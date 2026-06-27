@@ -69,7 +69,7 @@
             overflow: hidden;
             position: relative;
         }
-        /* ===== Splash 遮罩 ===== */
+        /* ===== Splash 遮罩（纯黑背景） ===== */
         .splash {
             position: absolute;
             inset: 0;
@@ -78,7 +78,7 @@
             align-items: center;
             justify-content: center;
             gap: 28px;
-            background: rgba(4, 4, 4, 0.85);
+            background: #000000;  /* 纯黑，不透明 */
             z-index: 400;
             transition: opacity 0.35s ease, visibility 0.35s ease;
             pointer-events: auto;
@@ -92,13 +92,20 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;  /* 修改为刚好接触多10像素 */
+            gap: 10px;
         }
         .splash-inner .splash-icon {
-            height: 240px;  /* 原来 120px，2 倍 */
+            height: 240px;
             width: 240px;
             object-fit: contain;
             filter: drop-shadow(0 4px 12px rgba(59,130,246,0.3));
+        }
+        .splash-divider {
+            color: #ffffff;
+            font-size: 120px;
+            font-weight: 100;
+            line-height: 1;
+            opacity: 0.6;
         }
         .splash-bar {
             width: 320px;
@@ -424,7 +431,8 @@
             gap: 12px;
             flex-shrink: 0;
         }
-        .chat-main .input-area .attach-btn {
+        /* 附件按钮（内联 SVG） */
+        .chat-main .input-area #attachBtn {
             background: none;
             border: none;
             padding: 8px;
@@ -434,15 +442,20 @@
             justify-content: center;
             border-radius: var(--radius-sm);
             transition: var(--transition);
+            color: var(--text-secondary);
         }
-        .chat-main .input-area .attach-btn:hover {
+        .chat-main .input-area #attachBtn:hover {
             background: var(--bg-hover);
+            color: var(--text-primary);
         }
-        .chat-main .input-area .attach-btn img {
-            height: 24px;
+        .chat-main .input-area #attachBtn svg {
             width: 24px;
-            opacity: 0.95;
-            filter: none;
+            height: 24px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
         .chat-main .input-area input[type="text"] {
             flex: 1;
@@ -615,8 +628,8 @@
             .chat-main .chat-messages { padding: 12px; }
             .chat-main .input-area { padding: 10px 16px 16px; }
             .login-card { padding: 28px 20px; }
-            /* 响应式下 splash 图标缩小，但用户要求2倍，我们按比例缩小 */
             .splash-inner .splash-icon { height: 120px; width: 120px; }
+            .splash-divider { font-size: 60px; }
             .splash-inner { gap: 6px; }
             .splash-bar { width: 260px; }
         }
@@ -626,6 +639,7 @@
             .sidebar .nav-item { padding: 10px; }
             .chat-main .message { max-width: 90%; }
             .splash-inner .splash-icon { height: 80px; width: 80px; }
+            .splash-divider { font-size: 40px; }
             .splash-inner { gap: 4px; }
             .splash-bar { width: calc(100% - 48px); }
         }
@@ -637,6 +651,7 @@
         <div class="splash" id="splash" role="status" aria-live="polite">
             <div class="splash-inner">
                 <img class="splash-icon" src="assets/Inspired.svg" alt="Inspired" />
+                <span class="splash-divider">|</span>
                 <img class="splash-icon" src="assets/basied.svg" alt="basied" />
             </div>
             <div class="splash-bar" aria-hidden="true">
@@ -694,10 +709,12 @@
                 </div>
                 <div class="chat-messages" id="messageList"></div>
                 <div class="input-area">
-                    <label class="attach-btn" title="发送图片">
-                        <img src="assets/attach.svg" alt="附件" id="attachIcon" />
-                        <input type="file" id="fileInput" accept="image/*" style="display:none;" />
-                    </label>
+                    <button id="attachBtn" title="发送图片">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                        </svg>
+                    </button>
+                    <input type="file" id="fileInput" accept="image/*" style="display:none;" />
                     <input type="text" id="chatInput" placeholder="输入消息…" />
                     <button class="send-btn" id="btnSend">
                         <svg viewBox="0 0 24 24">
@@ -793,6 +810,7 @@
         const btnLogin = document.getElementById('btnLogin');
         const btnSend = document.getElementById('btnSend');
         const fileInput = document.getElementById('fileInput');
+        const attachBtn = document.getElementById('attachBtn');
         const settingsOverlay = document.getElementById('settingsOverlay');
         const themeToggle = document.getElementById('themeToggle');
         const settingsLogout = document.getElementById('settingsLogout');
@@ -1055,6 +1073,12 @@
             await sendMessageContent(content);
         };
 
+        // 附件按钮点击触发文件选择
+        attachBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            fileInput.click();
+        });
+
         fileInput.addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1159,10 +1183,6 @@
                 }
             });
         }
-        document.querySelector('.attach-btn')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            fileInput.click();
-        });
         if (settingsNav) settingsNav.addEventListener('click', openSettings);
         if (closeSettings) closeSettings.addEventListener('click', closeSettingsPanel);
         if (settingsOverlay) {
