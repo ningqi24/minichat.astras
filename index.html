@@ -77,8 +77,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 28px;
-            background: #000000;  /* 纯黑，不透明 */
+            gap: 16px;  /* 减小间距，使进度条靠近图标 */
+            background: #000000;
             z-index: 400;
             transition: opacity 0.35s ease, visibility 0.35s ease;
             pointer-events: auto;
@@ -100,12 +100,12 @@
             object-fit: contain;
             filter: drop-shadow(0 4px 12px rgba(59,130,246,0.3));
         }
+        /* 竖线：与图标等高，白色半透明 */
         .splash-divider {
-            color: #ffffff;
-            font-size: 120px;
-            font-weight: 100;
-            line-height: 1;
-            opacity: 0.6;
+            width: 2px;
+            height: 240px;          /* 与图标高度一致 */
+            background: rgba(255,255,255,0.6);
+            flex-shrink: 0;
         }
         .splash-bar {
             width: 320px;
@@ -278,7 +278,8 @@
         }
         .sidebar .logo-area img {
             height: 36px;
-            width: auto;
+            max-width: 100%;
+            object-fit: contain;
         }
         .sidebar .logo-area span {
             display: none;
@@ -431,7 +432,6 @@
             gap: 12px;
             flex-shrink: 0;
         }
-        /* 附件按钮（内联 SVG） */
         .chat-main .input-area #attachBtn {
             background: none;
             border: none;
@@ -626,20 +626,31 @@
             .sidebar .user-email { font-size: 11px; text-align: center; }
             .chat-main .chat-header { padding: 12px 16px; }
             .chat-main .chat-messages { padding: 12px; }
-            .chat-main .input-area { padding: 10px 16px 16px; }
+            .chat-main .input-area { padding: 10px 16px 16px; gap: 8px; }
             .login-card { padding: 28px 20px; }
-            .splash-inner .splash-icon { height: 120px; width: 120px; }
-            .splash-divider { font-size: 60px; }
+            /* 手机端调整 splash 图标大小，防止溢出 */
+            .splash-inner .splash-icon {
+                height: 120px;
+                width: 120px;
+            }
+            .splash-divider {
+                height: 120px;
+            }
             .splash-inner { gap: 6px; }
             .splash-bar { width: 260px; }
         }
         @media (max-width: 480px) {
             .sidebar { width: 60px; padding: 8px; }
-            .sidebar .logo-area img { height: 28px; }
+            .sidebar .logo-area img { height: 28px; max-width: 40px; }
             .sidebar .nav-item { padding: 10px; }
             .chat-main .message { max-width: 90%; }
-            .splash-inner .splash-icon { height: 80px; width: 80px; }
-            .splash-divider { font-size: 40px; }
+            .splash-inner .splash-icon {
+                height: 80px;
+                width: 80px;
+            }
+            .splash-divider {
+                height: 80px;
+            }
             .splash-inner { gap: 4px; }
             .splash-bar { width: calc(100% - 48px); }
         }
@@ -651,7 +662,7 @@
         <div class="splash" id="splash" role="status" aria-live="polite">
             <div class="splash-inner">
                 <img class="splash-icon" src="assets/Inspired.svg" alt="Inspired" />
-                <span class="splash-divider">|</span>
+                <div class="splash-divider"></div>
                 <img class="splash-icon" src="assets/basied.svg" alt="basied" />
             </div>
             <div class="splash-bar" aria-hidden="true">
@@ -1073,7 +1084,6 @@
             await sendMessageContent(content);
         };
 
-        // 附件按钮点击触发文件选择
         attachBtn.addEventListener('click', function(e) {
             e.preventDefault();
             fileInput.click();
