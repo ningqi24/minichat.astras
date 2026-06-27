@@ -555,6 +555,42 @@
             color: var(--text-secondary);
             margin-top: 2px;
         }
+.settings-panel .username-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+.settings-panel .username-row input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    min-width: 120px;
+}
+.settings-panel .username-row input:focus {
+    border-color: var(--accent);
+}
+.settings-panel .username-row .btn-save {
+    padding: 10px 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+.settings-panel .username-row .btn-save:hover {
+    background: var(--accent-hover);
+}
         .toggle-switch {
             width: 48px;
             height: 28px;
@@ -748,6 +784,10 @@
                         <div class="knob"></div>
                     </div>
                 </div>
+<div class="username-row">
+    <input type="text" id="usernameInput" placeholder="输入昵称" maxlength="20" />
+    <button class="btn-save" id="saveUsernameBtn">保存昵称</button>
+</div>
                 <div class="setting-item" style="border-bottom: none; padding-bottom: 0;">
                     <div>
                         <div class="label">退出账户</div>
@@ -796,6 +836,19 @@
                     fill.style.width = '100%';
                 }
                 setTimeout(hideSplash, SPLASH_DURATION + 120);
+                    const saveBtn = document.getElementById('saveUsernameBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveUsername);
+    }
+    const usernameInput = document.getElementById('usernameInput');
+    if (usernameInput) {
+        usernameInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveUsername();
+            }
+        });
+    }
             });
         })();
 
@@ -835,6 +888,7 @@
         const settingsNav = document.getElementById('settingsNav');
 
         let currentEmail = '';
+        let currentDisplayName = ''; 
         let isCodeSending = false;
 
         // ==========================================
@@ -863,6 +917,59 @@
                 themeToggle.classList.add('active');
             }
         }
+
+        // 加载用户资料（昵称）
+async function loadUserProfile(email) {
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('profiles')
+            .select('username')
+            .eq('email', email)
+            .single();
+        if (error && error.code !== 'PGRST116') throw error;
+        if (data && data.username) {
+            currentDisplayName = data.username;
+        } else {
+            currentDisplayName = email;
+        }
+        sidebarUserEmail.textContent = currentDisplayName;
+        const usernameInput = document.getElementById('usernameInput');
+        if (usernameInput) {
+            usernameInput.value = data?.username || '';
+        }
+    } catch (err) {
+        console.warn('加载用户资料失败:', err);
+        currentDisplayName = email;
+        sidebarUserEmail.textContent = currentDisplayName;
+    }
+}
+
+        // 保存昵称
+async function saveUsername() {
+    const input = document.getElementById('usernameInput');
+    if (!input) return;
+    const newName = input.value.trim();
+    if (!newName) {
+        setAuthMessage('昵称不能为空', 'error');
+        return;
+    }
+    if (newName.length > 20) {
+        setAuthMessage('昵称不能超过20个字符', 'error');
+        return;
+    }
+    try {
+        const { error } = await window.supabaseClient
+            .from('profiles')
+            .upsert({ email: currentEmail, username: newName }, { onConflict: 'email' });
+        if (error) throw error;
+        currentDisplayName = newName;
+        sidebarUserEmail.textContent = newName;
+        setAuthMessage('昵称更新成功', 'success');
+    } catch (err) {
+        console.error('保存昵称失败:', err);
+        setAuthMessage('保存失败，请重试', 'error');
+    }
+}
 
         function toggleTheme() {
             const isLight = document.body.classList.toggle('light-theme');
@@ -1155,10 +1262,10 @@
         // ==========================================
         // 进入聊天
         // ==========================================
-        function enterChat() {
-            loginOverlay.classList.add('hidden');
-            mainInterface.classList.remove('hidden');
-            sidebarUserEmail.textContent = currentEmail;
+        async function enterChat() {
+    loginOverlay.classList.add('hidden');
+    mainInterface.classList.remove('hidden');
+    await loadUserProfile(currentEmail);
             // 重置分页状态
             hasMoreMessages = true;
             oldestTimestamp = null;
@@ -1171,7 +1278,7 @@
             if (cached && cached.length > 0) {
                 messageList.innerHTML = '';
                 cached.forEach(msg => {
-                    const isMe = msg.sender_name === currentEmail;
+                    const isMe = (msg.sender_name === currentDisplayName) || (msg.sender_name === currentEmail);
                     addMessageToBottom(msg.content, msg.sender_name || '匿名', isMe, formatTime(msg.created_at));
                 });
             } else {
@@ -1215,6 +1322,7 @@
                 window.chatChannel = null;
             }
             currentEmail = '';
+            currentDisplayName = '';
             mainInterface.classList.add('hidden');
             loginOverlay.classList.remove('hidden');
             authMessage.textContent = '';
@@ -1243,7 +1351,7 @@
                 const res = await fetch(WEBHOOK_SEND_MESSAGE, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content, sender_name: currentEmail })
+                    body: JSON.stringify({ content, sender_name: currentDisplayName })
                 });
                 if (!res.ok) throw new Error('发送失败');
                 if (chatInput.value) chatInput.value = '';
