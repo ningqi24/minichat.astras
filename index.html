@@ -77,7 +77,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 16px;  
+            gap: 16px;
             background: #000000;
             z-index: 400;
             transition: opacity 0.35s ease, visibility 0.35s ease;
@@ -555,42 +555,6 @@
             color: var(--text-secondary);
             margin-top: 2px;
         }
-        .settings-panel .username-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border-color);
-            flex-wrap: wrap;
-        }
-        .settings-panel .username-row input {
-            flex: 1;
-            padding: 10px 14px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border-color);
-            background: var(--bg-input);
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-            min-width: 120px;
-        }
-        .settings-panel .username-row input:focus {
-            border-color: var(--accent);
-        }
-        .settings-panel .username-row .btn-save {
-            padding: 10px 20px;
-            background: var(--accent);
-            border: none;
-            border-radius: var(--radius-sm);
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-            white-space: nowrap;
-        }
-        .settings-panel .username-row .btn-save:hover {
-            background: var(--accent-hover);
-        }
         .toggle-switch {
             width: 48px;
             height: 28px;
@@ -783,10 +747,7 @@
                         <div class="knob"></div>
                     </div>
                 </div>
-                <div class="username-row">
-                    <input type="text" id="usernameInput" placeholder="输入昵称" maxlength="20" />
-                    <button class="btn-save" id="saveUsernameBtn">保存昵称</button>
-                </div>
+                <!-- 昵称修改已移除 -->
                 <div class="setting-item" style="border-bottom: none; padding-bottom: 0;">
                     <div>
                         <div class="label">退出账户</div>
@@ -801,7 +762,7 @@
 
     <script>
         // ==========================================
-        // 1. 配置 & 初始化
+        // 配置
         // ==========================================
         const SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
         const SUPABASE_ANON_KEY =
@@ -814,7 +775,7 @@
         }
 
         // ==========================================
-        // 2. DOM 引用
+        // DOM 引用
         // ==========================================
         const loginOverlay = document.getElementById('loginOverlay');
         const mainInterface = document.getElementById('mainInterface');
@@ -834,28 +795,25 @@
         const settingsLogout = document.getElementById('settingsLogout');
         const closeSettings = document.getElementById('closeSettings');
         const settingsNav = document.getElementById('settingsNav');
-        const usernameInput = document.getElementById('usernameInput');
-        const saveUsernameBtn = document.getElementById('saveUsernameBtn');
 
-        // ==========================================
-        // 3. 全局状态
-        // ==========================================
         let currentEmail = '';
-        let currentUserId = '';          // ✅ 新增：用户唯一 ID
-        let currentDisplayName = '';     // 当前显示名称（昵称或邮箱）
         let isCodeSending = false;
 
-        // 分页相关
+        // ==========================================
+        // 分页相关变量
+        // ==========================================
         const PAGE_SIZE = 20;
         let isLoadingMore = false;
         let hasMoreMessages = true;
         let oldestTimestamp = null;
 
+        // ==========================================
         // 未读计数
+        // ==========================================
         let unreadCount = 0;
 
         // ==========================================
-        // 4. 主题管理
+        // 主题管理
         // ==========================================
         function loadTheme() {
             const saved = localStorage.getItem('minichat_theme');
@@ -875,73 +833,7 @@
         }
 
         // ==========================================
-        // 5. 用户资料管理（含昵称和 ID）
-        // ==========================================
-async function loadUserProfile(email) {
-    try {
-        // ① 从 Auth 会话获取用户 ID（最可靠）
-        const session = await window.supabaseClient.auth.getSession();
-        if (session.data?.session?.user?.id) {
-            currentUserId = session.data.session.user.id;
-            console.log('✅ 用户 ID 已获取:', currentUserId);
-        } else {
-            console.warn('⚠️ 未获取到用户 ID，请重新登录');
-            setAuthMessage('会话已过期，请重新登录', 'error');
-            // 可选：自动退出
-            // window.handleLogout();
-            return;
-        }
-
-        // ② 从 profiles 表获取昵称（不影响 ID）
-        const { data, error } = await window.supabaseClient
-            .from('profiles')
-            .select('username')
-            .eq('email', email)
-            .single();
-        if (error && error.code !== 'PGRST116') throw error;
-        if (data && data.username) {
-            currentDisplayName = data.username;
-        } else {
-            currentDisplayName = email;
-        }
-        sidebarUserEmail.textContent = currentDisplayName;
-        if (usernameInput) {
-            usernameInput.value = data?.username || '';
-        }
-    } catch (err) {
-        console.warn('加载用户资料失败:', err);
-        currentDisplayName = email;
-        sidebarUserEmail.textContent = currentDisplayName;
-    }
-}
-
-        async function saveUsername() {
-            if (!usernameInput) return;
-            const newName = usernameInput.value.trim();
-            if (!newName) {
-                setAuthMessage('昵称不能为空', 'error');
-                return;
-            }
-            if (newName.length > 20) {
-                setAuthMessage('昵称不能超过20个字符', 'error');
-                return;
-            }
-            try {
-                const { error } = await window.supabaseClient
-                    .from('profiles')
-                    .upsert({ email: currentEmail, username: newName, id: currentUserId }, { onConflict: 'email' });
-                if (error) throw error;
-                currentDisplayName = newName;
-                sidebarUserEmail.textContent = newName;
-                setAuthMessage('昵称更新成功', 'success');
-            } catch (err) {
-                console.error('保存昵称失败:', err);
-                setAuthMessage('保存失败，请重试', 'error');
-            }
-        }
-
-        // ==========================================
-        // 6. 设置面板
+        // 设置面板
         // ==========================================
         function openSettings() {
             settingsOverlay.classList.add('active');
@@ -952,7 +844,7 @@ async function loadUserProfile(email) {
         }
 
         // ==========================================
-        // 7. 工具函数
+        // 工具函数
         // ==========================================
         function formatTime(iso) {
             const d = new Date(iso);
@@ -1063,13 +955,7 @@ async function loadUserProfile(email) {
         function prependMessages(messages) {
             const fragment = document.createDocumentFragment();
             messages.forEach(msg => {
-                // ✅ 判断自己：优先用 sender_id，若没有则回退到 sender_name
-                let isMe = false;
-                if (msg.sender_id && currentUserId) {
-                    isMe = msg.sender_id === currentUserId;
-                } else {
-                    isMe = (msg.sender_name === currentDisplayName) || (msg.sender_name === currentEmail);
-                }
+                const isMe = (msg.sender_name === currentEmail);
                 const div = createMessageElement(msg.content, msg.sender_name || '匿名', isMe, formatTime(msg.created_at));
                 fragment.appendChild(div);
             });
@@ -1103,7 +989,7 @@ async function loadUserProfile(email) {
         }
 
         // ==========================================
-        // 8. 核心功能（登录/注册/发送消息）
+        // 核心功能（登录/注册）
         // ==========================================
         window.handleSendCode = async function() {
             const email = authEmail.value.trim();
@@ -1154,7 +1040,7 @@ async function loadUserProfile(email) {
                 if (result.status === 'success') {
                     currentEmail = email;
                     setAuthMessage('登录成功', 'success');
-                    await enterChat();   // 改为 await 确保加载完成
+                    enterChat();
                 } else {
                     setAuthMessage(result.message || '验证码错误', 'error');
                 }
@@ -1167,7 +1053,7 @@ async function loadUserProfile(email) {
         };
 
         // ==========================================
-        // 9. 分页加载历史消息
+        // 分页加载历史消息
         // ==========================================
         async function loadHistory(append = false) {
             if (isLoadingMore || !hasMoreMessages) return;
@@ -1200,12 +1086,7 @@ async function loadUserProfile(email) {
                 if (!append) {
                     messageList.innerHTML = '';
                     sorted.forEach(msg => {
-                        let isMe = false;
-                        if (msg.sender_id && currentUserId) {
-                            isMe = msg.sender_id === currentUserId;
-                        } else {
-                            isMe = (msg.sender_name === currentDisplayName) || (msg.sender_name === currentEmail);
-                        }
+                        const isMe = (msg.sender_name === currentEmail);
                         addMessageToBottom(msg.content, msg.sender_name || '匿名', isMe, formatTime(msg.created_at));
                     });
                     cacheMessages(sorted);
@@ -1224,14 +1105,12 @@ async function loadUserProfile(email) {
         }
 
         // ==========================================
-        // 10. 进入聊天
+        // 进入聊天
         // ==========================================
-        async function enterChat() {
+        function enterChat() {
             loginOverlay.classList.add('hidden');
             mainInterface.classList.remove('hidden');
-
-            // 加载用户资料（包含 currentUserId 和 currentDisplayName）
-            await loadUserProfile(currentEmail);
+            sidebarUserEmail.textContent = currentEmail;
 
             // 重置分页状态
             hasMoreMessages = true;
@@ -1240,17 +1119,12 @@ async function loadUserProfile(email) {
             unreadCount = 0;
             document.title = 'MiniChat';
 
-            // 先显示缓存
+            // 先尝试读取缓存
             const cached = getCachedMessages();
             if (cached && cached.length > 0) {
                 messageList.innerHTML = '';
                 cached.forEach(msg => {
-                    let isMe = false;
-                    if (msg.sender_id && currentUserId) {
-                        isMe = msg.sender_id === currentUserId;
-                    } else {
-                        isMe = (msg.sender_name === currentDisplayName) || (msg.sender_name === currentEmail);
-                    }
+                    const isMe = (msg.sender_name === currentEmail);
                     addMessageToBottom(msg.content, msg.sender_name || '匿名', isMe, formatTime(msg.created_at));
                 });
             } else {
@@ -1258,7 +1132,7 @@ async function loadUserProfile(email) {
             }
 
             // 加载最新消息
-            await loadHistory(false);
+            loadHistory(false);
 
             localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail }));
             loadTheme();
@@ -1273,7 +1147,7 @@ async function loadUserProfile(email) {
         }
 
         // ==========================================
-        // 11. 滚动触顶加载更多
+        // 滚动触顶加载更多
         // ==========================================
         let lastScrollTop = 0;
         function handleScroll() {
@@ -1285,7 +1159,7 @@ async function loadUserProfile(email) {
         }
 
         // ==========================================
-        // 12. 退出登录
+        // 退出登录
         // ==========================================
         window.handleLogout = function() {
             if (window.chatChannel) {
@@ -1293,8 +1167,6 @@ async function loadUserProfile(email) {
                 window.chatChannel = null;
             }
             currentEmail = '';
-            currentUserId = '';          // ✅ 重置用户 ID
-            currentDisplayName = '';
             mainInterface.classList.add('hidden');
             loginOverlay.classList.remove('hidden');
             authMessage.textContent = '';
@@ -1308,23 +1180,21 @@ async function loadUserProfile(email) {
         };
 
         // ==========================================
-        // 13. 发送消息核心（含 sender_id）
+        // 发送消息核心（使用 email 作为发送者）
         // ==========================================
         async function sendMessageContent(content) {
             if (!currentEmail) {
                 alert('请先登录');
                 return;
             }
-            // 乐观更新：显示自己的消息（右侧）
-            addMessageToBottom(content, currentDisplayName, true);
+            addMessageToBottom(content, currentEmail, true);
             try {
                 const res = await fetch(WEBHOOK_SEND_MESSAGE, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         content: content,
-                        sender_name: currentDisplayName,
-                        sender_id: currentUserId   // ✅ 发送用户 ID
+                        sender_name: currentEmail
                     })
                 });
                 if (!res.ok) throw new Error('发送失败');
@@ -1346,7 +1216,7 @@ async function loadUserProfile(email) {
         };
 
         // ==========================================
-        // 14. 图片上传（含压缩）
+        // 图片压缩函数
         // ==========================================
         function compressImage(file, maxWidth, quality) {
             return new Promise((resolve, reject) => {
@@ -1385,6 +1255,9 @@ async function loadUserProfile(email) {
             });
         }
 
+        // ==========================================
+        // 发送图片（含压缩）
+        // ==========================================
         attachBtn.addEventListener('click', function(e) {
             e.preventDefault();
             fileInput.click();
@@ -1453,7 +1326,7 @@ async function loadUserProfile(email) {
         });
 
         // ==========================================
-        // 15. 订阅实时消息（用 sender_id 判断自己）
+        // 订阅实时消息（使用 email 判断自己）
         // ==========================================
         function subscribeMessages() {
             if (window.chatChannel) {
@@ -1471,24 +1344,18 @@ async function loadUserProfile(email) {
                         const msg = payload.new;
                         if (!msg) return;
 
-                        // ✅ 关键：用 sender_id 判断是否自己
-                        let isMe = false;
-                        if (msg.sender_id && currentUserId) {
-                            isMe = msg.sender_id === currentUserId;
-                        } else {
-                            // 兼容旧消息（没有 sender_id）
-                            isMe = (msg.sender_name === currentDisplayName) || (msg.sender_name === currentEmail);
-                        }
+                        // 使用 email 判断是否自己发送
+                        const isMe = (msg.sender_name === currentEmail);
 
                         // 如果是自己发送的，跳过（乐观更新已显示）
                         if (isMe) {
                             return;
                         }
 
-                        // 其他人消息，添加到列表（左侧）
+                        // 其他人消息，添加到列表
                         addMessageToBottom(msg.content, msg.sender_name || '匿名', false, formatTime(msg.created_at));
 
-                        // 通知和标题闪烁（仅非自己消息且页面不可见）
+                        // 通知和标题闪烁
                         if (document.hidden) {
                             unreadCount++;
                             document.title = `(${unreadCount}) MiniChat`;
@@ -1509,7 +1376,7 @@ async function loadUserProfile(email) {
         }
 
         // ==========================================
-        // 16. 页面可见性变化重置未读
+        // 页面可见性变化重置未读
         // ==========================================
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
@@ -1519,37 +1386,31 @@ async function loadUserProfile(email) {
         });
 
         // ==========================================
-        // 17. 事件绑定
+        // 事件绑定
         // ==========================================
-        btnSendCode.addEventListener('click', window.handleSendCode);
-        btnLogin.addEventListener('click', window.handleLogin);
-        btnSend.addEventListener('click', window.sendMessageHandler);
-        chatInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                window.sendMessageHandler();
-            }
-        });
-
-        settingsNav.addEventListener('click', openSettings);
-        closeSettings.addEventListener('click', closeSettingsPanel);
-        settingsOverlay.addEventListener('click', function(e) {
-            if (e.target === this) closeSettingsPanel();
-        });
-        themeToggle.addEventListener('click', toggleTheme);
-        settingsLogout.addEventListener('click', window.handleLogout);
-
-        // 保存昵称
-        saveUsernameBtn.addEventListener('click', saveUsername);
-        usernameInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveUsername();
-            }
-        });
+        if (btnSendCode) btnSendCode.addEventListener('click', window.handleSendCode);
+        if (btnLogin) btnLogin.addEventListener('click', window.handleLogin);
+        if (btnSend) btnSend.addEventListener('click', window.sendMessageHandler);
+        if (chatInput) {
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    window.sendMessageHandler();
+                }
+            });
+        }
+        if (settingsNav) settingsNav.addEventListener('click', openSettings);
+        if (closeSettings) closeSettings.addEventListener('click', closeSettingsPanel);
+        if (settingsOverlay) {
+            settingsOverlay.addEventListener('click', function(e) {
+                if (e.target === this) closeSettingsPanel();
+            });
+        }
+        if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+        if (settingsLogout) settingsLogout.addEventListener('click', window.handleLogout);
 
         // ==========================================
-        // 18. Splash 控制（启动时检查缓存会话）
+        // Splash 控制
         // ==========================================
         (function() {
             const SPLASH_DURATION = 2600;
@@ -1588,10 +1449,10 @@ async function loadUserProfile(email) {
         })();
 
         // ==========================================
-        // 19. 初始主题
+        // 初始主题
         // ==========================================
         loadTheme();
-        console.log('MiniChat 已启动 (sender_id 版本)');
+        console.log('MiniChat 已启动 (无昵称版本)');
     </script>
 </body>
 </html>
