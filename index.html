@@ -354,25 +354,26 @@
         }
 
         function addMessage(content, sender, isMe, time) {
-            const div = document.createElement('div');
-            div.className = 'message ' + (isMe ? 'me' : 'other');
+    const div = document.createElement('div');
+    div.className = 'message ' + (isMe ? 'me' : 'other');
 
-            // 检测是否为图片消息（格式：![image](url)）
-            const imageMatch = content.match(/!\[image\]\((.*?)\)/);
-            let displayContent = content;
-            if (imageMatch) {
-                displayContent = `<img src="${imageMatch[1]}" alt="图片" loading="lazy" />`;
-            } else {
-                // 转义 HTML 防止 XSS（但保留链接等，简单起见直接显示）
-                displayContent = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            }
+    // 处理空内容
+    if (!content) content = '';
 
-            div.innerHTML = '<div class="sender">' + sender + '</div>' + displayContent +
-                '<div class="time">' + (time || formatTime(new Date().toISOString())) + '</div>';
-            messageList.appendChild(div);
-            messageList.scrollTop = messageList.scrollHeight;
-        }
+    // 检测是否为图片消息
+    const imageMatch = content.match(/!\[image\]\((.*?)\)/);
+    let displayContent = content;
+    if (imageMatch) {
+        displayContent = `<img src="${imageMatch[1]}" alt="图片" loading="lazy" />`;
+    } else {
+        displayContent = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
+    div.innerHTML = '<div class="sender">' + sender + '</div>' + displayContent +
+        '<div class="time">' + (time || formatTime(new Date().toISOString())) + '</div>';
+    messageList.appendChild(div);
+    messageList.scrollTop = messageList.scrollHeight;
+}
         function setLoading(loading) {
             btnSendCode.disabled = loading;
             btnLogin.disabled = loading;
