@@ -64,6 +64,75 @@
         }
 
         /* ==========================================
+           Preloader（中间品牌图 + Cloudflare 风格动画）
+           ========================================== */
+        .preloader {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 220;
+            pointer-events: none;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .preloader-inner {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            background: transparent;
+            padding: 12px 20px;
+            border-radius: 12px;
+        }
+        .preloader-inner img {
+            height: 64px;
+            width: 64px;
+            object-fit: contain;
+            filter: drop-shadow(0 8px 24px rgba(0,0,0,0.6));
+        }
+        /* 左右 logo 浮动 */
+        @keyframes floatLeft {
+            0% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(-8px); opacity: 0.9; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes floatRight {
+            0% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(8px); opacity: 0.9; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .preloader-left { animation: floatLeft 1.8s ease-in-out infinite; }
+        .preloader-right { animation: floatRight 1.8s ease-in-out infinite; }
+
+        /* 中间点阵旋转（Cloudflare 风格） */
+        .preloader-spinner {
+            position: relative;
+            width: 56px;
+            height: 56px;
+        }
+        .preloader-spinner .dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(180deg, #60a5fa, #3b82f6);
+            border-radius: 50%;
+            transform-origin: 28px 28px;
+            opacity: 0.95;
+            box-shadow: 0 6px 18px rgba(59,130,246,0.18);
+            animation: spinScale 1.4s cubic-bezier(.4,0,.2,1) infinite;
+        }
+        .preloader-spinner .dot1 { top: 6px; left: 28px; animation-delay: 0s; }
+        .preloader-spinner .dot2 { top: 28px; left: 6px; animation-delay: 0.12s; }
+        .preloader-spinner .dot3 { top: 28px; left: 50px; animation-delay: 0.24s; }
+        .preloader-spinner .dot4 { top: 50px; left: 28px; animation-delay: 0.36s; }
+
+        @keyframes spinScale {
+            0% { transform: scale(0.7); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(0.7); opacity: 0.6; }
+        }
+
+        /* ==========================================
            登录界面（覆盖全屏）
            ========================================== */
         .login-overlay {
@@ -74,7 +143,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100;
+            z-index: 200;
             border-radius: var(--radius);
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
@@ -424,11 +493,12 @@
         .chat-main .input-area .attach-btn:hover {
             background: var(--bg-hover);
         }
+        /* 统一图标尺寸并去掉可能影响显示的滤镜（确保可见） */
         .chat-main .input-area .attach-btn img {
             height: 24px;
             width: 24px;
-            opacity: 0.6;
-            filter: brightness(0) invert(1);
+            opacity: 0.95;
+            filter: none;
         }
         .chat-main .input-area .attach-btn:hover img {
             opacity: 1;
@@ -470,10 +540,12 @@
         .chat-main .input-area .send-btn:active {
             transform: scale(0.94);
         }
+        /* 发送按钮图标与附件图标保持相同大小 */
         .chat-main .input-area .send-btn img {
-            height: 22px;
-            width: 22px;
-            filter: brightness(0) invert(1);
+            height: 24px;
+            width: 24px;
+            filter: none;
+            opacity: 0.98;
         }
 
         @keyframes fadeIn {
@@ -497,6 +569,8 @@
             .chat-main .chat-messages { padding: 12px; }
             .chat-main .input-area { padding: 10px 16px 16px; }
             .login-card { padding: 28px 20px; }
+            .preloader-inner img { height: 48px; width: 48px; }
+            .preloader-spinner { width: 44px; height: 44px; }
         }
 
         @media (max-width: 480px) {
@@ -504,6 +578,7 @@
             .sidebar .logo-area img { height: 28px; }
             .sidebar .nav-item { padding: 10px; }
             .chat-main .message { max-width: 90%; }
+            .preloader-inner img { height: 40px; width: 40px; gap: 12px; }
         }
     </style>
 </head>
@@ -511,6 +586,23 @@
 <body>
 
     <div class="app" id="app">
+
+        <!-- Preloader -->
+        <div class="preloader" id="preloader" aria-hidden="false">
+            <div class="preloader-inner">
+                <!-- 左侧 Inspired -->
+                <img src="assets/Inspired.svg" alt="Inspired" class="preloader-left" onerror="this.style.display='none'"/>
+                <!-- 中间 Cloudflare 风格点阵 -->
+                <div class="preloader-spinner" aria-hidden="true">
+                    <div class="dot dot1"></div>
+                    <div class="dot dot2"></div>
+                    <div class="dot dot3"></div>
+                    <div class="dot dot4"></div>
+                </div>
+                <!-- 右侧 based -->
+                <img src="assets/based.svg" alt="based" class="preloader-right" onerror="this.style.display='none'"/>
+            </div>
+        </div>
 
         <!-- ==========================================
              登录界面（覆盖层）
@@ -553,7 +645,7 @@
                         <span>聊天</span>
                     </div>
                     <div class="nav-item">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.[...]
                         <span>设置</span>
                     </div>
                 </nav>
@@ -602,12 +694,22 @@
          JavaScript 逻辑（保留原有功能）
          ========================================== -->
     <script>
+        // Hide preloader on window load
+        window.addEventListener('load', function() {
+            const p = document.getElementById('preloader');
+            if (p) {
+                p.style.opacity = '0';
+                p.style.visibility = 'hidden';
+                setTimeout(() => { if (p && p.parentNode) p.parentNode.removeChild(p); }, 420);
+            }
+        });
+
         // ==========================================
         // 1. 配置
         // ==========================================
         const SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
         const SUPABASE_ANON_KEY =
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7Cw[...]
 
         const WEBHOOK_AUTH = 'https://hook.us2.make.com/7bwoxm0lr1adzqy12jcq4xjk0hkugl2n';
         const WEBHOOK_SEND_MESSAGE = 'https://hook.us2.make.com/9csv6ub93wvhcm4wdmpzdccyeqbsqd5q';
@@ -658,7 +760,7 @@
         window.previewImage = function(url) {
             const overlay = document.createElement('div');
             overlay.style.cssText =
-                'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;box-sizing:border-box;touch-action:manipulation;';
+                'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;bo[...]
 
             const img = document.createElement('img');
             img.src = url;
@@ -671,7 +773,7 @@
             const downloadBtn = document.createElement('button');
             downloadBtn.textContent = '下载图片';
             downloadBtn.style.cssText =
-                'padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:500;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 12px rgba(59,130,246,0.3);min-height:44px;min-width:100px;';
+                'padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:500;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 12px rgba(59,13[...]
             downloadBtn.onclick = function(e) {
                 e.stopPropagation();
                 downloadBtn.textContent = '下载中…';
@@ -709,7 +811,7 @@
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '关闭';
             closeBtn.style.cssText =
-                'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;font-size:15px;font-weight:500;cursor:pointer;touch-action:manipulation;min-height:44px;min-width:100px;';
+                'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;font-size:15px;font-weight:500;cursor:pointer;touch-action:manipulation;min-height:44px;m[...]
             closeBtn.onclick = function(e) {
                 e.stopPropagation();
                 document.body.removeChild(overlay);
@@ -998,68 +1100,4 @@
                         table: 'messages'
                     },
                     (payload) => {
-                        const msg = payload.new;
-                        const lastMsg = messageList.lastChild;
-                        if (lastMsg && lastMsg.textContent.includes(msg.content) && msg.sender_name === currentEmail)
-                            return;
-                        const isMe = msg.sender_name === currentEmail;
-                        addMessage(msg.content, msg.sender_name || '匿名', isMe, formatTime(msg.created_at));
-                    }
-                )
-                .subscribe(status => {
-                    if (status === 'SUBSCRIBED') console.log('✅ 已连接到实时频道！');
-                });
-            window.chatChannel = channel;
-        }
-
-        // ==========================================
-        // 14. 检查本地会话
-        // ==========================================
-        function checkStoredSession() {
-            const stored = localStorage.getItem('minichat_user');
-            if (stored) {
-                try {
-                    const data = JSON.parse(stored);
-                    if (data.email) {
-                        currentEmail = data.email;
-                        enterChat();
-                        return true;
-                    }
-                } catch (e) { /* ignore */ }
-            }
-            return false;
-        }
-
-        // ==========================================
-        // 15. 绑定事件
-        // ==========================================
-        btnSendCode.addEventListener('click', window.handleSendCode);
-        btnLogin.addEventListener('click', window.handleLogin);
-        btnSend.addEventListener('click', window.sendMessageHandler);
-        btnLogout.addEventListener('click', window.handleLogout);
-
-        // 附件按钮触发文件选择
-        document.querySelector('.attach-btn')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            fileInput.click();
-        });
-
-        authCode.addEventListener('keydown', e => { if (e.key === 'Enter') window.handleLogin(); });
-        authEmail.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                authCode.value ? window.handleLogin() : window.handleSendCode();
-            }
-        });
-        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') window.sendMessageHandler(); });
-
-        // ==========================================
-        // 16. 启动
-        // ==========================================
-        if (!checkStoredSession()) {
-            console.log('MiniChat 已启动，请登录');
-        }
-        console.log('Auth Webhook:', WEBHOOK_AUTH);
-        console.log('Send Message Webhook:', WEBHOOK_SEND_MESSAGE);
-    </script>
-</body>
-</html>
+[...]
