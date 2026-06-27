@@ -3,14 +3,35 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="icon" type="image/svg" href="assets/logo.svg" />
     <title>MiniChat</title>
 
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js">
     </script>
 
     <style>
-        /* ===== 全局重置 & 基础 ===== */
+        /* ==========================================
+           全局重置 & 深色主题变量
+           ========================================== */
+        :root {
+            --bg-primary: #0d0d0d;
+            --bg-secondary: #1a1a1a;
+            --bg-sidebar: #121212;
+            --bg-card: #1e1e1e;
+            --bg-input: #2a2a2a;
+            --bg-hover: #2a2a2a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --text-muted: #6b6b6b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border-color: #2a2a2a;
+            --shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.2s ease;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -18,272 +39,359 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f5f7fa;
-            color: #1e293b;
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 16px;
         }
 
-        /* ===== 主容器 ===== */
-        .app-container {
+        /* ===== 应用容器 ===== */
+        .app {
             width: 100%;
-            max-width: 560px;
-            height: 90vh;
-            max-height: 800px;
-            background: #ffffff;
-            border-radius: 28px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 20px rgba(0, 0, 0, 0.06);
+            max-width: 1300px;
+            height: 96vh;
+            max-height: 900px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             display: flex;
-            flex-direction: column;
             overflow: hidden;
-            transition: height 0.2s ease;
+            position: relative;
         }
 
-        /* ===== 顶栏 ===== */
-        .topbar {
-            padding: 16px 24px;
-            background: #ffffff;
-            border-bottom: 1px solid #e9edf2;
+        /* ==========================================
+           登录界面（覆盖全屏）
+           ========================================== */
+        .login-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .topbar-left .logo {
-            height: 32px;
-            width: auto;
-            display: block;
-        }
-
-        .topbar-left .app-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e293b;
-            letter-spacing: -0.3px;
-        }
-
-        .topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .topbar-right .user-email {
-            font-size: 13px;
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        .topbar-right .logout-btn {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 6px 12px;
-            border-radius: 6px;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .topbar-right .logout-btn:hover {
-            background: #f1f5f9;
-            color: #1e293b;
-        }
-
-        .topbar-right .logout-btn img {
-            height: 16px;
-            width: 16px;
-            opacity: 0.6;
-        }
-        .topbar-right .logout-btn:hover img {
-            opacity: 0.9;
-        }
-
-        /* ===== 登录区域 ===== */
-        .auth-section {
-            padding: 40px 32px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
             justify-content: center;
-            gap: 20px;
+            align-items: center;
+            z-index: 100;
+            border-radius: var(--radius);
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .login-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
 
-        .auth-section .auth-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #0f172a;
-            margin-bottom: 8px;
-        }
-
-        .auth-section .auth-sub {
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 12px;
-        }
-
-        .auth-section input {
-            padding: 14px 18px;
-            border-radius: 12px;
-            border: 1.5px solid #e2e8f0;
-            background: #f8fafc;
-            font-size: 15px;
-            color: #0f172a;
-            outline: none;
-            transition: 0.2s;
+        .login-card {
+            background: var(--bg-card);
+            padding: 40px 36px;
+            border-radius: var(--radius);
             width: 100%;
-        }
-        .auth-section input:focus {
-            border-color: #3b82f6;
-            background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--border-color);
         }
 
-        .auth-section .code-row {
+        .login-card .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .login-card .logo-area img {
+            height: 36px;
+            width: auto;
+        }
+        .login-card .logo-area h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .login-card .auth-title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .login-card .auth-sub {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 15px;
+            outline: none;
+            transition: var(--transition);
+            margin-bottom: 14px;
+        }
+        .login-card input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .login-card .code-row {
             display: flex;
             gap: 12px;
         }
-        .auth-section .code-row input {
+        .login-card .code-row input {
             flex: 1;
+            margin-bottom: 0;
         }
-        .auth-section .code-row .btn {
-            flex-shrink: 0;
+        .login-card .code-row .btn {
             padding: 14px 20px;
-            background: #f1f5f9;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
             font-weight: 500;
-            color: #1e293b;
-            transition: 0.2s;
             cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
         }
-        .auth-section .code-row .btn:hover {
-            background: #e9edf2;
-        }
-        .auth-section .code-row .btn:active {
-            transform: scale(0.97);
+        .login-card .code-row .btn:hover {
+            background: var(--bg-hover);
         }
 
-        .auth-section .btn-primary {
+        .login-card .btn-primary {
+            width: 100%;
             padding: 14px;
-            background: #3b82f6;
+            background: var(--accent);
             border: none;
-            border-radius: 12px;
+            border-radius: var(--radius-sm);
+            color: #fff;
             font-weight: 600;
             font-size: 15px;
-            color: #ffffff;
             cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
+            transition: var(--transition);
+            margin-top: 6px;
         }
-        .auth-section .btn-primary:hover {
-            background: #2563eb;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        .login-card .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
         }
-        .auth-section .btn-primary:active {
-            transform: scale(0.98);
-        }
-        .auth-section .btn-primary:disabled {
+        .login-card .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
 
-        .auth-message {
+        .login-card .auth-message {
             font-size: 13px;
             text-align: center;
+            margin-top: 16px;
             min-height: 20px;
-            padding: 4px 0;
         }
-        .auth-message.success {
-            color: #16a34a;
+        .login-card .auth-message.success {
+            color: #4ade80;
         }
-        .auth-message.error {
-            color: #dc2626;
+        .login-card .auth-message.error {
+            color: #f87171;
         }
 
-        /* ===== 聊天区域 ===== */
-        .chat-section {
+        /* ==========================================
+           主界面（左侧栏 + 右侧聊天）
+           ========================================== */
+        .main-interface {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .main-interface.hidden {
+            display: none;
+        }
+
+        /* ----- 左侧边栏 ----- */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            flex: 1;
-            min-height: 0;
+            padding: 20px 16px;
+            flex-shrink: 0;
         }
 
-        .chat-area {
+        .sidebar .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .sidebar .logo-area img {
+            height: 32px;
+            width: auto;
+        }
+        .sidebar .logo-area span {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sidebar .nav {
+            flex: 1;
+        }
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        .sidebar .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .sidebar .nav-item.active {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .sidebar .nav-item svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .sidebar .user-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+            margin-top: auto;
+        }
+        .sidebar .user-email {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 8px 0;
+        }
+        .sidebar .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            background: none;
+            border: none;
+            width: 100%;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .sidebar .logout-btn:hover {
+            background: var(--bg-hover);
+            color: #f87171;
+        }
+        .sidebar .logout-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* ----- 右侧聊天区 ----- */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            min-width: 0;
+        }
+
+        .chat-main .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .chat-main .chat-header .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .chat-main .chat-header .chat-title small {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-left: 10px;
+        }
+
+        .chat-main .chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 20px 24px;
-            background: #fafbfc;
             display: flex;
             flex-direction: column;
             gap: 10px;
+            background: var(--bg-primary);
         }
-
-        .chat-area::-webkit-scrollbar {
+        .chat-main .chat-messages::-webkit-scrollbar {
             width: 4px;
         }
-        .chat-area::-webkit-scrollbar-track {
+        .chat-main .chat-messages::-webkit-scrollbar-track {
             background: transparent;
         }
-        .chat-area::-webkit-scrollbar-thumb {
-            background: #d1d5db;
+        .chat-main .chat-messages::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
             border-radius: 10px;
         }
 
-        .message {
+        .chat-main .message {
             padding: 12px 18px;
             border-radius: 18px;
-            max-width: 80%;
+            max-width: 75%;
             word-wrap: break-word;
             line-height: 1.6;
             font-size: 14px;
             animation: fadeIn 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
-        .message.me {
+        .chat-main .message.me {
             align-self: flex-end;
-            background: #3b82f6;
-            color: #ffffff;
+            background: var(--accent);
+            color: #fff;
             border-bottom-right-radius: 6px;
         }
-        .message.other {
+        .chat-main .message.other {
             align-self: flex-start;
-            background: #ffffff;
-            color: #1e293b;
+            background: var(--bg-card);
+            color: var(--text-primary);
             border-bottom-left-radius: 6px;
-            border: 1px solid #e9edf2;
+            border: 1px solid var(--border-color);
         }
-        .message .sender {
+        .chat-main .message .sender {
             font-size: 11px;
             font-weight: 600;
             opacity: 0.7;
             margin-bottom: 4px;
         }
-        .message.me .sender {
+        .chat-main .message.me .sender {
             color: rgba(255,255,255,0.8);
         }
-        .message .time {
+        .chat-main .message .time {
             font-size: 10px;
             opacity: 0.5;
             margin-top: 6px;
             text-align: right;
         }
-        .message img {
+        .chat-main .message img {
             max-width: 200px;
             max-height: 200px;
             border-radius: 8px;
@@ -293,23 +401,16 @@
             border: none;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ===== 输入区 ===== */
-        .input-area {
+        .chat-main .input-area {
             padding: 12px 24px 20px 24px;
-            background: #ffffff;
-            border-top: 1px solid #e9edf2;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             gap: 12px;
             flex-shrink: 0;
         }
-
-        .input-area .attach-btn {
+        .chat-main .input-area .attach-btn {
             background: none;
             border: none;
             padding: 8px;
@@ -317,40 +418,40 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 10px;
-            transition: 0.2s;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
         }
-        .input-area .attach-btn:hover {
-            background: #f1f5f9;
+        .chat-main .input-area .attach-btn:hover {
+            background: var(--bg-hover);
         }
-        .input-area .attach-btn img {
+        .chat-main .input-area .attach-btn img {
             height: 24px;
             width: 24px;
             opacity: 0.6;
+            filter: brightness(0) invert(1);
         }
-        .input-area .attach-btn:hover img {
-            opacity: 0.9;
+        .chat-main .input-area .attach-btn:hover img {
+            opacity: 1;
         }
 
-        .input-area input[type="text"] {
+        .chat-main .input-area input[type="text"] {
             flex: 1;
-            padding: 12px 16px;
+            padding: 12px 18px;
             border-radius: 24px;
-            border: 1.5px solid #e2e8f0;
-            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
             font-size: 15px;
-            color: #0f172a;
             outline: none;
-            transition: 0.2s;
+            transition: var(--transition);
         }
-        .input-area input[type="text"]:focus {
-            border-color: #3b82f6;
-            background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        .chat-main .input-area input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
 
-        .input-area .send-btn {
-            background: #3b82f6;
+        .chat-main .input-area .send-btn {
+            background: var(--accent);
             border: none;
             border-radius: 50%;
             width: 48px;
@@ -359,110 +460,147 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: 0.2s;
+            transition: var(--transition);
             flex-shrink: 0;
         }
-        .input-area .send-btn:hover {
-            background: #2563eb;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        .chat-main .input-area .send-btn:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
         }
-        .input-area .send-btn:active {
+        .chat-main .input-area .send-btn:active {
             transform: scale(0.94);
         }
-.input-area .send-btn img {
-    height: 32px;
-    width: 32px;
-    filter: brightness(0) invert(1) !important;
-}
-
-        /* ===== 通用隐藏 ===== */
-        .hidden {
-            display: none !important;
+        .chat-main .input-area .send-btn img {
+            height: 22px;
+            width: 22px;
+            filter: brightness(0) invert(1);
         }
 
-        /* ===== 响应式 ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==========================================
+           响应式适配
+           ========================================== */
+        @media (max-width: 768px) {
+            body { padding: 0; }
+            .app { max-height: 100vh; border-radius: 0; }
+            .sidebar { width: 200px; padding: 12px; }
+            .sidebar .logo-area span { display: none; }
+            .sidebar .nav-item span { display: none; }
+            .sidebar .nav-item { justify-content: center; }
+            .sidebar .user-email { font-size: 11px; text-align: center; }
+            .sidebar .logout-btn { justify-content: center; }
+            .chat-main .chat-header { padding: 12px 16px; }
+            .chat-main .chat-messages { padding: 12px; }
+            .chat-main .input-area { padding: 10px 16px 16px; }
+            .login-card { padding: 28px 20px; }
+        }
+
         @media (max-width: 480px) {
-            body { padding: 8px; }
-            .app-container {
-                max-height: 98vh;
-                border-radius: 20px;
-            }
-            .topbar { padding: 12px 16px; }
-            .topbar-left .app-name { font-size: 16px; }
-            .topbar-left .logo { height: 28px; }
-            .auth-section { padding: 24px 20px; }
-            .auth-section .auth-title { font-size: 20px; }
-            .chat-area { padding: 16px; }
-            .message { max-width: 88%; }
-            .input-area { padding: 10px 16px 16px 16px; gap: 8px; }
-            .input-area input[type="text"] { padding: 10px 14px; font-size: 16px; }
-            .input-area .send-btn { width: 44px; height: 44px; }
-            .input-area .send-btn img { height: 20px; width: 20px; }
-            .input-area .attach-btn img { height: 22px; width: 22px; }
-            .topbar-right .user-email { font-size: 12px; }
-        }
-
-        @media (min-width: 768px) {
-            .app-container { max-width: 640px; }
+            .sidebar { width: 60px; padding: 8px; }
+            .sidebar .logo-area img { height: 28px; }
+            .sidebar .nav-item { padding: 10px; }
+            .chat-main .message { max-width: 90%; }
         }
     </style>
 </head>
 
 <body>
 
-    <div class="app-container" id="app">
+    <div class="app" id="app">
 
-        <!-- ===== 顶栏 ===== -->
-        <div class="topbar">
-            <div class="topbar-left">
-                <!-- 图标从本地文件加载，请替换路径 -->
-                <img class="logo" src="assets/logo.svg" alt="Logo" onerror="this.style.display='none'" />
-                <span class="app-name">MiniChat</span>
-            </div>
-            <div class="topbar-right" id="topbarRight">
-                <span class="user-email" id="currentUserDisplay">未登录</span>
-                <button class="logout-btn" id="btnLogout">
-                    <!-- 可选退出图标 -->
-                    <img src="assets/logout.svg" alt="" onerror="this.style.display='none'" />
-                    退出
-                </button>
-            </div>
-        </div>
-
-        <!-- ===== 登录区域 ===== -->
-        <div class="auth-section" id="authSection">
-            <div>
+        <!-- ==========================================
+             登录界面（覆盖层）
+             ========================================== -->
+        <div class="login-overlay" id="loginOverlay">
+            <div class="login-card">
+                <div class="logo-area">
+                    <!-- Logo 本地文件 -->
+                    <img src="assets/logo.svg" alt="Logo" onerror="this.style.display='none'" />
+                    <h1>MiniChat</h1>
+                </div>
                 <div class="auth-title">欢迎回来</div>
-                <div class="auth-sub">输入邮箱，获取验证码即可登录</div>
+                <div class="auth-sub">输入邮箱，获取验证码登录</div>
+
+                <input type="email" id="authEmail" placeholder="电子邮箱" />
+                <div class="code-row">
+                    <input type="text" id="authCode" placeholder="6位验证码" maxlength="6" />
+                    <button class="btn" id="btnSendCode">获取验证码</button>
+                </div>
+                <button class="btn-primary" id="btnLogin">登录 / 注册</button>
+                <div class="auth-message" id="authMessage"></div>
             </div>
-            <input type="email" id="authEmail" placeholder="电子邮箱" />
-            <div class="code-row">
-                <input type="text" id="authCode" placeholder="6位验证码" maxlength="6" />
-                <button class="btn" id="btnSendCode">获取验证码</button>
-            </div>
-            <button class="btn-primary" id="btnLogin">登录 / 注册</button>
-            <div class="auth-message" id="authMessage"></div>
         </div>
 
-        <!-- ===== 聊天区域 ===== -->
-        <div class="chat-section hidden" id="chatSection">
-            <div class="chat-area" id="messageList"></div>
-            <div class="input-area">
-                <label class="attach-btn" title="发送图片">
-                    <!-- 附件图标 -->
-                    <img src="assets/attach.svg" alt="附件" onerror="this.style.display='none'" />
-                    <input type="file" id="fileInput" accept="image/*" style="display:none;" />
-                </label>
-                <input type="text" id="chatInput" placeholder="输入消息…" />
-                <button class="send-btn" id="btnSend">
-                    <!-- 发送图标 -->
-                    <img src="assets/send.svg" alt="发送" onerror="this.style.display='none'" />
-                </button>
-            </div>
+        <!-- ==========================================
+             主界面（左侧栏 + 右侧聊天）
+             ========================================== -->
+        <div class="main-interface hidden" id="mainInterface">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="logo-area">
+                    <img src="assets/logo.svg" alt="Logo" onerror="this.style.display='none'" />
+                    <span>MiniChat</span>
+                </div>
+
+                <nav class="nav">
+                    <div class="nav-item active">
+                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>聊天</span>
+                    </div>
+                    <div class="nav-item">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span>设置</span>
+                    </div>
+                </nav>
+
+                <div class="user-section">
+                    <div class="user-email" id="sidebarUserEmail">未登录</div>
+                    <button class="logout-btn" id="btnLogout">
+                        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        退出
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 右侧聊天主区域 -->
+            <main class="chat-main">
+                <div class="chat-header">
+                    <div class="chat-title">
+                        全局聊天
+                        <small># 所有成员</small>
+                    </div>
+                    <div style="font-size:13px;color:var(--text-secondary);">
+                        <span id="onlineStatus">● 在线</span>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="messageList">
+                    <!-- 消息动态渲染 -->
+                </div>
+
+                <div class="input-area">
+                    <label class="attach-btn" title="发送图片">
+                        <img src="assets/attach.svg" alt="附件" onerror="this.style.display='none'" />
+                        <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+                    </label>
+                    <input type="text" id="chatInput" placeholder="输入消息…" />
+                    <button class="send-btn" id="btnSend">
+                        <img src="assets/send.svg" alt="发送" onerror="this.style.display='none'" />
+                    </button>
+                </div>
+            </main>
         </div>
 
     </div>
 
+    <!-- ==========================================
+         JavaScript 逻辑（保留原有功能）
+         ========================================== -->
     <script>
         // ==========================================
         // 1. 配置
@@ -482,24 +620,24 @@
         }
 
         // ==========================================
-        // 3. 状态 & DOM
+        // 3. DOM 引用
         // ==========================================
-        let currentEmail = '';
-        let isCodeSending = false;
-
-        const authSection = document.getElementById('authSection');
-        const chatSection = document.getElementById('chatSection');
+        const loginOverlay = document.getElementById('loginOverlay');
+        const mainInterface = document.getElementById('mainInterface');
         const authEmail = document.getElementById('authEmail');
         const authCode = document.getElementById('authCode');
         const authMessage = document.getElementById('authMessage');
         const messageList = document.getElementById('messageList');
         const chatInput = document.getElementById('chatInput');
-        const currentUserDisplay = document.getElementById('currentUserDisplay');
+        const sidebarUserEmail = document.getElementById('sidebarUserEmail');
         const btnSendCode = document.getElementById('btnSendCode');
         const btnLogin = document.getElementById('btnLogin');
         const btnSend = document.getElementById('btnSend');
         const btnLogout = document.getElementById('btnLogout');
         const fileInput = document.getElementById('fileInput');
+
+        let currentEmail = '';
+        let isCodeSending = false;
 
         // ==========================================
         // 4. 工具函数
@@ -516,16 +654,16 @@
             if (type === 'error') authMessage.classList.add('error');
         }
 
-        // 图片预览与下载（无 emoji）
+        // 图片预览与下载
         window.previewImage = function(url) {
             const overlay = document.createElement('div');
             overlay.style.cssText =
-                'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;box-sizing:border-box;touch-action:manipulation;';
+                'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;box-sizing:border-box;touch-action:manipulation;';
 
             const img = document.createElement('img');
             img.src = url;
             img.style.cssText =
-                'max-width:100%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;box-shadow:0 10px 30px rgba(0,0,0,0.3);';
+                'max-width:100%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
 
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;justify-content:center;';
@@ -571,7 +709,7 @@
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '关闭';
             closeBtn.style.cssText =
-                'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,0.2);color:#fff;font-size:15px;font-weight:500;cursor:pointer;touch-action:manipulation;min-height:44px;min-width:100px;';
+                'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;font-size:15px;font-weight:500;cursor:pointer;touch-action:manipulation;min-height:44px;min-width:100px;';
             closeBtn.onclick = function(e) {
                 e.stopPropagation();
                 document.body.removeChild(overlay);
@@ -695,9 +833,9 @@
         // 7. 进入聊天
         // ==========================================
         function enterChat() {
-            authSection.classList.add('hidden');
-            chatSection.classList.remove('hidden');
-            currentUserDisplay.textContent = currentEmail;
+            loginOverlay.classList.add('hidden');
+            mainInterface.classList.remove('hidden');
+            sidebarUserEmail.textContent = currentEmail;
             messageList.innerHTML = '';
             localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail }));
             subscribeMessages();
@@ -713,12 +851,12 @@
                 window.chatChannel = null;
             }
             currentEmail = '';
-            chatSection.classList.add('hidden');
-            authSection.classList.remove('hidden');
+            mainInterface.classList.add('hidden');
+            loginOverlay.classList.remove('hidden');
             authMessage.textContent = '';
             messageList.innerHTML = '';
             authCode.value = '';
-            currentUserDisplay.textContent = '未登录';
+            sidebarUserEmail.textContent = '未登录';
             localStorage.removeItem('minichat_user');
             setAuthMessage('已退出', '');
         };
@@ -900,7 +1038,7 @@
         btnSend.addEventListener('click', window.sendMessageHandler);
         btnLogout.addEventListener('click', window.handleLogout);
 
-        // 点击附件按钮触发文件选择
+        // 附件按钮触发文件选择
         document.querySelector('.attach-btn')?.addEventListener('click', function(e) {
             e.preventDefault();
             fileInput.click();
@@ -923,6 +1061,5 @@
         console.log('Auth Webhook:', WEBHOOK_AUTH);
         console.log('Send Message Webhook:', WEBHOOK_SEND_MESSAGE);
     </script>
-
 </body>
 </html>
