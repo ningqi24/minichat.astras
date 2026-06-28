@@ -2757,6 +2757,23 @@
                 }
                 setTimeout(hideSplash, SPLASH_DURATION + 120);
             });
+            let deferredPrompt;
+                window.addEventListener('beforeinstallprompt', (e) => {
+                  e.preventDefault();
+                  deferredPrompt = e;
+                  // 显示自定义安装按钮（示例：在界面某个位置显示）
+                  const installBtn = document.createElement('button');
+                  installBtn.textContent = '📱 安装 MiniChat';
+                  installBtn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 24px;background:#3b82f6;color:#fff;border:none;border-radius:30px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+                  document.body.appendChild(installBtn);
+                  installBtn.addEventListener('click', () => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => {
+                      installBtn.remove();
+                      deferredPrompt = null;
+                    });
+                  });
+                });
         })();
 
         loadTheme();
