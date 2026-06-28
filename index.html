@@ -36,8 +36,6 @@
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;display:flex;justify-content:center;align-items:center;padding:16px;transition:background .3s,color .3s}
         .app{width:100%;max-width:1300px;height:96vh;max-height:900px;background:var(--bg-secondary);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;overflow:hidden;position:relative}
-
-        /* === 启动画面 === */
         .splash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;z-index:400;transition:opacity .35s,visibility .35s}
         .splash.hidden{opacity:0;visibility:hidden;pointer-events:none}
         .splash-inner{display:flex;align-items:center;gap:10px}
@@ -46,8 +44,6 @@
         .splash-bar{width:320px;max-width:calc(100% - 80px);height:6px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.5);margin-top:4px}
         .splash-bar .fill{height:100%;width:0%;background:#3b82f6;border-radius:6px;animation:splashFill 1.8s linear 1 forwards}
         @keyframes splashFill{from{width:0%}to{width:100%}}
-
-        /* === 登录覆盖层 === */
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;border-radius:var(--radius);transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
         .login-card{background:var(--bg-card);padding:40px 36px;border-radius:var(--radius);width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.8);border:1px solid var(--border-color)}
@@ -71,8 +67,6 @@
         .login-card .pwd-wrapper{position:relative}
         .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;transition:background .2s,color .2s}
         .login-card .pwd-wrapper .toggle-pwd:hover{background:var(--bg-hover);color:var(--text-primary)}
-
-        /* === 侧边栏 === */
         .sidebar .logo-area .logo-text{font-size:18px;font-weight:700;color:var(--text-primary);margin-left:4px}
         .sidebar .version-tag{font-size:10px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}
@@ -89,8 +83,6 @@
         .sidebar .nav-item svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
         .sidebar .user-section{border-top:1px solid var(--border-color);padding-top:16px;margin-top:auto}
         .sidebar .user-email{font-size:13px;color:var(--text-secondary);padding:8px 0;word-break:break-all}
-
-        /* === 主聊天区域 === */
         .chat-main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-secondary)}
         .chat-main .chat-header{padding:16px 24px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
         .chat-main .chat-header .chat-title{font-size:18px;font-weight:600}
@@ -117,8 +109,6 @@
         .online-user-name{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .online-user-email{font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .online-empty{color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0}
-
-        /* === 消息列表 === */
         .chat-main .chat-messages{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:12px;background:var(--bg-primary)}
         .chat-main .chat-messages::-webkit-scrollbar{width:4px}
         .chat-main .chat-messages::-webkit-scrollbar-track{background:transparent}
@@ -175,8 +165,6 @@
         .chat-main .message .recall-btn{background:rgba(128,128,128,.15);border:1px solid rgba(128,128,128,.1);color:var(--text-secondary);font-size:11px;cursor:pointer;padding:2px 10px;border-radius:4px;transition:all .15s ease;touch-action:manipulation}
         .chat-main .message .recall-btn:hover{background:rgba(255,100,100,.3);color:#f87171;transform:translateY(-1px)}
         .chat-main .message .recall-btn:active{transform:scale(0.9)}
-
-        /* === 用户资料弹窗 === */
         .user-profile-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:500;animation:fadeIn .2s ease}
         .user-profile-modal.active{display:flex}
         .user-profile-modal .modal-content{background:var(--bg-card);border-radius:var(--radius);padding:32px;max-width:360px;width:90%;border:1px solid var(--border-color);box-shadow:var(--shadow);text-align:center}
@@ -192,8 +180,6 @@
         .user-profile-modal .modal-close{margin-top:16px;background:var(--bg-input);border:none;padding:10px;border-radius:var(--radius-sm);color:var(--text-primary);font-weight:500;cursor:pointer;width:100%;transition:all .2s ease}
         .user-profile-modal .modal-close:hover{background:var(--bg-hover);transform:translateY(-1px)}
         .user-profile-modal .modal-close:active{transform:scale(0.97)}
-
-        /* === 头像上传 === */
         .avatar-upload-area{display:flex;align-items:center;gap:16px;margin:6px 0 4px}
         .avatar-upload-area .preview{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--bg-input);border:2px solid var(--border-color);flex-shrink:0}
         .avatar-upload-area .upload-btn{padding:6px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:12px;cursor:pointer;transition:all .2s ease}
@@ -201,8 +187,6 @@
         .avatar-upload-area .upload-btn:active{transform:scale(0.95)}
         .avatar-upload-area input[type="file"]{display:none}
         .avatar-upload-status{font-size:12px;color:var(--text-secondary);margin-top:2px}
-
-        /* === 附件区域 === */
         .attachment-area{display:flex;flex-wrap:wrap;gap:8px;padding:4px 24px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);min-height:0}
         .attachment-area:empty{display:none}
         .attachment-item{display:flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:4px 8px 4px 4px;font-size:12px;color:var(--text-secondary);max-width:200px}
@@ -216,8 +200,6 @@
         .attachment-item.quote-attachment .qa-label{font-size:10px;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:3px;text-transform:uppercase;letter-spacing:.5px}
         .attachment-item.quote-attachment .qa-author{font-size:12px;font-weight:700;color:var(--quote-author)}
         .attachment-item.quote-attachment .qa-text{font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4}
-
-        /* === 输入区域 === */
         .chat-main .input-area{padding:12px 24px 20px;background:var(--bg-secondary);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;position:relative}
         .chat-main .input-area .input-group{flex:1;display:flex;align-items:center;gap:8px;min-width:0;position:relative}
         .chat-main .input-area .input-group textarea{flex:1;padding:10px 14px;border-radius:24px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:15px;outline:none;transition:var(--transition);resize:vertical;min-height:48px;max-height:150px;line-height:1.5;font-family:inherit;white-space:pre-wrap;word-wrap:break-word}
@@ -233,8 +215,6 @@
         .chat-main .input-area .send-btn:active{transform:scale(0.92)}
         .chat-main .input-area .send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
         .chat-main .input-area .send-btn svg{width:24px;height:24px;display:block;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-
-        /* === @提及下拉 === */
         .mention-dropdown{display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);max-height:150px;overflow-y:auto;z-index:50;box-shadow:var(--shadow);padding:4px 0}
         .mention-dropdown.active{display:block}
         .mention-dropdown .mention-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;transition:background .2s ease}
@@ -242,15 +222,11 @@
         .mention-dropdown .mention-item img{width:24px;height:24px;border-radius:50%;object-fit:cover}
         .mention-dropdown .mention-item .name{font-size:13px;color:var(--text-primary)}
         .mention-dropdown .mention-item .email{font-size:11px;color:var(--text-muted);margin-left:4px}
-
-        /* === 表情选择器 === */
         .emoji-picker{display:none;position:absolute;bottom:70px;left:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px;box-shadow:var(--shadow);z-index:300;max-width:280px;max-height:200px;overflow-y:auto;flex-wrap:wrap;gap:6px}
         .emoji-picker.active{display:flex}
         .emoji-picker span{font-size:24px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .2s ease,transform .15s ease;user-select:none}
         .emoji-picker span:hover{background:var(--bg-hover);transform:scale(1.1)}
         .emoji-picker span:active{transform:scale(0.9)}
-
-        /* === 正在输入提示 === */
         .typing-indicator{padding:4px 24px 0;font-size:13px;color:var(--text-secondary);min-height:28px;display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .25s;pointer-events:none;background:var(--bg-secondary)}
         .typing-indicator.active{opacity:1}
         .typing-dots{display:flex;align-items:center;gap:2px}
@@ -258,8 +234,6 @@
         .typing-dots span:nth-child(2){animation-delay:.2s}
         .typing-dots span:nth-child(3){animation-delay:.4s}
         @keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
-
-        /* === 设置面板 === */
         .settings-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:300;border-radius:var(--radius);transition:opacity .25s,visibility .25s;opacity:0;visibility:hidden;pointer-events:none}
         .settings-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
         .settings-panel{background:var(--bg-card);border-radius:var(--radius);padding:32px 36px;width:100%;max-width:400px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto}
@@ -287,8 +261,6 @@
         .settings-panel .close-settings:hover{background:var(--bg-hover);transform:translateY(-1px)}
         .settings-panel .close-settings:active{transform:scale(0.97)}
         .settings-panel .panel-version{margin-top:12px;text-align:center;font-size:11px;color:var(--text-muted)}
-
-        /* === 动画 === */
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes highlightPulse{
             0%{box-shadow:0 0 0 0 rgba(59,130,246,0.6);}
@@ -299,8 +271,6 @@
             animation:highlightPulse 0.8s ease 3;
             border-radius:var(--radius-sm);
         }
-
-        /* === 响应式 === */
         @media(max-width:768px){body{padding:0}.app{max-height:100vh;border-radius:0}.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:8px}.login-card{padding:28px 20px}.splash-inner .splash-icon{height:120px;width:120px}.splash-divider{height:120px}.splash-bar{width:260px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.emoji-picker{left:10px;bottom:60px;max-width:220px}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}}
         @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-inner .splash-icon{height:80px;width:80px}.splash-divider{height:80px}.splash-bar{width:calc(100% - 48px)}}
     </style>
@@ -378,8 +348,8 @@
     </div>
 </div>
 <script>
-/* ===== 版本号 v2.2.4 ===== */
-const APP_VERSION='2.2.4';
+/* ===== 版本号 v2.2.5 ===== */
+const APP_VERSION='2.2.5';
 document.getElementById('sidebarVersion').textContent='v'+APP_VERSION;
 document.getElementById('panelVersion').textContent='MiniChat v'+APP_VERSION;
 
@@ -394,7 +364,6 @@ let currentEmail='',currentUserId='',currentDisplayName='',currentAvatarUrl='',i
 const MIN_SEND_INTERVAL=500,PAGE_SIZE=20;
 let isLoadingMore=false,hasMoreMessages=true,oldestTimestamp=null,unreadCount=0;
 
-/* ===== 头像缓存破坏 ===== */
 function bustCache(url){
     if(!url)return'';
     if(url.includes('ui-avatars.com'))return url;
@@ -410,17 +379,14 @@ function getAvatarUrl(email){
 }
 function getDefaultAvatar(email){return'https://ui-avatars.com/api/?name='+encodeURIComponent(email?email.split('@')[0]:'用户')+'&background=3b82f6&color=fff&size=128&bold=true';}
 
-/* ===== 富文本渲染器（支持带邮箱的引用） ===== */
 function renderMessageContent(raw){
     if(!raw)return'';
     let text=raw;
     const quotes=[],images=[],audios=[];
-    // 匹配格式: [quote:作者|时间|邮箱|内容]
     text=text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([\s\S]*?)\]/g, function(_, a, t, e, b){
         quotes.push({author:a, time:t, email:e, body:b});
         return '\x00Q'+quotes.length+'Q\x00';
     });
-    // 兼容旧格式（无邮箱）
     text=text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([\s\S]*?)\]/g, function(_, a, t, b){
         quotes.push({author:a, time:t, email:'', body:b});
         return '\x00Q'+quotes.length+'Q\x00';
@@ -452,19 +418,15 @@ function renderMessageContent(raw){
 }
 function esc(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';}
 
-/* ===== 工具 ===== */
 function formatTime(iso){return iso?new Date(iso).toLocaleString('zh-CN',{hour12:false}):'未知';}
 function formatTimeShort(iso){return new Date(iso).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});}
 function setAuthMessage(msg,type){authMessage.textContent=msg;authMessage.className='auth-message';if(type==='success')authMessage.classList.add('success');if(type==='error')authMessage.classList.add('error');}
 
-/* ===== 主题 ===== */
 function loadTheme(){if(localStorage.getItem('minichat_theme')==='light'){document.body.classList.add('light-theme');themeToggle.classList.remove('active');}else{document.body.classList.remove('light-theme');themeToggle.classList.add('active');}}
 function toggleTheme(){const l=document.body.classList.toggle('light-theme');themeToggle.classList.toggle('active');localStorage.setItem('minichat_theme',l?'light':'dark');}
 
-/* ===== 图片压缩 ===== */
 function compressImage(file,mw,q){return new Promise((res,rej)=>{const r=new FileReader();r.onload=function(e){const img=new Image();img.onload=function(){const c=document.createElement('canvas');let w=img.width,h=img.height;if(w>mw){h=h*(mw/w);w=mw;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);c.toBlob(function(b){if(!b){rej(new Error('压缩失败'));return;}res(new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()}));},'image/jpeg',q);};img.onerror=rej;img.src=e.target.result;};r.onerror=rej;r.readAsDataURL(file);});}
 
-/* ===== 头像上传 ===== */
 async function uploadAvatar(file){
     if(!currentUserId){alert('请先登录');return;}
     if(!file||!file.type.startsWith('image/')){avatarUploadStatus.textContent='请选择图片';avatarUploadStatus.style.color='#f87171';return;}
@@ -493,7 +455,6 @@ function refreshAllAvatars(email,newUrl){
     document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(function(img){img.src=busted;});
 }
 
-/* ===== 用户信息 ===== */
 async function fetchUserProfiles(emails){
     if(!emails||!emails.length)return{};
     const{data,error}=await supabase.from('profiles').select('email,display_name,avatar_url,created_at,last_login').in('email',emails);
@@ -516,7 +477,6 @@ function showUserProfile(email){
     profileModal.classList.add('active');
 }
 
-/* ===== 引用附件 ===== */
 function addQuoteAttachment(senderName, senderEmail, content, time){
     let plain=content||'';
     plain=plain.replace(/!\[image\]\([^)]*\)/g,'[图片]').replace(/\[audio\]\([^)]*\)/g,'[音频]').replace(/\[quote:[^\]]*\]/g,'').trim();
@@ -535,8 +495,8 @@ function addQuoteAttachment(senderName, senderEmail, content, time){
 function insertAtCursor(text){chatInput.value=text+'\n';chatInput.selectionStart=chatInput.selectionEnd=chatInput.value.length;chatInput.focus();chatInput.dispatchEvent(new Event('input',{bubbles:true}));autoResizeTextarea();}
 function autoResizeTextarea(){chatInput.style.height='auto';chatInput.style.height=Math.min(Math.max(chatInput.scrollHeight,48),150)+'px';}
 
-/* ===== 引用跳转功能 ===== */
 function scrollToQuote(author, time, email){
+    console.log('🔍 scrollToQuote 被调用:', { author, time, email });
     if(!author) {
         setAuthMessage('引用信息缺失', 'error');
         setTimeout(() => setAuthMessage(''), 2000);
@@ -550,6 +510,7 @@ function scrollToQuote(author, time, email){
         return;
     }
     const elements = messageList.querySelectorAll('.message');
+    console.log('📋 当前消息数量:', elements.length);
     let bestMatch = null;
     let bestDiff = Infinity;
 
@@ -561,7 +522,6 @@ function scrollToQuote(author, time, email){
         if(isNaN(msgTime)) continue;
 
         let match = false;
-        // 优先使用邮箱匹配
         if(email && senderEmail === email) {
             match = true;
         } else if(!email && senderName === author) {
@@ -580,16 +540,17 @@ function scrollToQuote(author, time, email){
     }
 
     if(bestMatch) {
+        console.log('✅ 找到匹配消息，滚动中...');
         bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
         bestMatch.classList.add('message-highlight');
         setTimeout(() => bestMatch.classList.remove('message-highlight'), 2400);
     } else {
+        console.warn('❌ 未找到匹配消息');
         setAuthMessage('未找到原始消息（可能已删除或未加载）', 'error');
         setTimeout(() => setAuthMessage(''), 2500);
     }
 }
 
-/* ===== 创建消息元素 ===== */
 function createMessageElement(msg){
     const{content,sender_name,sender_email,isMe,time,id,created_at}=msg;
     const div=document.createElement('div');
@@ -646,7 +607,6 @@ function createMessageElement(msg){
 function addMessageToBottom(msg){messageList.appendChild(createMessageElement(msg));messageList.scrollTop=messageList.scrollHeight;}
 function prependMessages(msgs){const f=document.createDocumentFragment();msgs.forEach(m=>f.appendChild(createMessageElement(m)));if(messageList.firstChild)messageList.insertBefore(f,messageList.firstChild);else messageList.appendChild(f);}
 
-/* ===== 加载历史 ===== */
 async function loadHistory(append){
     if(isLoadingMore||!hasMoreMessages)return;isLoadingMore=true;
     try{
@@ -664,7 +624,6 @@ async function loadHistory(append){
 }
 async function refreshMessages(){messageList.innerHTML='';hasMoreMessages=true;oldestTimestamp=null;await loadHistory(false);}
 
-/* ===== 认证 ===== */
 function switchMode(mode){
     isLoginMode=(mode==='login');
     authTitle.textContent=isLoginMode?'欢迎回来':'创建账户';
@@ -693,7 +652,6 @@ async function ensureProfile(uid,email){
     else await supabase.from('profiles').update({last_login:new Date().toISOString()}).eq('id',uid);
 }
 
-/* ===== 昵称 ===== */
 async function loadDisplayName(){
     if(!currentUserId)return;
     try{
@@ -729,49 +687,53 @@ async function refreshSettingsData(){
     }
 }
 
-/* ===== 全局事件监听（使用事件委托，绑定在稳定的 document 上） ===== */
-function setupGlobalEventListeners() {
-    // 引用块点击 - 使用事件委托
-    document.addEventListener('click', function(e) {
-        const quote = e.target.closest('.quote-block');
-        if (quote) {
-            e.preventDefault();
-            const author = quote.dataset.author;
-            const time = quote.dataset.time;
-            const email = quote.dataset.email || '';
-            if (author && time) {
-                scrollToQuote(author, time, email);
-            } else {
-                setAuthMessage('引用数据不完整', 'error');
-                setTimeout(() => setAuthMessage(''), 2000);
-            }
-            return;
+function handleDocumentClick(e) {
+    console.log('🖱️ 全局点击事件触发，目标元素:', e.target);
+    const recallBtn = e.target.closest('.recall-btn');
+    if (recallBtn) {
+        e.preventDefault();
+        if (recallBtn.dataset.messageId) {
+            window.recallMessage(recallBtn.dataset.messageId);
         }
-
-        // 撤回按钮
-        const recallBtn = e.target.closest('.recall-btn');
-        if (recallBtn) {
-            e.preventDefault();
-            if (recallBtn.dataset.messageId) {
-                window.recallMessage(recallBtn.dataset.messageId);
-            }
-            return;
+        return;
+    }
+    const quote = e.target.closest('.quote-block');
+    if (quote) {
+        e.preventDefault();
+        console.log('📝 引用块被点击:', quote);
+        const author = quote.dataset.author || quote.getAttribute('data-author');
+        const time = quote.dataset.time || quote.getAttribute('data-time');
+        const email = quote.dataset.email || quote.getAttribute('data-email') || '';
+        console.log('📊 引用数据:', { author, time, email });
+        if (author && time) {
+            scrollToQuote(author, time, email);
+        } else {
+            console.warn('⚠️ 引用数据缺失:', quote.outerHTML);
+            setAuthMessage('引用数据不完整，请检查控制台', 'error');
+            setTimeout(() => setAuthMessage(''), 3000);
         }
-    });
-
-    // 滚动加载更多 - 使用事件委托
-    document.addEventListener('scroll', function(e) {
-        // 只处理 messageList 的滚动
-        if (e.target === messageList || e.target.closest('#messageList')) {
-            const target = e.target === messageList ? messageList : e.target.closest('#messageList');
-            if (target && target.scrollTop <= 20 && !isLoadingMore && hasMoreMessages) {
-                loadHistory(true);
-            }
-        }
-    }, true); // 使用捕获阶段确保能捕获到滚动事件
+        return;
+    }
 }
 
-/* ===== 进入聊天 ===== */
+function handleDocumentScroll(e) {
+    if (e.target === messageList || e.target.closest('#messageList')) {
+        const target = e.target === messageList ? messageList : e.target.closest('#messageList');
+        if (target && target.scrollTop <= 20 && !isLoadingMore && hasMoreMessages) {
+            console.log('⬆️ 滚动到顶，加载更多');
+            loadHistory(true);
+        }
+    }
+}
+
+function setupGlobalEventListeners() {
+    document.removeEventListener('click', handleDocumentClick);
+    document.removeEventListener('scroll', handleDocumentScroll);
+    document.addEventListener('click', handleDocumentClick);
+    document.addEventListener('scroll', handleDocumentScroll, true);
+    console.log('✅ 全局事件监听已设置');
+}
+
 function enterChat(){
     loginOverlay.classList.add('hidden');mainInterface.classList.remove('hidden');
     hasMoreMessages=true;oldestTimestamp=null;isLoadingMore=false;unreadCount=0;document.title='MiniChat';
@@ -780,17 +742,10 @@ function enterChat(){
     loadTheme();
     if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();
     subscribeMessages();
-
-    // 设置全局事件监听（只执行一次）
-    if (!window._globalListenersSetup) {
-        setupGlobalEventListeners();
-        window._globalListenersSetup = true;
-    }
-
+    setupGlobalEventListeners();
     btnSend.disabled=false;chatInput.addEventListener('input',autoResizeTextarea);autoResizeTextarea();
 }
 
-/* ===== 退出 ===== */
 async function handleLogout(){
     if(window.chatChannel){try{await window.chatChannel.untrack();}catch(e){}window.chatChannel.unsubscribe();window.chatChannel=null;}
     await supabase.auth.signOut();currentEmail='';currentUserId='';currentDisplayName='';
@@ -802,7 +757,6 @@ async function handleLogout(){
 }
 function closeSettingsFunc(){settingsOverlay.classList.remove('active');}
 
-/* ===== 附件渲染 ===== */
 function renderAttachments(){
     attachmentArea.innerHTML='';
     attachments.forEach(function(att,idx){
@@ -835,7 +789,6 @@ function addAttachment(file){
     attachments.push({id:Date.now()+Math.random(),file:file,type:t,name:file.name});renderAttachments();
 }
 
-/* ===== 上传附件辅助 ===== */
 async function uploadNewAttachments(list){
     if(!list.length)return[];
     const results=await Promise.all(list.map(async att=>{
@@ -850,7 +803,6 @@ async function uploadNewAttachments(list){
     return results.filter(Boolean);
 }
 
-/* ===== 发送消息 ===== */
 async function sendMessageContent(content){
     if(!currentEmail){alert('请先登录');return;}
     const text=(content||'').trim();
@@ -890,10 +842,8 @@ async function sendMessageContent(content){
     }finally{isSending=false;btnSend.disabled=false;chatInput.disabled=false;}
 }
 
-/* ===== 撤回 ===== */
 window.recallMessage=async function(mid){if(!mid||!confirm('确定撤回？'))return;try{const{error}=await supabase.from('messages').update({content:'（已撤回）'}).eq('id',mid).eq('sender_email',currentEmail);if(error){setAuthMessage('撤回失败','error');setTimeout(()=>setAuthMessage(''),3000);}}catch(e){console.error(e);}};
 
-/* ===== 在线UI ===== */
 function updateOnlineUI(){onlineStatus.textContent='● '+onlineCount+' 人在线';onlineBadge.textContent=onlineCount;onlineBadge.classList.toggle('show',onlineCount>0);modalOnlineCount.textContent=onlineCount;renderOnlineUsers();}
 function renderOnlineUsers(){
     onlineUserList.innerHTML='';
@@ -911,7 +861,6 @@ function renderOnlineUsers(){
     }
 }
 
-/* ===== @提及 ===== */
 let mentionActive=false;
 chatInput.addEventListener('input',function(){
     const v=this.value,cp=this.selectionStart,la=v.lastIndexOf('@',cp);
@@ -927,12 +876,10 @@ function renderMentionDropdown(filter){
 }
 document.addEventListener('click',function(e){if(mentionActive&&!mentionDropdown.contains(e.target)&&e.target!==chatInput){mentionDropdown.classList.remove('active');mentionActive=false;}});
 
-/* ===== 输入指示 ===== */
 let typingStopId=null,lastTypingBT=0;
 function sendTypingEvent(){if(!window.chatChannel||!currentUserId)return;const n=Date.now();if(n-lastTypingBT<1500)return;lastTypingBT=n;window.chatChannel.send({type:'broadcast',event:'typing',payload:{user_id:currentUserId,display_name:currentDisplayName||currentEmail.split('@')[0],avatar_url:currentAvatarUrl}});}
 function showTypingIndicator(dn){const i=$('typingIndicator'),t=$('typingText');if(!i||!t)return;t.textContent=(dn||'用户')+' 正在输入';i.classList.add('active');clearTimeout(typingStopId);typingStopId=setTimeout(()=>i.classList.remove('active'),2000);}
 
-/* ===== 订阅 ===== */
 function subscribeMessages(){
     if(window.chatChannel){window.chatChannel.unsubscribe();window.chatChannel=null;}
     const ch=supabase.channel('chat-room',{config:{presence:{key:currentUserId}}});
@@ -976,10 +923,8 @@ function subscribeMessages(){
     window.chatChannel=ch;
 }
 
-/* ===== 图片预览 ===== */
 window.previewImage=function(url){const o=document.createElement('div');o.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;';const img=document.createElement('img');img.src=url;img.style.cssText='max-width:100%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;';const bc=document.createElement('div');bc.style.cssText='display:flex;gap:16px;';const db=document.createElement('button');db.textContent='下载';db.style.cssText='padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;cursor:pointer;';db.onclick=function(e){e.stopPropagation();db.textContent='下载中…';db.disabled=true;fetch(url).then(r=>r.blob()).then(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=url.split('/').pop().split('?')[0]||'image.jpg';document.body.appendChild(a);a.click();a.remove();db.textContent='已下载';setTimeout(()=>{db.textContent='下载';db.disabled=false;},2000);}).catch(()=>{db.textContent='失败';setTimeout(()=>{db.textContent='下载';db.disabled=false;},2000);});};const cb=document.createElement('button');cb.textContent='关闭';cb.style.cssText='padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-size:15px;cursor:pointer;';cb.onclick=function(e){e.stopPropagation();document.body.removeChild(o);};bc.appendChild(db);bc.appendChild(cb);o.addEventListener('click',function(e){if(e.target===o)document.body.removeChild(o);});o.appendChild(img);o.appendChild(bc);document.body.appendChild(o);};
 
-/* ===== 拖拽/粘贴 ===== */
 chatInput.addEventListener('dragover',function(e){e.preventDefault();this.style.borderColor='var(--accent)';});
 chatInput.addEventListener('dragleave',function(e){e.preventDefault();this.style.borderColor='';});
 chatInput.addEventListener('drop',function(e){e.preventDefault();this.style.borderColor='';const f=e.dataTransfer.files;if(f)for(let fi of f)if(fi.type.startsWith('image/')||fi.type.startsWith('audio/'))addAttachment(fi);});
@@ -987,19 +932,16 @@ chatInput.addEventListener('paste',function(e){for(let i of e.clipboardData.item
 attachBtn.addEventListener('click',function(e){e.preventDefault();fileInput.click();});
 fileInput.addEventListener('change',function(e){const f=e.target.files;if(f)for(let fi of f)addAttachment(fi);fileInput.value='';});
 
-/* ===== 输入事件 ===== */
 chatInput.addEventListener('keydown',function(e){
     if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessageContent(this.value);}
 });
 btnSend.addEventListener('click',function(){sendMessageContent(chatInput.value);});
 
-/* ===== Emoji ===== */
 let emojiVisible=false;
 emojiBtn.addEventListener('click',function(e){e.stopPropagation();emojiVisible=!emojiVisible;emojiPicker.classList.toggle('active',emojiVisible);});
 emojiPicker.addEventListener('click',function(e){if(e.target.tagName==='SPAN'){insertAtCursor(e.target.textContent);emojiPicker.classList.remove('active');emojiVisible=false;}});
 document.addEventListener('click',function(e){if(emojiVisible&&!emojiPicker.contains(e.target)&&e.target!==emojiBtn){emojiPicker.classList.remove('active');emojiVisible=false;}});
 
-/* ===== 事件绑定 ===== */
 document.addEventListener('visibilitychange',function(){if(!document.hidden){unreadCount=0;document.title='MiniChat';}});
 window.addEventListener('beforeunload',async function(){if(window.chatChannel)try{await window.chatChannel.untrack();}catch(e){}});
 btnLogin.addEventListener('click',handleAuth);
@@ -1020,7 +962,6 @@ document.addEventListener('click',function(e){if(onlineModal.classList.contains(
 closeProfileModal.addEventListener('click',()=>profileModal.classList.remove('active'));
 profileModal.addEventListener('click',function(e){if(e.target===this)profileModal.classList.remove('active');});
 
-/* ===== Splash ===== */
 (function(){
     const DUR=1800,splash=$('splash'),fill=$('splashFill');
     function hide(){
