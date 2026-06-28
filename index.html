@@ -1752,7 +1752,7 @@
                 if (!append) {
                     messageList.innerHTML = '';
                     messages.forEach(msg => addMessageToBottom(msg));
-                    cacheMessages(sorted);
+                    // 不再缓存消息，避免使用过时头像
                 } else {
                     prependMessages(messages);
                 }
@@ -1768,19 +1768,18 @@
         }
 
         // ==========================================
-        // 缓存管理
+        // 缓存管理（只缓存消息内容，不用于显示）
         // ==========================================
         function cacheMessages(messages) {
+            // 保留缓存功能，但不再用于初始加载
             try {
                 localStorage.setItem('minichat_messages', JSON.stringify(messages));
             } catch (e) { /* ignore */ }
         }
 
         function getCachedMessages() {
-            try {
-                const data = localStorage.getItem('minichat_messages');
-                return data ? JSON.parse(data) : null;
-            } catch (e) { return null; }
+            // 可用于离线提示，但不再显示
+            return null;
         }
 
         async function refreshMessages() {
@@ -2030,19 +2029,13 @@
             document.title = 'MiniChat';
 
             loadDisplayName().then(() => {
+                // 加载完后，直接刷新消息列表（获取最新头像）
                 refreshMessages();
             });
 
-            const cached = getCachedMessages();
-            if (cached && cached.length > 0) {
-                messageList.innerHTML = '';
-                // 需要从缓存中提取头像信息，但缓存可能没有头像，所以调用 loadHistory 重新加载
-                // 直接重新加载，用最新数据
-                loadHistory(false);
-            } else {
-                messageList.innerHTML = '';
-                loadHistory(false);
-            }
+            // 不再从缓存加载，直接加载最新数据
+            messageList.innerHTML = '';
+            loadHistory(false);
 
             localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
             loadTheme();
@@ -2654,7 +2647,7 @@
         })();
 
         loadTheme();
-        console.log('✅ MiniChat 已升级：用户头像 + 详细信息弹窗');
+        console.log('✅ MiniChat 已升级：头像实时同步（无缓存）');
     </script>
 </body>
 </html>
