@@ -10,9 +10,9 @@ A simple “minichat” project
 [![Supabase](https://img.shields.io/badge/后端-Supabase-3b82f6)](https://supabase.com)
 [![许可证](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-> 一个极简、现代、支持实时通信的聊天室，单 HTML 文件，开箱即用。
+> ![MiniChat](./assets/logo.svg)  一个极简、现代、支持实时通信的聊天室，单 HTML 文件，开箱即用。
 
-![MiniChat](./assets/logo.svg) 
+![Inspired](./assets/Inspired.svg) ![basied](./assets/basied.svg) 
 
 ---
 
