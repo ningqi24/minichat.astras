@@ -26,8 +26,6 @@
             --radius: 16px;
             --radius-sm: 10px;
             --transition: 0.2s ease;
-            --sender-name-size: 15px;
-            --sender-email-size: 11px;
         }
         body.light-theme {
             --bg-primary: #f0f2f5;
@@ -80,7 +78,6 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            /* 更靠近图标 */
             background: #000000;
             z-index: 400;
             transition: opacity 0.35s ease, visibility 0.35s ease;
@@ -126,15 +123,10 @@
             border-radius: 6px;
             transition: width 0.25s linear;
             animation: splashFill 1.8s linear 1 forwards;
-            /* 加快速度 */
         }
         @keyframes splashFill {
-            from {
-                width: 0%;
-            }
-            to {
-                width: 100%;
-            }
+            from { width: 0%; }
+            to { width: 100%; }
         }
         /* ===== 登录界面 ===== */
         .login-overlay {
@@ -308,9 +300,6 @@
             height: 36px;
             max-width: 100%;
             object-fit: contain;
-        }
-        .sidebar .logo-area span {
-            display: none;
         }
         .sidebar .nav {
             flex: 1;
@@ -501,7 +490,7 @@
             text-align: center;
             padding: 12px 0;
         }
-        /* ===== 聊天消息样式（保留） ===== */
+        /* ===== 聊天消息样式 ===== */
         .chat-main .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -545,7 +534,6 @@
             border-bottom-left-radius: 6px;
             border: 1px solid var(--border-color);
         }
-        /* ===== 🎨 突出昵称的样式 ===== */
         .chat-main .message .sender {
             display: flex;
             align-items: baseline;
@@ -575,7 +563,6 @@
         .chat-main .message.other .sender .email {
             color: var(--text-secondary);
         }
-        /* ===== 消息底部（时间 + 撤回按钮） ===== */
         .chat-main .message .message-footer {
             display: flex;
             align-items: center;
@@ -594,12 +581,10 @@
             font-size: 12px;
             cursor: pointer;
             padding: 6px 14px;
-            /* 增大点击区域 */
             min-height: 36px;
             border-radius: 6px;
             transition: all 0.2s;
             touch-action: manipulation;
-            /* 移动端优化 */
         }
         .chat-main .message .recall-btn:hover {
             background: var(--bg-hover);
@@ -850,98 +835,35 @@
             background: var(--bg-hover);
         }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(6px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 768px) {
-            body {
-                padding: 0;
-            }
-            .app {
-                max-height: 100vh;
-                border-radius: 0;
-            }
-            .sidebar {
-                width: 200px;
-                padding: 12px;
-            }
-            .sidebar .nav-item span {
-                display: none;
-            }
-            .sidebar .nav-item {
-                justify-content: center;
-            }
-            .sidebar .user-email {
-                font-size: 11px;
-                text-align: center;
-            }
-            .chat-main .chat-header {
-                padding: 12px 16px;
-            }
-            .chat-main .chat-messages {
-                padding: 12px;
-            }
-            .chat-main .input-area {
-                padding: 10px 16px 16px;
-                gap: 8px;
-            }
-            .login-card {
-                padding: 28px 20px;
-            }
-            .splash-inner .splash-icon {
-                height: 120px;
-                width: 120px;
-            }
-            .splash-divider {
-                height: 120px;
-            }
-            .splash-inner {
-                gap: 6px;
-            }
-            .splash-bar {
-                width: 260px;
-            }
-            .online-modal {
-                right: 10px;
-                left: 10px;
-                top: 50px;
-                max-width: none;
-            }
+            body { padding: 0; }
+            .app { max-height: 100vh; border-radius: 0; }
+            .sidebar { width: 200px; padding: 12px; }
+            .sidebar .nav-item span { display: none; }
+            .sidebar .nav-item { justify-content: center; }
+            .sidebar .user-email { font-size: 11px; text-align: center; }
+            .chat-main .chat-header { padding: 12px 16px; }
+            .chat-main .chat-messages { padding: 12px; }
+            .chat-main .input-area { padding: 10px 16px 16px; gap: 8px; }
+            .login-card { padding: 28px 20px; }
+            .splash-inner .splash-icon { height: 120px; width: 120px; }
+            .splash-divider { height: 120px; }
+            .splash-inner { gap: 6px; }
+            .splash-bar { width: 260px; }
+            .online-modal { right: 10px; left: 10px; top: 50px; max-width: none; }
         }
         @media (max-width: 480px) {
-            .sidebar {
-                width: 60px;
-                padding: 8px;
-            }
-            .sidebar .logo-area img {
-                height: 28px;
-                max-width: 40px;
-            }
-            .sidebar .nav-item {
-                padding: 10px;
-            }
-            .chat-main .message {
-                max-width: 90%;
-            }
-            .splash-inner .splash-icon {
-                height: 80px;
-                width: 80px;
-            }
-            .splash-divider {
-                height: 80px;
-            }
-            .splash-inner {
-                gap: 4px;
-            }
-            .splash-bar {
-                width: calc(100% - 48px);
-            }
+            .sidebar { width: 60px; padding: 8px; }
+            .sidebar .logo-area img { height: 28px; max-width: 40px; }
+            .sidebar .nav-item { padding: 10px; }
+            .chat-main .message { max-width: 90%; }
+            .splash-inner .splash-icon { height: 80px; width: 80px; }
+            .splash-divider { height: 80px; }
+            .splash-inner { gap: 4px; }
+            .splash-bar { width: calc(100% - 48px); }
         }
     </style>
 </head>
@@ -986,7 +908,7 @@
             <aside class="sidebar">
                 <div class="logo-area">
                     <img src="assets/logo.svg" alt="Logo" />
-                    <span class="logo-text">MiniChat</span>
+                    <span class="logo-text">MiniChat</span> <!-- ✅ 已添加 -->
                 </div>
                 <nav class="nav">
                     <div class="nav-item active">
@@ -1268,7 +1190,7 @@
         };
 
         // ==========================================
-        // 🎨 核心：创建消息元素（昵称突出 + 邮箱辅助 + 撤回按钮）
+        // 核心：创建消息元素
         // ==========================================
         function createMessageElement(content, senderName, senderEmail, isMe, time, messageId, createdAt) {
             const div = document.createElement('div');
@@ -1276,7 +1198,6 @@
             if (messageId) div.dataset.messageId = messageId;
             if (createdAt) div.dataset.createdAt = createdAt;
 
-            // 处理消息内容
             let displayContent = content || '';
             const imageMatch = displayContent.match(/!\[image\]\((.*?)\)/);
             if (imageMatch) {
@@ -1287,7 +1208,6 @@
                 displayContent = displayContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
 
-            // 发送者信息（昵称 + 邮箱）
             const displayName = senderName || '匿名';
             let senderHtml = '';
             if (senderEmail && senderEmail !== senderName && !senderName.includes('@')) {
@@ -1302,7 +1222,6 @@
                 }
             }
 
-            // 时间 + 撤回按钮（使用 data-message-id，不使用 onclick）
             const timeStr = time || formatTime(new Date().toISOString());
             let footerHtml = `<span class="time">${timeStr}</span>`;
 
@@ -1390,10 +1309,7 @@
                 onlineUserList.innerHTML = '<div class="online-empty">暂无其他在线用户</div>';
                 return;
             }
-            const currentUserId_ = currentUserId;
             for (const [id, user] of Object.entries(onlineUsers)) {
-                // 可选：不显示自己
-                // if (id === currentUserId_) continue;
                 const item = document.createElement('div');
                 item.className = 'online-user-item';
                 const dot = document.createElement('span');
@@ -1560,7 +1476,7 @@
         }
 
         // ==========================================
-        // ✅ 方案A：修改昵称时同步更新历史消息 + 更新 Presence
+        // 修改昵称同步历史消息 + Presence
         // ==========================================
         async function saveDisplayName() {
             const newName = displayNameInput.value.trim();
@@ -1579,7 +1495,6 @@
             displayNameMessage.style.color = 'var(--text-secondary)';
 
             try {
-                // 1. 更新 profiles 表
                 const { error } = await supabase
                     .from('profiles')
                     .update({ display_name: newName })
@@ -1594,7 +1509,6 @@
                     return;
                 }
 
-                // ✅ 2. 同步更新所有历史消息的 sender_name
                 const { error: updateMsgError } = await supabase
                     .from('messages')
                     .update({ sender_name: newName })
@@ -1612,7 +1526,6 @@
                 currentDisplayName = newName;
                 sidebarUserEmail.textContent = newName;
 
-                // ✅ 3. 更新 Presence 信息（让别人看到新昵称）
                 if (window.chatChannel) {
                     await window.chatChannel.track({
                         user_id: currentUserId,
@@ -1622,7 +1535,6 @@
                     });
                 }
 
-                // 刷新消息列表
                 refreshMessages();
 
             } catch (err) {
@@ -1749,7 +1661,7 @@
             messageList.addEventListener('scroll', handleScroll);
 
             // ==========================================
-            // ✅ 移动端撤回：事件委托（click + touchstart）
+            // ✅ 移动端撤回事件委托
             // ==========================================
             messageList.addEventListener('click', function(e) {
                 const btn = e.target.closest('.recall-btn');
@@ -1781,7 +1693,6 @@
         // 退出登录
         // ==========================================
         async function handleLogout() {
-            // 退出前 untrack
             if (window.chatChannel) {
                 try {
                     await window.chatChannel.untrack();
@@ -1802,14 +1713,13 @@
             setAuthMessage('已退出', '');
             closeSettingsPanel();
             messageList.removeEventListener('scroll', handleScroll);
-            // 重置在线状态
             onlineUsers = {};
             onlineCount = 0;
             updateOnlineUI();
         }
 
         // ==========================================
-        // 发送消息（同时存 sender_name 和 sender_email）
+        // 发送消息
         // ==========================================
         async function sendMessageContent(content) {
             if (!currentEmail) {
@@ -1819,7 +1729,6 @@
 
             const senderName = currentDisplayName || currentEmail.split('@')[0];
 
-            // ✅ 1. 乐观添加临时消息（无撤回按钮）
             const tempDiv = createMessageElement(content, senderName, currentEmail, true, null, null, null);
             tempDiv.id = 'temp-' + Date.now();
             messageList.appendChild(tempDiv);
@@ -1864,7 +1773,7 @@
         }
 
         // ==========================================
-        // ✅ 消息撤回功能
+        // ✅ 消息撤回
         // ==========================================
         window.recallMessage = async function(messageId) {
             if (!messageId) return;
@@ -2012,18 +1921,16 @@
             const channel = supabase.channel('chat-room', {
                 config: {
                     presence: {
-                        key: currentUserId // 每个用户一个唯一 key
+                        key: currentUserId
                     }
                 }
             });
 
-            // ---------- Presence 处理 ----------
             channel.on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
                 const users = {};
                 let count = 0;
                 for (const [key, presences] of Object.entries(state)) {
-                    // 取每个用户的最新一个连接（多标签页只算一次）
                     const presence = presences[0];
                     if (presence) {
                         users[key] = {
@@ -2039,15 +1946,6 @@
                 updateOnlineUI();
             });
 
-            // 可选：监听加入/离开事件（用于调试）
-            channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-                // console.log('加入:', key, newPresences);
-            });
-            channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-                // console.log('离开:', key, leftPresences);
-            });
-
-            // ---------- 消息变化监听 ----------
             channel.on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -2115,10 +2013,8 @@
                 }
             });
 
-            // ---------- 订阅 ----------
             channel.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    // 订阅成功，track 当前用户
                     await channel.track({
                         user_id: currentUserId,
                         email: currentEmail,
@@ -2184,7 +2080,6 @@
             }
         });
 
-        // 在线用户弹窗控制
         onlineUsersBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             onlineModal.classList.toggle('active');
@@ -2204,7 +2099,7 @@
         // Splash 控制（加快速度）
         // ==========================================
         (function() {
-            const SPLASH_DURATION = 1800; // 从 2600ms 缩短为 1800ms
+            const SPLASH_DURATION = 1800;
             const splash = document.getElementById('splash');
             const fill = document.getElementById('splashFill');
 
@@ -2247,7 +2142,7 @@
         })();
 
         loadTheme();
-        console.log('✅ MiniChat 已升级：在线用户列表 + 消息撤回 + 昵称同步 + 移动端优化');
+        console.log('✅ MiniChat 已升级：包含 Logo 文字、移动端撤回优化、快速启动');
     </script>
 </body>
 </html>
