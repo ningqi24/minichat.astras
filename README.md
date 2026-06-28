@@ -1,7 +1,7 @@
 A simple “minichat” project 
-/Inspired by “SimpleChat（https://space.bilibili.com/1447858895）“
-/Basied on ”Chatmini“”Astras.cc“”Supabase.com“”Spacemail.com“
-/By https://github.com/ningqi24
+/ **Inspired by “SimpleChat（https://space.bilibili.com/1447858895）“**
+/ **Basied on ”Chatmini“”Astras.cc“”Supabase.com“”Spacemail.com“**
+/ **By https://github.com/ningqi24**
 
 # MiniChat · 轻量级实时聊天应用
 
