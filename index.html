@@ -1486,34 +1486,37 @@
             const splash = document.getElementById('splash');
             const fill = document.getElementById('splashFill');
 
-            function hideSplash() {
-                if (!splash) return;
-                splash.classList.add('hidden');
-                setTimeout(() => {
-                    if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 420);
-                const raw = localStorage.getItem('minichat_user');
-                if (raw) {
-                    try {
-                        const u = JSON.parse(raw);
-                        if (u && u.email) {
-                            currentEmail = u.email;
-                            currentUserId = u.id || '';
-                            // 尝试恢复 session
-                            supabase.auth.getSession().then(({ data, error }) => {
-                                if (data.session) {
-                                    enterChat();
-                                } else {
-                                    // 会话过期，显示登录
-                                    loginOverlay.classList.remove('hidden');
-                                }
-                            }).catch(() => {
-                                loginOverlay.classList.remove('hidden');
-                            });
-                            return;
+    function hideSplash() {
+        if (!splash) return;
+        splash.classList.add('hidden');
+        setTimeout(() => {
+            if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 420);
+        
+        // ★ 先确保登录界面显示（防止空白）
+        loginOverlay.classList.remove('hidden');
+        
+        // 然后尝试恢复 session（静默处理）
+        const raw = localStorage.getItem('minichat_user');
+        if (raw) {
+            try {
+                const u = JSON.parse(raw);
+                if (u && u.email) {
+                    currentEmail = u.email;
+                    currentUserId = u.id || '';
+                    // 异步检查 session，有效则自动进入聊天
+                    supabase.auth.getSession().then(({ data, error }) => {
+                        if (data.session) {
+                            enterChat(); // 会隐藏登录界面并显示主界面
                         }
-                    } catch (e) { /* ignore */ }
+                        // 如果 session 无效，什么都不做，保留登录界面
+                    }).catch(() => {
+                        // 出错也什么都不做，保留登录界面
+                    });
+                    return;
                 }
+            } catch (e) { /* ignore */ }
+        }
                 loginOverlay.classList.remove('hidden');
             }
 
