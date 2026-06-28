@@ -1551,38 +1551,63 @@
             messageList.removeEventListener('scroll', handleScroll);
         }
 
-        // ==========================================
-        // 发送消息：同时存 sender_name 和 sender_email
-        // ==========================================
-        async function sendMessageContent(content) {
-            if (!currentEmail) {
-                alert('请先登录');
-                return;
-            }
+// ==========================================
+// 发送消息（同时存 sender_name 和 sender_email）
+// ==========================================
+async function sendMessageContent(content) {
+    if (!currentEmail) {
+        alert('请先登录');
+        return;
+    }
 
-            const senderName = currentDisplayName || currentEmail.split('@')[0];
+    const senderName = currentDisplayName || currentEmail.split('@')[0];
 
-            addMessageToBottom(content, senderName, currentEmail, true);
+    // ✅ 1. 乐观添加临时消息（无撤回按钮）
+    const tempDiv = createMessageElement(content, senderName, currentEmail, true, null, null, null);
+    tempDiv.id = 'temp-' + Date.now(); // 临时 ID
+    messageList.appendChild(tempDiv);
+    messageList.scrollTop = messageList.scrollHeight;
 
-            try {
-                const { error } = await supabase
-                    .from('messages')
-                    .insert({
-                        content: content,
-                        sender_name: senderName,
-                        sender_email: currentEmail
-                    });
-                if (error) throw error;
-                if (chatInput.value) chatInput.value = '';
-            } catch (err) {
-                console.error('发送失败:', err);
-                if (messageList.lastChild) messageList.removeChild(messageList.lastChild);
-                setAuthMessage('消息发送失败', 'error');
-                setTimeout(() => {
-                    if (authMessage.textContent === '消息发送失败') authMessage.textContent = '';
-                }, 3000);
-            }
+    try {
+        // ✅ 2. 插入数据库
+        const { data, error } = await supabase
+            .from('messages')
+            .insert({
+                content: content,
+                sender_name: senderName,
+                sender_email: currentEmail
+            })
+            .select()  // 返回插入的记录
+            .single();
+
+        if (error) throw error;
+
+        // ✅ 3. 用真实数据替换临时消息
+        if (data) {
+            const newDiv = createMessageElement(
+                data.content,
+                data.sender_name || '匿名',
+                data.sender_email || data.sender_name,
+                true,
+                formatTime(data.created_at),
+                data.id,
+                data.created_at
+            );
+            tempDiv.replaceWith(newDiv);
         }
+
+        if (chatInput.value) chatInput.value = '';
+
+    } catch (err) {
+        console.error('发送失败:', err);
+        // 移除临时消息
+        if (tempDiv.parentNode) tempDiv.remove();
+        setAuthMessage('消息发送失败，请重试', 'error');
+        setTimeout(() => {
+            if (authMessage.textContent === '消息发送失败，请重试') authMessage.textContent = '';
+        }, 3000);
+    }
+}
 
         // ==========================================
         // ✅ 消息撤回功能
