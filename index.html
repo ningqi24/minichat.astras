@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js">
     </script>
     <style>
-        /* ===== 全局重置 & 双主题变量 ===== */
+        /* ===== 全局变量 ===== */
         :root {
             --bg-primary: #0d0d0d;
             --bg-secondary: #1a1a1a;
@@ -26,6 +26,7 @@
             --radius: 16px;
             --radius-sm: 10px;
             --transition: 0.2s ease;
+            --avatar-size: 28px;
         }
         body.light-theme {
             --bg-primary: #f0f2f5;
@@ -125,8 +126,12 @@
             animation: splashFill 1.8s linear 1 forwards;
         }
         @keyframes splashFill {
-            from { width: 0%; }
-            to { width: 100%; }
+            from {
+                width: 0%;
+            }
+            to {
+                width: 100%;
+            }
         }
         /* ===== 登录界面 ===== */
         .login-overlay {
@@ -468,6 +473,14 @@
         .online-user-item:last-child {
             border-bottom: none;
         }
+        .online-user-item .avatar-small {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--bg-input);
+            flex-shrink: 0;
+        }
         .online-dot {
             display: inline-block;
             width: 8px;
@@ -490,7 +503,7 @@
             text-align: center;
             padding: 12px 0;
         }
-        /* ===== 聊天消息样式 ===== */
+        /* ===== 聊天消息样式（含头像） ===== */
         .chat-main .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -512,65 +525,92 @@
             border-radius: 10px;
         }
         .chat-main .message {
-            padding: 12px 18px;
-            border-radius: 18px;
-            max-width: 75%;
-            word-wrap: break-word;
-            line-height: 1.6;
-            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            max-width: 85%;
             animation: fadeIn 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
         .chat-main .message.me {
             align-self: flex-end;
-            background: var(--accent);
-            color: #fff;
-            border-bottom-right-radius: 6px;
+            flex-direction: row-reverse;
         }
         .chat-main .message.other {
             align-self: flex-start;
+        }
+        .chat-main .message .avatar-wrapper {
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .chat-main .message .avatar-wrapper img {
+            width: var(--avatar-size);
+            height: var(--avatar-size);
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--bg-input);
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .chat-main .message.me .avatar-wrapper img {
+            border-color: var(--accent);
+        }
+        .chat-main .message .bubble {
+            padding: 10px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.6;
+            font-size: 14px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 0;
+        }
+        .chat-main .message.me .bubble {
+            background: var(--accent);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-main .message.other .bubble {
             background: var(--bg-card);
             color: var(--text-primary);
-            border-bottom-left-radius: 6px;
+            border-bottom-left-radius: 4px;
             border: 1px solid var(--border-color);
         }
         .chat-main .message .sender {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
             display: flex;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 4px 8px;
-            margin-bottom: 4px;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
         }
         .chat-main .message .sender .name {
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-        }
-        .chat-main .message .sender .email {
-            font-size: 11px;
-            font-weight: 400;
-            opacity: 0.6;
-        }
-        .chat-main .message.me .sender .name {
-            color: rgba(255, 255, 255, 0.95);
-        }
-        .chat-main .message.me .sender .email {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        .chat-main .message.other .sender .name {
             color: var(--text-primary);
         }
-        .chat-main .message.other .sender .email {
-            color: var(--text-secondary);
+        .chat-main .message.me .sender .name {
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .chat-main .message .sender .email {
+            font-size: 10px;
+            font-weight: 400;
+            opacity: 0.5;
+        }
+        .chat-main .message .message-content {
+            margin-bottom: 4px;
+        }
+        .chat-main .message .message-content img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            display: block;
+            margin-top: 4px;
+            cursor: pointer;
         }
         .chat-main .message .message-footer {
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 10px;
-            margin-top: 6px;
-        }
-        .chat-main .message .time {
             font-size: 10px;
             opacity: 0.5;
         }
@@ -578,11 +618,10 @@
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 11px;
             cursor: pointer;
-            padding: 6px 14px;
-            min-height: 36px;
-            border-radius: 6px;
+            padding: 2px 10px;
+            border-radius: 4px;
             transition: all 0.2s;
             touch-action: manipulation;
         }
@@ -594,15 +633,133 @@
             opacity: 0.6;
             font-style: italic;
         }
-        .chat-main .message img {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            display: block;
-            margin-top: 6px;
-            cursor: pointer;
-            border: none;
+        /* ===== 用户详情模态框 ===== */
+        .user-profile-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            animation: fadeIn 0.2s ease;
         }
+        .user-profile-modal.active {
+            display: flex;
+        }
+        .user-profile-modal .modal-content {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 32px;
+            max-width: 360px;
+            width: 90%;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .user-profile-modal .modal-content .avatar-large {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--bg-input);
+            margin: 0 auto 12px;
+            border: 3px solid var(--accent);
+        }
+        .user-profile-modal .modal-content .display-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .user-profile-modal .modal-content .email {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .user-profile-modal .modal-content .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+        .user-profile-modal .modal-content .detail-item:last-child {
+            border-bottom: none;
+        }
+        .user-profile-modal .modal-content .detail-item .label {
+            color: var(--text-secondary);
+        }
+        .user-profile-modal .modal-content .detail-item .value {
+            font-weight: 500;
+        }
+        .user-profile-modal .modal-content .status-badge {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #4ade80;
+            color: #000;
+            margin-top: 4px;
+        }
+        .user-profile-modal .modal-content .status-badge.offline {
+            background: var(--text-muted);
+            color: #fff;
+        }
+        .user-profile-modal .modal-close {
+            margin-top: 16px;
+            background: var(--bg-input);
+            border: none;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .user-profile-modal .modal-close:hover {
+            background: var(--bg-hover);
+        }
+        /* ===== 设置面板头像上传 ===== */
+        .avatar-upload-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 6px 0 4px;
+        }
+        .avatar-upload-area .preview {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--bg-input);
+            border: 2px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .avatar-upload-area .upload-btn {
+            padding: 6px 14px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .avatar-upload-area .upload-btn:hover {
+            background: var(--accent-hover);
+        }
+        .avatar-upload-area input[type="file"] {
+            display: none;
+        }
+        .avatar-upload-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        /* ===== 输入区域不变 ===== */
         .chat-main .input-area {
             padding: 12px 24px 20px 24px;
             background: var(--bg-secondary);
@@ -679,7 +836,7 @@
             stroke-linecap: round;
             stroke-linejoin: round;
         }
-        /* ===== 设置面板 ===== */
+        /* ===== 设置面板其他保持不变 ===== */
         .settings-overlay {
             position: absolute;
             inset: 0;
@@ -709,6 +866,8 @@
             border: 1px solid var(--border-color);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
             transition: background 0.3s, border-color 0.3s;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .settings-panel h2 {
             font-size: 22px;
@@ -835,35 +994,98 @@
             background: var(--bg-hover);
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         @media (max-width: 768px) {
-            body { padding: 0; }
-            .app { max-height: 100vh; border-radius: 0; }
-            .sidebar { width: 200px; padding: 12px; }
-            .sidebar .nav-item span { display: none; }
-            .sidebar .nav-item { justify-content: center; }
-            .sidebar .user-email { font-size: 11px; text-align: center; }
-            .chat-main .chat-header { padding: 12px 16px; }
-            .chat-main .chat-messages { padding: 12px; }
-            .chat-main .input-area { padding: 10px 16px 16px; gap: 8px; }
-            .login-card { padding: 28px 20px; }
-            .splash-inner .splash-icon { height: 120px; width: 120px; }
-            .splash-divider { height: 120px; }
-            .splash-inner { gap: 6px; }
-            .splash-bar { width: 260px; }
-            .online-modal { right: 10px; left: 10px; top: 50px; max-width: none; }
+            body {
+                padding: 0;
+            }
+            .app {
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            .sidebar {
+                width: 200px;
+                padding: 12px;
+            }
+            .sidebar .nav-item span {
+                display: none;
+            }
+            .sidebar .nav-item {
+                justify-content: center;
+            }
+            .sidebar .user-email {
+                font-size: 11px;
+                text-align: center;
+            }
+            .chat-main .chat-header {
+                padding: 12px 16px;
+            }
+            .chat-main .chat-messages {
+                padding: 12px;
+            }
+            .chat-main .input-area {
+                padding: 10px 16px 16px;
+                gap: 8px;
+            }
+            .login-card {
+                padding: 28px 20px;
+            }
+            .splash-inner .splash-icon {
+                height: 120px;
+                width: 120px;
+            }
+            .splash-divider {
+                height: 120px;
+            }
+            .splash-inner {
+                gap: 6px;
+            }
+            .splash-bar {
+                width: 260px;
+            }
+            .online-modal {
+                right: 10px;
+                left: 10px;
+                top: 50px;
+                max-width: none;
+            }
+            .chat-main .message {
+                max-width: 90%;
+            }
         }
         @media (max-width: 480px) {
-            .sidebar { width: 60px; padding: 8px; }
-            .sidebar .logo-area img { height: 28px; max-width: 40px; }
-            .sidebar .nav-item { padding: 10px; }
-            .chat-main .message { max-width: 90%; }
-            .splash-inner .splash-icon { height: 80px; width: 80px; }
-            .splash-divider { height: 80px; }
-            .splash-inner { gap: 4px; }
-            .splash-bar { width: calc(100% - 48px); }
+            .sidebar {
+                width: 60px;
+                padding: 8px;
+            }
+            .sidebar .logo-area img {
+                height: 28px;
+                max-width: 40px;
+            }
+            .sidebar .nav-item {
+                padding: 10px;
+            }
+            .splash-inner .splash-icon {
+                height: 80px;
+                width: 80px;
+            }
+            .splash-divider {
+                height: 80px;
+            }
+            .splash-inner {
+                gap: 4px;
+            }
+            .splash-bar {
+                width: calc(100% - 48px);
+            }
         }
     </style>
 </head>
@@ -908,7 +1130,7 @@
             <aside class="sidebar">
                 <div class="logo-area">
                     <img src="assets/logo.svg" alt="Logo" />
-                    <span class="logo-text">MiniChat</span> <!-- ✅ 已添加 -->
+                    <span class="logo-text">MiniChat</span>
                 </div>
                 <nav class="nav">
                     <div class="nav-item active">
@@ -976,6 +1198,20 @@
         <div class="settings-overlay" id="settingsOverlay">
             <div class="settings-panel">
                 <h2>设置</h2>
+                <!-- 头像上传 -->
+                <div class="setting-item" style="flex-direction:column;align-items:stretch;gap:10px;border-bottom:1px solid var(--border-color);">
+                    <div>
+                        <div class="label">头像</div>
+                        <div class="desc">点击下方按钮上传新头像</div>
+                    </div>
+                    <div class="avatar-upload-area">
+                        <img class="preview" id="avatarPreview" src="" alt="头像预览" />
+                        <button class="upload-btn" id="avatarUploadBtn">上传</button>
+                        <input type="file" id="avatarFileInput" accept="image/*" />
+                    </div>
+                    <div class="avatar-upload-status" id="avatarUploadStatus"></div>
+                </div>
+                <!-- 深色模式 -->
                 <div class="setting-item">
                     <div>
                         <div class="label">深色模式</div>
@@ -985,6 +1221,7 @@
                         <div class="knob"></div>
                     </div>
                 </div>
+                <!-- 昵称修改 -->
                 <div class="setting-item nickname-item">
                     <div>
                         <div class="label">显示昵称</div>
@@ -996,6 +1233,7 @@
                     </div>
                     <div class="nickname-msg" id="displayNameMessage"></div>
                 </div>
+                <!-- 退出账户 -->
                 <div class="setting-item" style="border-bottom: none; padding-bottom: 0;">
                     <div>
                         <div class="label">退出账户</div>
@@ -1004,6 +1242,25 @@
                     <button class="btn-danger" id="settingsLogout">退出</button>
                 </div>
                 <button class="close-settings" id="closeSettings">关闭</button>
+            </div>
+        </div>
+
+        <!-- 用户详情模态框 -->
+        <div class="user-profile-modal" id="userProfileModal">
+            <div class="modal-content">
+                <img class="avatar-large" id="profileAvatar" src="" alt="头像" />
+                <div class="display-name" id="profileDisplayName">昵称</div>
+                <div class="email" id="profileEmail">邮箱</div>
+                <div class="status-badge" id="profileStatus">在线</div>
+                <div class="detail-item">
+                    <span class="label">注册时间</span>
+                    <span class="value" id="profileCreatedAt">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">最后登录</span>
+                    <span class="value" id="profileLastLogin">-</span>
+                </div>
+                <button class="modal-close" id="closeProfileModal">关闭</button>
             </div>
         </div>
     </div>
@@ -1058,11 +1315,27 @@
         const modalOnlineCount = document.getElementById('modalOnlineCount');
         const onlineUsersBtn = document.getElementById('onlineUsersBtn');
         const closeOnlineModal = document.getElementById('closeOnlineModal');
+        // 头像相关
+        const avatarPreview = document.getElementById('avatarPreview');
+        const avatarUploadBtn = document.getElementById('avatarUploadBtn');
+        const avatarFileInput = document.getElementById('avatarFileInput');
+        const avatarUploadStatus = document.getElementById('avatarUploadStatus');
+        // 用户详情模态框
+        const profileModal = document.getElementById('userProfileModal');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileDisplayName = document.getElementById('profileDisplayName');
+        const profileEmail = document.getElementById('profileEmail');
+        const profileStatus = document.getElementById('profileStatus');
+        const profileCreatedAt = document.getElementById('profileCreatedAt');
+        const profileLastLogin = document.getElementById('profileLastLogin');
+        const closeProfileModal = document.getElementById('closeProfileModal');
 
         let currentEmail = '';
         let currentUserId = '';
         let currentDisplayName = '';
+        let currentAvatarUrl = '';
         let isLoginMode = true;
+        let currentUserMap = {}; // 缓存用户信息 { email: { display_name, avatar_url, created_at, last_login } }
 
         // ==========================================
         // 分页相关变量
@@ -1111,6 +1384,12 @@
         // 工具函数
         // ==========================================
         function formatTime(iso) {
+            if (!iso) return '未知';
+            const d = new Date(iso);
+            return d.toLocaleString('zh-CN', { hour12: false });
+        }
+
+        function formatTimeShort(iso) {
             const d = new Date(iso);
             return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         }
@@ -1122,82 +1401,234 @@
             if (type === 'error') authMessage.classList.add('error');
         }
 
-        window.previewImage = function(url) {
-            const overlay = document.createElement('div');
-            overlay.style.cssText =
-                'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;';
-            const img = document.createElement('img');
-            img.src = url;
-            img.style.cssText =
-                'max-width:100%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
-            const btnContainer = document.createElement('div');
-            btnContainer.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;justify-content:center;';
-            const downloadBtn = document.createElement('button');
-            downloadBtn.textContent = '下载图片';
-            downloadBtn.style.cssText =
-                'padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:500;cursor:pointer;';
-            downloadBtn.onclick = function(e) {
-                e.stopPropagation();
-                downloadBtn.textContent = '下载中…';
-                downloadBtn.disabled = true;
-                fetch(url)
-                    .then(res => {
-                        if (!res.ok) throw new Error('下载失败');
-                        return res.blob();
-                    })
-                    .then(blob => {
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        const filename = url.split('/').pop().split('?')[0] || 'image.jpg';
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        URL.revokeObjectURL(a.href);
-                        downloadBtn.textContent = '已下载';
-                        setTimeout(() => {
-                            downloadBtn.textContent = '下载图片';
-                            downloadBtn.disabled = false;
-                        }, 2000);
-                    })
-                    .catch(err => {
-                        console.error('下载失败:', err);
-                        downloadBtn.textContent = '下载失败';
-                        setTimeout(() => {
-                            downloadBtn.textContent = '下载图片';
-                            downloadBtn.disabled = false;
-                        }, 2000);
-                    });
-            };
-            const closeBtn = document.createElement('button');
-            closeBtn.textContent = '关闭';
-            closeBtn.style.cssText =
-                'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;font-size:15px;font-weight:500;cursor:pointer;';
-            closeBtn.onclick = function(e) {
-                e.stopPropagation();
-                document.body.removeChild(overlay);
-            };
-            btnContainer.appendChild(downloadBtn);
-            btnContainer.appendChild(closeBtn);
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
-            });
-            overlay.appendChild(img);
-            overlay.appendChild(btnContainer);
-            document.body.appendChild(overlay);
-        };
+        function getDefaultAvatar(email) {
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(email ? email.split('@')[0] : '用户')}&background=3b82f6&color=fff&size=128&bold=true`;
+        }
 
         // ==========================================
-        // 核心：创建消息元素
+        // 图片压缩（复用现有）
         // ==========================================
-        function createMessageElement(content, senderName, senderEmail, isMe, time, messageId, createdAt) {
+        function compressImage(file, maxWidth, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth) {
+                            height = height * (maxWidth / width);
+                            width = maxWidth;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob(function(blob) {
+                            if (!blob) {
+                                reject(new Error('压缩失败'));
+                                return;
+                            }
+                            const compressed = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressed);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ==========================================
+        // 头像上传
+        // ==========================================
+        async function uploadAvatar(file) {
+            if (!currentUserId) {
+                alert('请先登录');
+                return;
+            }
+            if (!file || !file.type.startsWith('image/')) {
+                avatarUploadStatus.textContent = '请选择图片文件';
+                avatarUploadStatus.style.color = '#f87171';
+                return;
+            }
+
+            let processedFile = file;
+            try {
+                if (file.size > 200 * 1024) {
+                    processedFile = await compressImage(file, 512, 0.7);
+                }
+            } catch (err) {
+                console.warn('压缩失败，使用原图', err);
+            }
+
+            if (processedFile.size > 5 * 1024 * 1024) {
+                avatarUploadStatus.textContent = '图片不能超过 5MB';
+                avatarUploadStatus.style.color = '#f87171';
+                return;
+            }
+
+            avatarUploadStatus.textContent = '上传中…';
+            avatarUploadStatus.style.color = 'var(--text-secondary)';
+
+            try {
+                const fileExt = processedFile.name.split('.').pop();
+                const fileName = `avatar_${currentUserId}_${Date.now()}.${fileExt}`;
+                const filePath = `public/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(filePath, processedFile, { cacheControl: '3600', upsert: true });
+
+                if (uploadError) throw uploadError;
+
+                const { data: urlData } = supabase.storage
+                    .from('avatars')
+                    .getPublicUrl(filePath);
+                const publicURL = urlData.publicUrl;
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({ avatar_url: publicURL })
+                    .eq('id', currentUserId);
+
+                if (updateError) throw updateError;
+
+                currentAvatarUrl = publicURL;
+                avatarPreview.src = publicURL;
+                avatarUploadStatus.textContent = '✅ 头像已更新';
+                avatarUploadStatus.style.color = '#4ade80';
+
+                if (window.chatChannel) {
+                    await window.chatChannel.track({
+                        user_id: currentUserId,
+                        email: currentEmail,
+                        display_name: currentDisplayName,
+                        avatar_url: publicURL,
+                        online_at: new Date().toISOString()
+                    });
+                }
+
+                refreshMessages();
+
+            } catch (err) {
+                console.error('上传头像失败:', err);
+                avatarUploadStatus.textContent = '上传失败: ' + (err.message || '请重试');
+                avatarUploadStatus.style.color = '#f87171';
+            }
+        }
+
+        // ==========================================
+        // 加载用户信息
+        // ==========================================
+        async function fetchUserProfiles(emails) {
+            if (!emails || emails.length === 0) return {};
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('email, display_name, avatar_url, created_at, last_login')
+                .in('email', emails);
+            if (error) {
+                console.error('获取用户信息失败:', error);
+                return {};
+            }
+            const map = {};
+            data.forEach(row => {
+                map[row.email] = {
+                    display_name: row.display_name,
+                    avatar_url: row.avatar_url,
+                    created_at: row.created_at,
+                    last_login: row.last_login
+                };
+            });
+            return map;
+        }
+
+        // ==========================================
+        // 用户详情弹窗
+        // ==========================================
+        function showUserProfile(email) {
+            if (!email) return;
+            let userInfo = currentUserMap[email] || {};
+            if (email === currentEmail) {
+                userInfo = {
+                    display_name: currentDisplayName,
+                    avatar_url: currentAvatarUrl,
+                    created_at: userInfo.created_at || '未知',
+                    last_login: userInfo.last_login || '未知'
+                };
+            }
+            const onlineUser = Object.values(onlineUsers).find(u => u.email === email);
+            if (onlineUser) {
+                userInfo.display_name = onlineUser.display_name || userInfo.display_name;
+                userInfo.avatar_url = onlineUser.avatar_url || userInfo.avatar_url;
+            }
+
+            const displayName = userInfo.display_name || email.split('@')[0];
+            const avatarUrl = userInfo.avatar_url || getDefaultAvatar(email);
+            const status = onlineUser ? '在线' : '离线';
+
+            profileAvatar.src = avatarUrl;
+            profileDisplayName.textContent = displayName;
+            profileEmail.textContent = email;
+            profileStatus.textContent = status;
+            profileStatus.className = 'status-badge' + (status === '在线' ? '' : ' offline');
+            profileCreatedAt.textContent = userInfo.created_at ? formatTime(userInfo.created_at) : '未知';
+            profileLastLogin.textContent = userInfo.last_login ? formatTime(userInfo.last_login) : '未知';
+
+            profileModal.classList.add('active');
+        }
+
+        // ==========================================
+        // 创建消息元素（含头像）
+        // ==========================================
+        function createMessageElement(msg) {
+            const { content, sender_name, sender_email, isMe, time, id, created_at, avatar_url } = msg;
             const div = document.createElement('div');
             div.className = 'message ' + (isMe ? 'me' : 'other');
-            if (messageId) div.dataset.messageId = messageId;
-            if (createdAt) div.dataset.createdAt = createdAt;
+            if (id) div.dataset.messageId = id;
+            if (created_at) div.dataset.createdAt = created_at;
 
+            const avatarWrapper = document.createElement('div');
+            avatarWrapper.className = 'avatar-wrapper';
+            const avatarImg = document.createElement('img');
+            avatarImg.src = avatar_url || getDefaultAvatar(sender_email);
+            avatarImg.alt = '头像';
+            avatarImg.onerror = function() { this.src = getDefaultAvatar(sender_email); };
+            avatarWrapper.appendChild(avatarImg);
+            avatarWrapper.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showUserProfile(sender_email);
+            });
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+
+            const senderDiv = document.createElement('div');
+            senderDiv.className = 'sender';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = sender_name || '匿名';
+            senderDiv.appendChild(nameSpan);
+            if (sender_email && sender_email !== sender_name) {
+                const emailSpan = document.createElement('span');
+                emailSpan.className = 'email';
+                emailSpan.textContent = sender_email;
+                senderDiv.appendChild(emailSpan);
+            }
+            senderDiv.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showUserProfile(sender_email);
+            });
+            bubble.appendChild(senderDiv);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
             let displayContent = content || '';
             const imageMatch = displayContent.match(/!\[image\]\((.*?)\)/);
             if (imageMatch) {
@@ -1207,46 +1638,45 @@
             } else {
                 displayContent = displayContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
+            contentDiv.innerHTML = displayContent;
+            bubble.appendChild(contentDiv);
 
-            const displayName = senderName || '匿名';
-            let senderHtml = '';
-            if (senderEmail && senderEmail !== senderName && !senderName.includes('@')) {
-                senderHtml =
-                `<span class="name">${displayName}</span><span class="email">${senderEmail}</span>`;
-            } else if (senderName && senderName.includes('@') && !senderEmail) {
-                senderHtml = `<span class="name">${senderName}</span>`;
-            } else {
-                senderHtml = `<span class="name">${displayName}</span>`;
-                if (senderEmail && senderEmail !== senderName) {
-                    senderHtml += `<span class="email">${senderEmail}</span>`;
-                }
-            }
-
-            const timeStr = time || formatTime(new Date().toISOString());
-            let footerHtml = `<span class="time">${timeStr}</span>`;
+            const footer = document.createElement('div');
+            footer.className = 'message-footer';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            timeSpan.textContent = time || formatTimeShort(new Date().toISOString());
+            footer.appendChild(timeSpan);
 
             const isRecalled = content === '（已撤回）';
-            if (isMe && createdAt && !isRecalled) {
-                const msgTime = new Date(createdAt).getTime();
+            if (isMe && created_at && !isRecalled) {
+                const msgTime = new Date(created_at).getTime();
                 const diffMinutes = (Date.now() - msgTime) / 1000 / 60;
                 if (diffMinutes < 2) {
-                    footerHtml +=
-                        `<button class="recall-btn" data-message-id="${messageId}">撤回</button>`;
+                    const recallBtn = document.createElement('button');
+                    recallBtn.className = 'recall-btn';
+                    recallBtn.dataset.messageId = id;
+                    recallBtn.textContent = '撤回';
+                    recallBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        window.recallMessage(id);
+                    });
+                    recallBtn.addEventListener('touchstart', function(e) {
+                        e.stopPropagation();
+                        window.recallMessage(id);
+                    }, { passive: false });
+                    footer.appendChild(recallBtn);
                 }
             }
+            bubble.appendChild(footer);
 
-            const contentClass = isRecalled ? 'message-content recalled' : 'message-content';
-
-            div.innerHTML = `
-                <div class="sender">${senderHtml}</div>
-                <div class="${contentClass}">${displayContent}</div>
-                <div class="message-footer">${footerHtml}</div>
-            `;
+            div.appendChild(avatarWrapper);
+            div.appendChild(bubble);
             return div;
         }
 
-        function addMessageToBottom(content, senderName, senderEmail, isMe, time, messageId, createdAt) {
-            const div = createMessageElement(content, senderName, senderEmail, isMe, time, messageId, createdAt);
+        function addMessageToBottom(msg) {
+            const div = createMessageElement(msg);
             messageList.appendChild(div);
             messageList.scrollTop = messageList.scrollHeight;
         }
@@ -1254,16 +1684,7 @@
         function prependMessages(messages) {
             const fragment = document.createDocumentFragment();
             messages.forEach(msg => {
-                const isMe = (msg.sender_email === currentEmail);
-                const div = createMessageElement(
-                    msg.content,
-                    msg.sender_name || '匿名',
-                    msg.sender_email || msg.sender_name,
-                    isMe,
-                    formatTime(msg.created_at),
-                    msg.id,
-                    msg.created_at
-                );
+                const div = createMessageElement(msg);
                 fragment.appendChild(div);
             });
             const firstChild = messageList.firstChild;
@@ -1274,6 +1695,81 @@
             }
         }
 
+        // ==========================================
+        // 加载历史消息（含头像）
+        // ==========================================
+        async function loadHistory(append = false) {
+            if (isLoadingMore || !hasMoreMessages) return;
+            isLoadingMore = true;
+
+            try {
+                let query = supabase
+                    .from('messages')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(PAGE_SIZE);
+
+                if (oldestTimestamp) {
+                    query = query.lt('created_at', oldestTimestamp);
+                }
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    hasMoreMessages = false;
+                    isLoadingMore = false;
+                    return;
+                }
+
+                const sorted = data.reverse();
+                const earliest = sorted[0];
+                oldestTimestamp = earliest.created_at;
+
+                const emails = [...new Set(sorted.map(m => m.sender_email).filter(Boolean))];
+                let userMap = {};
+                if (emails.length > 0) {
+                    userMap = await fetchUserProfiles(emails);
+                }
+                Object.assign(currentUserMap, userMap);
+
+                const messages = sorted.map(msg => {
+                    const isMe = (msg.sender_email === currentEmail);
+                    const userInfo = userMap[msg.sender_email] || {};
+                    const avatar_url = userInfo.avatar_url || getDefaultAvatar(msg.sender_email);
+                    return {
+                        id: msg.id,
+                        content: msg.content,
+                        sender_name: msg.sender_name || userInfo.display_name || '匿名',
+                        sender_email: msg.sender_email,
+                        isMe: isMe,
+                        time: formatTimeShort(msg.created_at),
+                        created_at: msg.created_at,
+                        avatar_url: avatar_url
+                    };
+                });
+
+                if (!append) {
+                    messageList.innerHTML = '';
+                    messages.forEach(msg => addMessageToBottom(msg));
+                    cacheMessages(sorted);
+                } else {
+                    prependMessages(messages);
+                }
+
+                if (data.length < PAGE_SIZE) {
+                    hasMoreMessages = false;
+                }
+                isLoadingMore = false;
+            } catch (err) {
+                console.error('加载历史消息失败:', err);
+                isLoadingMore = false;
+            }
+        }
+
+        // ==========================================
+        // 缓存管理
+        // ==========================================
         function cacheMessages(messages) {
             try {
                 localStorage.setItem('minichat_messages', JSON.stringify(messages));
@@ -1287,46 +1783,11 @@
             } catch (e) { return null; }
         }
 
-        function setLoading(loading) {
-            btnLogin.disabled = loading;
-            btnLogin.style.opacity = loading ? '0.6' : '1';
-        }
-
-        // ==========================================
-        // 在线用户 UI 更新
-        // ==========================================
-        function updateOnlineUI() {
-            onlineStatus.textContent = `● ${onlineCount} 人在线`;
-            onlineBadge.textContent = onlineCount;
-            onlineBadge.classList.toggle('show', onlineCount > 0);
-            modalOnlineCount.textContent = onlineCount;
-            renderOnlineUsers();
-        }
-
-        function renderOnlineUsers() {
-            onlineUserList.innerHTML = '';
-            if (onlineCount === 0) {
-                onlineUserList.innerHTML = '<div class="online-empty">暂无其他在线用户</div>';
-                return;
-            }
-            for (const [id, user] of Object.entries(onlineUsers)) {
-                const item = document.createElement('div');
-                item.className = 'online-user-item';
-                const dot = document.createElement('span');
-                dot.className = 'online-dot';
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'online-user-name';
-                nameSpan.textContent = user.display_name || '匿名';
-                if (user.email && user.email !== user.display_name) {
-                    const emailSpan = document.createElement('span');
-                    emailSpan.className = 'online-user-email';
-                    emailSpan.textContent = user.email;
-                    nameSpan.appendChild(emailSpan);
-                }
-                item.appendChild(dot);
-                item.appendChild(nameSpan);
-                onlineUserList.appendChild(item);
-            }
+        async function refreshMessages() {
+            messageList.innerHTML = '';
+            hasMoreMessages = true;
+            oldestTimestamp = null;
+            await loadHistory(false);
         }
 
         // ==========================================
@@ -1430,7 +1891,8 @@
                         id: userId,
                         email: email,
                         last_login: new Date().toISOString(),
-                        display_name: defaultName
+                        display_name: defaultName,
+                        avatar_url: getDefaultAvatar(email)
                     });
                 if (insertError) {
                     console.error('插入 profiles 失败:', insertError);
@@ -1444,6 +1906,11 @@
             }
         }
 
+        function setLoading(loading) {
+            btnLogin.disabled = loading;
+            btnLogin.style.opacity = loading ? '0.6' : '1';
+        }
+
         // ==========================================
         // 昵称管理
         // ==========================================
@@ -1452,32 +1919,35 @@
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('display_name')
+                    .select('display_name, avatar_url')
                     .eq('id', currentUserId)
                     .single();
                 if (error) throw error;
-                if (data && data.display_name) {
-                    currentDisplayName = data.display_name;
-                    displayNameInput.value = data.display_name;
-                    sidebarUserEmail.textContent = data.display_name;
+                if (data) {
+                    currentDisplayName = data.display_name || currentEmail.split('@')[0];
+                    currentAvatarUrl = data.avatar_url || getDefaultAvatar(currentEmail);
+                    displayNameInput.value = currentDisplayName;
+                    sidebarUserEmail.textContent = currentDisplayName;
+                    avatarPreview.src = currentAvatarUrl;
                 } else {
                     const fallback = currentEmail.split('@')[0];
                     currentDisplayName = fallback;
+                    currentAvatarUrl = getDefaultAvatar(currentEmail);
                     displayNameInput.value = fallback;
                     sidebarUserEmail.textContent = fallback;
+                    avatarPreview.src = currentAvatarUrl;
                 }
             } catch (err) {
-                console.error('加载昵称失败:', err);
+                console.error('加载用户信息失败:', err);
                 const fallback = currentEmail.split('@')[0];
                 currentDisplayName = fallback;
+                currentAvatarUrl = getDefaultAvatar(currentEmail);
                 displayNameInput.value = fallback;
                 sidebarUserEmail.textContent = fallback;
+                avatarPreview.src = currentAvatarUrl;
             }
         }
 
-        // ==========================================
-        // 修改昵称同步历史消息 + Presence
-        // ==========================================
         async function saveDisplayName() {
             const newName = displayNameInput.value.trim();
             if (!newName) {
@@ -1531,6 +2001,7 @@
                         user_id: currentUserId,
                         email: currentEmail,
                         display_name: currentDisplayName,
+                        avatar_url: currentAvatarUrl,
                         online_at: new Date().toISOString()
                     });
                 }
@@ -1541,73 +2012,6 @@
                 console.error('保存昵称失败:', err);
                 displayNameMessage.textContent = '保存失败，请重试';
                 displayNameMessage.style.color = '#f87171';
-            }
-        }
-
-        async function refreshMessages() {
-            messageList.innerHTML = '';
-            hasMoreMessages = true;
-            oldestTimestamp = null;
-            await loadHistory(false);
-        }
-
-        // ==========================================
-        // 分页加载历史消息
-        // ==========================================
-        async function loadHistory(append = false) {
-            if (isLoadingMore || !hasMoreMessages) return;
-            isLoadingMore = true;
-
-            try {
-                let query = supabase
-                    .from('messages')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(PAGE_SIZE);
-
-                if (oldestTimestamp) {
-                    query = query.lt('created_at', oldestTimestamp);
-                }
-
-                const { data, error } = await query;
-                if (error) throw error;
-
-                if (!data || data.length === 0) {
-                    hasMoreMessages = false;
-                    isLoadingMore = false;
-                    return;
-                }
-
-                const sorted = data.reverse();
-                const earliest = sorted[0];
-                oldestTimestamp = earliest.created_at;
-
-                if (!append) {
-                    messageList.innerHTML = '';
-                    sorted.forEach(msg => {
-                        const isMe = (msg.sender_email === currentEmail);
-                        addMessageToBottom(
-                            msg.content,
-                            msg.sender_name || '匿名',
-                            msg.sender_email || msg.sender_name,
-                            isMe,
-                            formatTime(msg.created_at),
-                            msg.id,
-                            msg.created_at
-                        );
-                    });
-                    cacheMessages(sorted);
-                } else {
-                    prependMessages(sorted);
-                }
-
-                if (data.length < PAGE_SIZE) {
-                    hasMoreMessages = false;
-                }
-                isLoadingMore = false;
-            } catch (err) {
-                console.error('加载历史消息失败:', err);
-                isLoadingMore = false;
             }
         }
 
@@ -1632,23 +2036,13 @@
             const cached = getCachedMessages();
             if (cached && cached.length > 0) {
                 messageList.innerHTML = '';
-                cached.forEach(msg => {
-                    const isMe = (msg.sender_email === currentEmail);
-                    addMessageToBottom(
-                        msg.content,
-                        msg.sender_name || '匿名',
-                        msg.sender_email || msg.sender_name,
-                        isMe,
-                        formatTime(msg.created_at),
-                        msg.id,
-                        msg.created_at
-                    );
-                });
+                // 需要从缓存中提取头像信息，但缓存可能没有头像，所以调用 loadHistory 重新加载
+                // 直接重新加载，用最新数据
+                loadHistory(false);
             } else {
                 messageList.innerHTML = '';
+                loadHistory(false);
             }
-
-            loadHistory(false);
 
             localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
             loadTheme();
@@ -1660,9 +2054,7 @@
             subscribeMessages();
             messageList.addEventListener('scroll', handleScroll);
 
-            // ==========================================
-            // ✅ 移动端撤回事件委托
-            // ==========================================
+            // 移动端撤回事件委托
             messageList.addEventListener('click', function(e) {
                 const btn = e.target.closest('.recall-btn');
                 if (btn) {
@@ -1729,10 +2121,18 @@
 
             const senderName = currentDisplayName || currentEmail.split('@')[0];
 
-            const tempDiv = createMessageElement(content, senderName, currentEmail, true, null, null, null);
-            tempDiv.id = 'temp-' + Date.now();
-            messageList.appendChild(tempDiv);
-            messageList.scrollTop = messageList.scrollHeight;
+            // 乐观创建消息对象
+            const tempMsg = {
+                id: 'temp-' + Date.now(),
+                content: content,
+                sender_name: senderName,
+                sender_email: currentEmail,
+                isMe: true,
+                time: formatTimeShort(new Date().toISOString()),
+                created_at: new Date().toISOString(),
+                avatar_url: currentAvatarUrl || getDefaultAvatar(currentEmail)
+            };
+            addMessageToBottom(tempMsg);
 
             try {
                 const { data, error } = await supabase
@@ -1747,24 +2147,34 @@
 
                 if (error) throw error;
 
+                // 用真实数据替换
                 if (data) {
-                    const newDiv = createMessageElement(
-                        data.content,
-                        data.sender_name || '匿名',
-                        data.sender_email || data.sender_name,
-                        true,
-                        formatTime(data.created_at),
-                        data.id,
-                        data.created_at
-                    );
-                    tempDiv.replaceWith(newDiv);
+                    const realMsg = {
+                        id: data.id,
+                        content: data.content,
+                        sender_name: data.sender_name || senderName,
+                        sender_email: data.sender_email || currentEmail,
+                        isMe: true,
+                        time: formatTimeShort(data.created_at),
+                        created_at: data.created_at,
+                        avatar_url: currentAvatarUrl || getDefaultAvatar(currentEmail)
+                    };
+                    // 移除临时消息并添加真实消息
+                    const tempEl = messageList.querySelector(`[data-message-id="${tempMsg.id}"]`);
+                    if (tempEl) {
+                        tempEl.replaceWith(createMessageElement(realMsg));
+                    } else {
+                        // 如果临时消息已被移除，直接添加
+                        addMessageToBottom(realMsg);
+                    }
                 }
 
                 if (chatInput.value) chatInput.value = '';
 
             } catch (err) {
                 console.error('发送失败:', err);
-                if (tempDiv.parentNode) tempDiv.remove();
+                const tempEl = messageList.querySelector(`[data-message-id="${tempMsg.id}"]`);
+                if (tempEl) tempEl.remove();
                 setAuthMessage('消息发送失败，请重试', 'error');
                 setTimeout(() => {
                     if (authMessage.textContent === '消息发送失败，请重试') authMessage.textContent = '';
@@ -1773,7 +2183,7 @@
         }
 
         // ==========================================
-        // ✅ 消息撤回
+        // 消息撤回
         // ==========================================
         window.recallMessage = async function(messageId) {
             if (!messageId) return;
@@ -1799,118 +2209,49 @@
         };
 
         // ==========================================
-        // 图片压缩
+        // 在线用户 UI 更新
         // ==========================================
-        function compressImage(file, maxWidth, quality) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > maxWidth) {
-                            height = height * (maxWidth / width);
-                            width = maxWidth;
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        canvas.toBlob(function(blob) {
-                            if (!blob) {
-                                reject(new Error('压缩失败'));
-                                return;
-                            }
-                            const compressed = new File([blob], file.name, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            });
-                            resolve(compressed);
-                        }, 'image/jpeg', quality);
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
+        function updateOnlineUI() {
+            onlineStatus.textContent = `● ${onlineCount} 人在线`;
+            onlineBadge.textContent = onlineCount;
+            onlineBadge.classList.toggle('show', onlineCount > 0);
+            modalOnlineCount.textContent = onlineCount;
+            renderOnlineUsers();
+        }
+
+        function renderOnlineUsers() {
+            onlineUserList.innerHTML = '';
+            if (onlineCount === 0) {
+                onlineUserList.innerHTML = '<div class="online-empty">暂无其他在线用户</div>';
+                return;
+            }
+            for (const [id, user] of Object.entries(onlineUsers)) {
+                const item = document.createElement('div');
+                item.className = 'online-user-item';
+                const avatar = document.createElement('img');
+                avatar.className = 'avatar-small';
+                avatar.src = user.avatar_url || getDefaultAvatar(user.email);
+                avatar.onerror = function() { this.src = getDefaultAvatar(user.email); };
+                const dot = document.createElement('span');
+                dot.className = 'online-dot';
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'online-user-name';
+                nameSpan.textContent = user.display_name || '匿名';
+                if (user.email && user.email !== user.display_name) {
+                    const emailSpan = document.createElement('span');
+                    emailSpan.className = 'online-user-email';
+                    emailSpan.textContent = user.email;
+                    nameSpan.appendChild(emailSpan);
+                }
+                item.appendChild(avatar);
+                item.appendChild(dot);
+                item.appendChild(nameSpan);
+                onlineUserList.appendChild(item);
+            }
         }
 
         // ==========================================
-        // 图片上传
-        // ==========================================
-        attachBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            if (!file.type.startsWith('image/')) {
-                setAuthMessage('请选择图片文件', 'error');
-                fileInput.value = '';
-                return;
-            }
-
-            let processedFile = file;
-            try {
-                if (file.size > 200 * 1024) {
-                    processedFile = await compressImage(file, 1080, 0.7);
-                }
-            } catch (err) {
-                console.warn('压缩失败，使用原图', err);
-                processedFile = file;
-            }
-
-            if (processedFile.size > 20 * 1024 * 1024) {
-                setAuthMessage('图片不能超过 20MB', 'error');
-                fileInput.value = '';
-                return;
-            }
-
-            const tempId = 'uploading_' + Date.now();
-            const tempDiv = document.createElement('div');
-            tempDiv.id = tempId;
-            tempDiv.className = 'message me';
-            tempDiv.innerHTML =
-                '<div class="sender"><span class="name">我</span></div><span style="opacity:0.6;">上传中…</span>';
-            messageList.appendChild(tempDiv);
-            messageList.scrollTop = messageList.scrollHeight;
-
-            try {
-                const fileExt = processedFile.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-                const filePath = `public/${fileName}`;
-                const { data, error } = await supabase.storage
-                    .from('chat-images')
-                    .upload(filePath, processedFile, { cacheControl: '3600', upsert: false });
-                if (error) throw error;
-                const { data: urlData } = supabase.storage
-                    .from('chat-images')
-                    .getPublicUrl(filePath);
-                const publicURL = urlData.publicUrl;
-                const tempEl = document.getElementById(tempId);
-                if (tempEl) tempEl.remove();
-                const content = `![image](${publicURL})`;
-                await sendMessageContent(content);
-            } catch (err) {
-                console.error('上传失败:', err);
-                const tempEl = document.getElementById(tempId);
-                if (tempEl) tempEl.remove();
-                setAuthMessage('图片上传失败，请重试', 'error');
-                setTimeout(() => {
-                    if (authMessage.textContent === '图片上传失败，请重试') authMessage.textContent = '';
-                }, 3000);
-            } finally {
-                fileInput.value = '';
-            }
-        });
-
-        // ==========================================
-        // ✅ 订阅实时消息 + Presence
+        // 订阅消息 + Presence
         // ==========================================
         function subscribeMessages() {
             if (window.chatChannel) {
@@ -1936,7 +2277,8 @@
                         users[key] = {
                             user_id: key,
                             display_name: presence.display_name || '匿名',
-                            email: presence.email || ''
+                            email: presence.email || '',
+                            avatar_url: presence.avatar_url || getDefaultAvatar(presence.email)
                         };
                         count++;
                     }
@@ -1956,15 +2298,25 @@
                     if (!msg) return;
                     const isMe = (msg.sender_email === currentEmail);
                     if (isMe) return;
-                    addMessageToBottom(
-                        msg.content,
-                        msg.sender_name || '匿名',
-                        msg.sender_email || msg.sender_name,
-                        false,
-                        formatTime(msg.created_at),
-                        msg.id,
-                        msg.created_at
-                    );
+                    // 获取发送者头像
+                    const email = msg.sender_email;
+                    let avatar_url = currentUserMap[email]?.avatar_url || getDefaultAvatar(email);
+                    // 从在线用户中获取头像
+                    const onlineUser = Object.values(onlineUsers).find(u => u.email === email);
+                    if (onlineUser && onlineUser.avatar_url) {
+                        avatar_url = onlineUser.avatar_url;
+                    }
+                    const newMsg = {
+                        id: msg.id,
+                        content: msg.content,
+                        sender_name: msg.sender_name || '匿名',
+                        sender_email: email,
+                        isMe: false,
+                        time: formatTimeShort(msg.created_at),
+                        created_at: msg.created_at,
+                        avatar_url: avatar_url
+                    };
+                    addMessageToBottom(newMsg);
 
                     if (document.hidden) {
                         unreadCount++;
@@ -2019,6 +2371,7 @@
                         user_id: currentUserId,
                         email: currentEmail,
                         display_name: currentDisplayName || currentEmail.split('@')[0],
+                        avatar_url: currentAvatarUrl || getDefaultAvatar(currentEmail),
                         online_at: new Date().toISOString()
                     });
                 }
@@ -2028,7 +2381,147 @@
         }
 
         // ==========================================
-        // 页面可见性变化
+        // 图片预览（全局）
+        // ==========================================
+        window.previewImage = function(url) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText =
+                'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.cssText =
+                'max-width:100%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
+            const btnContainer = document.createElement('div');
+            btnContainer.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;justify-content:center;';
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = '下载图片';
+            downloadBtn.style.cssText =
+                'padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:500;cursor:pointer;';
+            downloadBtn.onclick = function(e) {
+                e.stopPropagation();
+                downloadBtn.textContent = '下载中…';
+                downloadBtn.disabled = true;
+                fetch(url)
+                    .then(res => {
+                        if (!res.ok) throw new Error('下载失败');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        const filename = url.split('/').pop().split('?')[0] || 'image.jpg';
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(a.href);
+                        downloadBtn.textContent = '已下载';
+                        setTimeout(() => {
+                            downloadBtn.textContent = '下载图片';
+                            downloadBtn.disabled = false;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('下载失败:', err);
+                        downloadBtn.textContent = '下载失败';
+                        setTimeout(() => {
+                            downloadBtn.textContent = '下载图片';
+                            downloadBtn.disabled = false;
+                        }, 2000);
+                    });
+            };
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '关闭';
+            closeBtn.style.cssText =
+                'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;font-size:15px;font-weight:500;cursor:pointer;';
+            closeBtn.onclick = function(e) {
+                e.stopPropagation();
+                document.body.removeChild(overlay);
+            };
+            btnContainer.appendChild(downloadBtn);
+            btnContainer.appendChild(closeBtn);
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+            overlay.appendChild(img);
+            overlay.appendChild(btnContainer);
+            document.body.appendChild(overlay);
+        };
+
+        // ==========================================
+        // 图片上传（聊天图片）
+        // ==========================================
+        attachBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                setAuthMessage('请选择图片文件', 'error');
+                fileInput.value = '';
+                return;
+            }
+
+            let processedFile = file;
+            try {
+                if (file.size > 200 * 1024) {
+                    processedFile = await compressImage(file, 1080, 0.7);
+                }
+            } catch (err) {
+                console.warn('压缩失败，使用原图', err);
+                processedFile = file;
+            }
+
+            if (processedFile.size > 20 * 1024 * 1024) {
+                setAuthMessage('图片不能超过 20MB', 'error');
+                fileInput.value = '';
+                return;
+            }
+
+            const tempId = 'uploading_' + Date.now();
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'message me';
+            tempDiv.innerHTML =
+                '<div class="avatar-wrapper"><img src="" alt="头像" style="width:28px;height:28px;border-radius:50%;" /></div><div class="bubble"><span style="opacity:0.6;">上传中…</span></div>';
+            const avatarImg = tempDiv.querySelector('.avatar-wrapper img');
+            avatarImg.src = currentAvatarUrl || getDefaultAvatar(currentEmail);
+            messageList.appendChild(tempDiv);
+            messageList.scrollTop = messageList.scrollHeight;
+
+            try {
+                const fileExt = processedFile.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+                const filePath = `public/${fileName}`;
+                const { data, error } = await supabase.storage
+                    .from('chat-images')
+                    .upload(filePath, processedFile, { cacheControl: '3600', upsert: false });
+                if (error) throw error;
+                const { data: urlData } = supabase.storage
+                    .from('chat-images')
+                    .getPublicUrl(filePath);
+                const publicURL = urlData.publicUrl;
+                const content = `![image](${publicURL})`;
+                await sendMessageContent(content);
+                tempDiv.remove();
+            } catch (err) {
+                console.error('上传失败:', err);
+                tempDiv.remove();
+                setAuthMessage('图片上传失败，请重试', 'error');
+                setTimeout(() => {
+                    if (authMessage.textContent === '图片上传失败，请重试') authMessage.textContent = '';
+                }, 3000);
+            } finally {
+                fileInput.value = '';
+            }
+        });
+
+        // ==========================================
+        // 事件绑定
         // ==========================================
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
@@ -2037,9 +2530,6 @@
             }
         });
 
-        // ==========================================
-        // 事件绑定
-        // ==========================================
         btnLogin.addEventListener('click', handleAuth);
         document.getElementById('switchToSignup').addEventListener('click', () => switchMode('signup'));
         togglePwd.addEventListener('click', function() {
@@ -2080,6 +2570,18 @@
             }
         });
 
+        // 头像上传按钮
+        avatarUploadBtn.addEventListener('click', function() {
+            avatarFileInput.click();
+        });
+        avatarFileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                uploadAvatar(e.target.files[0]);
+            }
+            this.value = '';
+        });
+
+        // 在线用户弹窗
         onlineUsersBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             onlineModal.classList.toggle('active');
@@ -2095,8 +2597,18 @@
             }
         });
 
+        // 用户详情弹窗关闭
+        closeProfileModal.addEventListener('click', function() {
+            profileModal.classList.remove('active');
+        });
+        profileModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                profileModal.classList.remove('active');
+            }
+        });
+
         // ==========================================
-        // Splash 控制（加快速度）
+        // Splash 控制
         // ==========================================
         (function() {
             const SPLASH_DURATION = 1800;
@@ -2142,7 +2654,7 @@
         })();
 
         loadTheme();
-        console.log('✅ MiniChat 已升级：包含 Logo 文字、移动端撤回优化、快速启动');
+        console.log('✅ MiniChat 已升级：用户头像 + 详细信息弹窗');
     </script>
 </body>
 </html>
