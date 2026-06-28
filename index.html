@@ -604,6 +604,8 @@
         }
         .chat-main .message .message-content {
             margin-bottom: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         .chat-main .message .message-content img {
             max-width: 200px;
@@ -926,9 +928,9 @@
             min-width: 0;
             position: relative;
         }
-        .chat-main .input-area .input-group input[type="text"] {
+        .chat-main .input-area .input-group textarea {
             flex: 1;
-            padding: 12px 18px;
+            padding: 10px 14px;
             border-radius: 24px;
             border: 1px solid var(--border-color);
             background: var(--bg-input);
@@ -936,15 +938,28 @@
             font-size: 15px;
             outline: none;
             transition: var(--transition);
-            min-width: 0;
+            resize: vertical;
+            min-height: 48px;
+            max-height: 150px;
+            line-height: 1.5;
+            font-family: inherit;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
-        .chat-main .input-area .input-group input[type="text"]:focus {
+        .chat-main .input-area .input-group textarea:focus {
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
-        .chat-main .input-area .input-group input[type="text"].editing {
+        .chat-main .input-area .input-group textarea.editing {
             border-color: #fbbf24;
             box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
+        }
+        .chat-main .input-area .input-group textarea::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-main .input-area .input-group textarea::-webkit-scrollbar-thumb {
+            background: var(--text-muted);
+            border-radius: 10px;
         }
         .chat-main .input-area .btn-icon {
             background: none;
@@ -1508,7 +1523,7 @@
                     </div>
 
                     <div class="input-group">
-                        <input type="text" id="chatInput" placeholder="输入消息…" />
+                        <textarea id="chatInput" placeholder="输入消息…" rows="1"></textarea>
                         <!-- @提及下拉列表 -->
                         <div class="mention-dropdown" id="mentionDropdown"></div>
                         <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none;" multiple />
@@ -1943,17 +1958,38 @@
         }
 
         // ==========================================
-        // 在光标位置插入文本
+        // 在光标位置插入文本（智能换行处理）
         // ==========================================
         function insertAtCursor(text) {
             const start = chatInput.selectionStart;
             const end = chatInput.selectionEnd;
             const val = chatInput.value;
-            chatInput.value = val.substring(0, start) + text + val.substring(end);
-            const newPos = start + text.length;
+            // 检查是否需要添加前导换行
+            let prefix = '';
+            if (start > 0 && val[start - 1] !== '\n') {
+                prefix = '\n';
+            }
+            // 检查是否需要添加尾部换行（插入后光标位置是否在行尾）
+            let suffix = '';
+            if (end < val.length && val[end] !== '\n') {
+                suffix = '\n';
+            }
+            const insertText = prefix + text + suffix;
+            chatInput.value = val.substring(0, start) + insertText + val.substring(end);
+            const newPos = start + insertText.length;
             chatInput.selectionStart = chatInput.selectionEnd = newPos;
             chatInput.focus();
             chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+            // 自动调整高度
+            autoResizeTextarea();
+        }
+
+        // ==========================================
+        // 自动调整 textarea 高度
+        // ==========================================
+        function autoResizeTextarea() {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
         }
 
         // ==========================================
@@ -1987,7 +2023,8 @@
                     else plainText = attachDesc;
                 }
                 if (!plainText) plainText = '[空消息]';
-                const quoteBlock = `\n> ${sender_name || '匿名'}: ${plainText}\n`;
+                const quoteBlock = `> ${sender_name || '匿名'}: ${plainText}`;
+                // 插入时前后加换行，确保独立块
                 insertAtCursor(quoteBlock);
                 setAuthMessage('✅ 已引用', 'success');
                 setTimeout(() => setAuthMessage(''), 1500);
@@ -2031,7 +2068,7 @@
             contentDiv.className = 'message-content';
 
             let displayContent = content || '';
-            // 引用块
+            // 处理引用块（匹配行首 > ）
             displayContent = displayContent.replace(/^>\s*(.+?)(?=\n|$)/gm, function(match, text) {
                 const parts = text.match(/^(.+?):\s*(.*)/);
                 if (parts) {
@@ -2040,7 +2077,7 @@
                     return `<div class="quote-block">${text}</div>`;
                 }
             });
-            // @提及
+            // 处理 @提及
             displayContent = displayContent.replace(/@(\S+)/g, function(match, username) {
                 return `<span class="mention">@${username}</span>`;
             });
@@ -2052,12 +2089,19 @@
             displayContent = displayContent.replace(/\[audio\]\((.*?)\)/g, function(match, url) {
                 return `<audio controls src="${url}" preload="metadata"></audio>`;
             });
-            // 转义
+            // 转义普通文本（但保留已生成的标签），同时将换行转为 <br>
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = displayContent;
             function escapeTextNodes(node) {
                 if (node.nodeType === 3) {
-                    node.textContent = node.textContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    let text = node.textContent;
+                    text = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    // 将换行转为 <br>（注意：文本节点中的 \n 需要替换）
+                    // 因为我们在 innerHTML 中会显示，所以需要将 \n 转换为 <br>
+                    // 但文本节点中的 \n 不会自动换行，我们直接替换为 <br>
+                    // 但直接替换会导致 HTML 标签被转义？但我们已经转义了 < >，所以安全
+                    // 但我们需要保留原来的文本结构，所以这里不处理，后面统一处理
+                    node.textContent = text;
                 } else if (node.nodeType === 1) {
                     for (let child of node.childNodes) {
                         escapeTextNodes(child);
@@ -2065,7 +2109,12 @@
                 }
             }
             escapeTextNodes(tempDiv);
-            contentDiv.innerHTML = tempDiv.innerHTML;
+            // 现在 tempDiv.innerHTML 包含了转义后的内容，但换行符仍为 \n，需要转为 <br>
+            // 但注意不要破坏标签内的 \n（但标签内通常没有）
+            let html = tempDiv.innerHTML;
+            // 将 \n 替换为 <br>，但需要避免替换标签内部的（但标签内没有）
+            html = html.replace(/\n/g, '<br>');
+            contentDiv.innerHTML = html;
             bubble.appendChild(contentDiv);
 
             const footer = document.createElement('div');
@@ -2157,6 +2206,7 @@
                             footer.appendChild(tip);
                             setTimeout(() => tip.remove(), 3000);
                             chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            autoResizeTextarea();
                         });
                         footer.appendChild(editBtn);
                     }
@@ -2569,6 +2619,8 @@
             }, { passive: false });
 
             btnSend.disabled = false;
+            chatInput.addEventListener('input', autoResizeTextarea);
+            autoResizeTextarea();
         }
 
         function handleScroll() {
@@ -2871,6 +2923,7 @@
                 attachments = [];
                 editingAttachments = [];
                 renderAttachments();
+                autoResizeTextarea();
 
             } catch (err) {
                 console.error('发送失败:', err);
@@ -2974,6 +3027,7 @@
             mentionActive = false;
             mentionDropdown.classList.remove('active');
             sendTypingEvent();
+            autoResizeTextarea();
         });
 
         function renderMentionDropdown(filter) {
@@ -3023,6 +3077,7 @@
                     }
                     mentionDropdown.classList.remove('active');
                     mentionActive = false;
+                    autoResizeTextarea();
                 });
                 mentionDropdown.appendChild(item);
             });
@@ -3402,6 +3457,7 @@
                 renderAttachments();
                 setAuthMessage('已取消编辑', 'success');
                 setTimeout(() => setAuthMessage(''), 1500);
+                autoResizeTextarea();
             }
         });
 
@@ -3571,7 +3627,7 @@
         })();
 
         loadTheme();
-        console.log('✅ MiniChat 已修复：拖拽文件、引用乱码、引用块独立');
+        console.log('✅ MiniChat 已更新：多行输入、换行显示、引用优化');
     </script>
     <script>
         if ('serviceWorker' in navigator) {
