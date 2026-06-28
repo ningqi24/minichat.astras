@@ -345,8 +345,8 @@
     </div>
 </div>
 <script>
-/* ===== 版本号 v2.2.2 ===== */
-const APP_VERSION='2.2.2';
+/* ===== 版本号 v2.2.3 ===== */
+const APP_VERSION='2.2.3';
 document.getElementById('sidebarVersion').textContent='v'+APP_VERSION;
 document.getElementById('panelVersion').textContent='MiniChat v'+APP_VERSION;
 
@@ -382,7 +382,7 @@ function renderMessageContent(raw){
     if(!raw)return'';
     let text=raw;
     const quotes=[],images=[],audios=[];
-    // 匹配格式: [quote:作者|时间|邮箱|内容]  或 [quote:作者|时间|内容] (兼容旧)
+    // 匹配格式: [quote:作者|时间|邮箱|内容]
     text=text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([\s\S]*?)\]/g, function(_, a, t, e, b){
         quotes.push({author:a, time:t, email:e, body:b});
         return '\x00Q'+quotes.length+'Q\x00';
@@ -489,7 +489,6 @@ function addQuoteAttachment(senderName, senderEmail, content, time){
     plain=plain.replace(/!\[image\]\([^)]*\)/g,'[图片]').replace(/\[audio\]\([^)]*\)/g,'[音频]').replace(/\[quote:[^\]]*\]/g,'').trim();
     if(!plain)plain='[空消息]';
     plain=plain.split('\n')[0].substring(0,100);
-    // 将邮箱也存入引用标记
     attachments.push({
         id:'quote-'+Date.now(),
         type:'quote',
@@ -503,9 +502,13 @@ function addQuoteAttachment(senderName, senderEmail, content, time){
 function insertAtCursor(text){chatInput.value=text+'\n';chatInput.selectionStart=chatInput.selectionEnd=chatInput.value.length;chatInput.focus();chatInput.dispatchEvent(new Event('input',{bubbles:true}));autoResizeTextarea();}
 function autoResizeTextarea(){chatInput.style.height='auto';chatInput.style.height=Math.min(Math.max(chatInput.scrollHeight,48),150)+'px';}
 
-/* ===== 引用跳转功能（增强版） ===== */
+/* ===== 引用跳转功能（增强） ===== */
 function scrollToQuote(author, time, email){
-    if(!author) return;
+    if(!author) {
+        setAuthMessage('引用信息缺失', 'error');
+        setTimeout(() => setAuthMessage(''), 2000);
+        return;
+    }
     let targetTime;
     try { targetTime = new Date(time).getTime(); } catch(e){ targetTime = NaN; }
     if(isNaN(targetTime)) {
@@ -524,15 +527,15 @@ function scrollToQuote(author, time, email){
         const msgTime = el.dataset.createdAt ? new Date(el.dataset.createdAt).getTime() : NaN;
         if(isNaN(msgTime)) continue;
 
-        // 优先匹配邮箱（如果提供了）
         let match = false;
+        // 优先使用邮箱匹配
         if(email && senderEmail === email) {
             match = true;
         } else if(!email && senderName === author) {
-            // 无邮箱时回退到昵称匹配
+            // 无邮箱时回退到昵称
             match = true;
         } else if(email && senderName === author && senderEmail !== email) {
-            // 如果邮箱不匹配但名字一样，暂时也算匹配（备用）
+            // 如果邮箱不匹配但名字相同（可能未存储邮箱），也算备选
             match = true;
         }
 
@@ -550,12 +553,12 @@ function scrollToQuote(author, time, email){
         bestMatch.classList.add('message-highlight');
         setTimeout(() => bestMatch.classList.remove('message-highlight'), 2400);
     } else {
-        setAuthMessage('未找到原始消息', 'error');
-        setTimeout(() => setAuthMessage(''), 2000);
+        setAuthMessage('未找到原始消息（可能已删除或未加载）', 'error');
+        setTimeout(() => setAuthMessage(''), 2500);
     }
 }
 
-/* ===== 创建消息元素 ===== */
+/* ===== 创建消息元素（移除cd上的事件绑定） ===== */
 function createMessageElement(msg){
     const{content,sender_name,sender_email,isMe,time,id,created_at}=msg;
     const div=document.createElement('div');
@@ -580,18 +583,7 @@ function createMessageElement(msg){
 
     const cd=document.createElement('div');cd.className='message-content';
     cd.innerHTML=renderMessageContent(content);
-    // 引用点击跳转（委托）
-    cd.addEventListener('click', function(e) {
-        const quote = e.target.closest('.quote-block');
-        if (quote) {
-            const author = quote.dataset.author;
-            const time = quote.dataset.time;
-            const email = quote.dataset.email || '';
-            if (author && time) {
-                scrollToQuote(author, time, email);
-            }
-        }
-    });
+    // 不再为 cd 绑定 click 事件，改为在 messageList 上委托
     bubble.appendChild(cd);
 
     const ft=document.createElement('div');ft.className='message-footer';
@@ -708,7 +700,7 @@ async function refreshSettingsData(){
     }
 }
 
-/* ===== 进入聊天 ===== */
+/* ===== 进入聊天（重构事件监听） ===== */
 function enterChat(){
     loginOverlay.classList.add('hidden');mainInterface.classList.remove('hidden');
     hasMoreMessages=true;oldestTimestamp=null;isLoadingMore=false;unreadCount=0;document.title='MiniChat';
@@ -717,10 +709,46 @@ function enterChat(){
     loadTheme();
     if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();
     subscribeMessages();
-    messageList.addEventListener('scroll',handleScroll);
-    messageList.addEventListener('click',function(e){const b=e.target.closest('.recall-btn');if(b){e.preventDefault();if(b.dataset.messageId)window.recallMessage(b.dataset.messageId);}});
-    messageList.addEventListener('touchstart',function(e){const b=e.target.closest('.recall-btn');if(b){e.preventDefault();if(b.dataset.messageId)window.recallMessage(b.dataset.messageId);}},{passive:false});
+
+    // 清除之前可能绑定的监听，避免重复（但这里只执行一次，没关系）
+    // 使用事件委托处理所有点击
+    messageList.removeEventListener('click', handleMessageListClick);
+    messageList.removeEventListener('touchstart', handleMessageListTouch);
+    messageList.addEventListener('click', handleMessageListClick);
+    messageList.addEventListener('touchstart', handleMessageListTouch);
+
     btnSend.disabled=false;chatInput.addEventListener('input',autoResizeTextarea);autoResizeTextarea();
+}
+function handleMessageListClick(e){
+    // 处理撤回按钮
+    const recallBtn = e.target.closest('.recall-btn');
+    if (recallBtn) {
+        e.preventDefault();
+        if (recallBtn.dataset.messageId) window.recallMessage(recallBtn.dataset.messageId);
+        return;
+    }
+    // 处理引用块点击
+    const quote = e.target.closest('.quote-block');
+    if (quote) {
+        e.preventDefault();
+        const author = quote.dataset.author;
+        const time = quote.dataset.time;
+        const email = quote.dataset.email || '';
+        if (author && time) {
+            scrollToQuote(author, time, email);
+        } else {
+            setAuthMessage('引用数据不完整', 'error');
+            setTimeout(() => setAuthMessage(''), 2000);
+        }
+    }
+}
+function handleMessageListTouch(e){
+    // 移动端兼容撤回
+    const recallBtn = e.target.closest('.recall-btn');
+    if (recallBtn) {
+        e.preventDefault();
+        if (recallBtn.dataset.messageId) window.recallMessage(recallBtn.dataset.messageId);
+    }
 }
 function handleScroll(){if(messageList.scrollTop<=20&&!isLoadingMore&&hasMoreMessages)loadHistory(true);}
 
@@ -731,6 +759,8 @@ async function handleLogout(){
     mainInterface.classList.add('hidden');loginOverlay.classList.remove('hidden');authMessage.textContent='';
     messageList.innerHTML='';sidebarUserEmail.textContent='未登录';localStorage.removeItem('minichat_user');
     closeSettingsFunc();messageList.removeEventListener('scroll',handleScroll);
+    messageList.removeEventListener('click', handleMessageListClick);
+    messageList.removeEventListener('touchstart', handleMessageListTouch);
     onlineUsers={};onlineCount=0;updateOnlineUI();
     chatInput.value='';btnSend.disabled=true;attachments=[];renderAttachments();
 }
@@ -797,7 +827,6 @@ async function sendMessageContent(content){
     try{
         let fc=text;
         const qa=attachments.filter(a=>a.type==='quote');
-        // 引用块生成时带上邮箱
         qa.forEach(q=>{
             const emailPart = q.quoteEmail ? '|'+q.quoteEmail : '';
             fc='[quote:'+q.quoteAuthor+'|'+q.quoteTime+emailPart+'|'+q.quoteText+']\n'+fc;
