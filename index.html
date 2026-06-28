@@ -15,7 +15,7 @@
             --bg-card: #1e1e1e;
             --bg-input: #2a2a2a;
             --bg-hover: #2a2a2a;
-            --bg-overlay: rgba(0,0,0,0.7);
+            --bg-overlay: rgba(0, 0, 0, 0.7);
             --text-primary: #e8e8e8;
             --text-secondary: #a0a0a0;
             --text-muted: #6b6b6b;
@@ -36,7 +36,7 @@
             --bg-card: #ffffff;
             --bg-input: #eef0f2;
             --bg-hover: #e8eaed;
-            --bg-overlay: rgba(255,255,255,0.7);
+            --bg-overlay: rgba(255, 255, 255, 0.7);
             --text-primary: #1e293b;
             --text-secondary: #64748b;
             --text-muted: #94a3b8;
@@ -100,12 +100,12 @@
             height: 240px;
             width: 240px;
             object-fit: contain;
-            filter: drop-shadow(0 4px 12px rgba(59,130,246,0.3));
+            filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));
         }
         .splash-divider {
             width: 2px;
             height: 80px;
-            background: rgba(255,255,255,0.6);
+            background: rgba(255, 255, 255, 0.6);
             flex-shrink: 0;
         }
         .splash-bar {
@@ -113,9 +113,9 @@
             max-width: calc(100% - 80px);
             height: 6px;
             border-radius: 6px;
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
             overflow: hidden;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
         }
         .splash-bar .fill {
             height: 100%;
@@ -126,8 +126,12 @@
             animation: splashFill 2.6s linear 1 forwards;
         }
         @keyframes splashFill {
-            from { width: 0%; }
-            to { width: 100%; }
+            from {
+                width: 0%;
+            }
+            to {
+                width: 100%;
+            }
         }
         /* ===== 登录界面 ===== */
         .login-overlay {
@@ -389,7 +393,7 @@
             line-height: 1.6;
             font-size: 14px;
             animation: fadeIn 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
         .chat-main .message.me {
             align-self: flex-end;
@@ -434,11 +438,35 @@
         .chat-main .message.other .sender .email {
             color: var(--text-secondary);
         }
+        /* ===== 消息底部（时间 + 撤回按钮） ===== */
+        .chat-main .message .message-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 6px;
+        }
         .chat-main .message .time {
             font-size: 10px;
             opacity: 0.5;
-            margin-top: 6px;
-            text-align: right;
+        }
+        .chat-main .message .recall-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            padding: 2px 10px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .chat-main .message .recall-btn:hover {
+            background: var(--bg-hover);
+            color: var(--accent);
+        }
+        .chat-main .message .recalled {
+            opacity: 0.6;
+            font-style: italic;
         }
         .chat-main .message img {
             max-width: 200px;
@@ -553,7 +581,7 @@
             width: 100%;
             max-width: 400px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
             transition: background 0.3s, border-color 0.3s;
         }
         .settings-panel h2 {
@@ -643,7 +671,7 @@
             top: 2px;
             left: 2px;
             transition: transform 0.25s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
         .toggle-switch.active {
             background: var(--accent);
@@ -681,34 +709,92 @@
             background: var(--bg-hover);
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         @media (max-width: 768px) {
-            body { padding: 0; }
-            .app { max-height: 100vh; border-radius: 0; }
-            .sidebar { width: 200px; padding: 12px; }
-            .sidebar .nav-item span { display: none; }
-            .sidebar .nav-item { justify-content: center; }
-            .sidebar .user-email { font-size: 11px; text-align: center; }
-            .chat-main .chat-header { padding: 12px 16px; }
-            .chat-main .chat-messages { padding: 12px; }
-            .chat-main .input-area { padding: 10px 16px 16px; gap: 8px; }
-            .login-card { padding: 28px 20px; }
-            .splash-inner .splash-icon { height: 120px; width: 120px; }
-            .splash-divider { height: 120px; }
-            .splash-inner { gap: 6px; }
-            .splash-bar { width: 260px; }
+            body {
+                padding: 0;
+            }
+            .app {
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            .sidebar {
+                width: 200px;
+                padding: 12px;
+            }
+            .sidebar .nav-item span {
+                display: none;
+            }
+            .sidebar .nav-item {
+                justify-content: center;
+            }
+            .sidebar .user-email {
+                font-size: 11px;
+                text-align: center;
+            }
+            .chat-main .chat-header {
+                padding: 12px 16px;
+            }
+            .chat-main .chat-messages {
+                padding: 12px;
+            }
+            .chat-main .input-area {
+                padding: 10px 16px 16px;
+                gap: 8px;
+            }
+            .login-card {
+                padding: 28px 20px;
+            }
+            .splash-inner .splash-icon {
+                height: 120px;
+                width: 120px;
+            }
+            .splash-divider {
+                height: 120px;
+            }
+            .splash-inner {
+                gap: 6px;
+            }
+            .splash-bar {
+                width: 260px;
+            }
         }
         @media (max-width: 480px) {
-            .sidebar { width: 60px; padding: 8px; }
-            .sidebar .logo-area img { height: 28px; max-width: 40px; }
-            .sidebar .nav-item { padding: 10px; }
-            .chat-main .message { max-width: 90%; }
-            .splash-inner .splash-icon { height: 80px; width: 80px; }
-            .splash-divider { height: 80px; }
-            .splash-inner { gap: 4px; }
-            .splash-bar { width: calc(100% - 48px); }
+            .sidebar {
+                width: 60px;
+                padding: 8px;
+            }
+            .sidebar .logo-area img {
+                height: 28px;
+                max-width: 40px;
+            }
+            .sidebar .nav-item {
+                padding: 10px;
+            }
+            .chat-main .message {
+                max-width: 90%;
+            }
+            .splash-inner .splash-icon {
+                height: 80px;
+                width: 80px;
+            }
+            .splash-divider {
+                height: 80px;
+            }
+            .splash-inner {
+                gap: 4px;
+            }
+            .splash-bar {
+                width: calc(100% - 48px);
+            }
         }
     </style>
 </head>
@@ -761,7 +847,7 @@
                         <span>聊天</span>
                     </div>
                     <div class="nav-item" id="settingsNav">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                         <span>设置</span>
                     </div>
                 </nav>
@@ -1003,56 +1089,67 @@
         };
 
         // ==========================================
-        // 🎨 核心：创建消息元素（昵称突出 + 邮箱辅助）
+        // 🎨 核心：创建消息元素（昵称突出 + 邮箱辅助 + 撤回按钮）
         // ==========================================
-        function createMessageElement(content, senderName, senderEmail, isMe, time) {
+        function createMessageElement(content, senderName, senderEmail, isMe, time, messageId, createdAt) {
             const div = document.createElement('div');
             div.className = 'message ' + (isMe ? 'me' : 'other');
-            if (!content) content = '';
+            if (messageId) div.dataset.messageId = messageId;
+            if (createdAt) div.dataset.createdAt = createdAt;
 
-            const imageMatch = content.match(/!\[image\]\((.*?)\)/);
-            let displayContent = content;
+            // 处理消息内容
+            let displayContent = content || '';
+            const imageMatch = displayContent.match(/!\[image\]\((.*?)\)/);
             if (imageMatch) {
                 const url = imageMatch[1];
                 displayContent =
                     `<img src="${url}" onclick="window.previewImage && window.previewImage('${url}')" alt="图片" loading="lazy" />`;
             } else {
-                displayContent = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                displayContent = displayContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
 
-            // 构建发送者信息：昵称（大）+ 邮箱（小）
+            // 发送者信息（昵称 + 邮箱）
             const displayName = senderName || '匿名';
             let senderHtml = '';
             if (senderEmail && senderEmail !== senderName && !senderName.includes('@')) {
-                // 正常情况：昵称 (邮箱)
-                senderHtml = `
-                    <span class="name">${displayName}</span>
-                    <span class="email">${senderEmail}</span>
-                `;
+                senderHtml =
+                `<span class="name">${displayName}</span><span class="email">${senderEmail}</span>`;
             } else if (senderName && senderName.includes('@') && !senderEmail) {
-                // 旧消息只有邮箱，直接显示邮箱作为名称
-                senderHtml = `<span class="name">${senderName}</span>`;
-            } else if (senderEmail && senderEmail === senderName) {
-                // 如果昵称就是邮箱（降级）
                 senderHtml = `<span class="name">${senderName}</span>`;
             } else {
-                // 兜底
                 senderHtml = `<span class="name">${displayName}</span>`;
-                if (senderEmail) {
+                if (senderEmail && senderEmail !== senderName) {
                     senderHtml += `<span class="email">${senderEmail}</span>`;
                 }
             }
 
+            // 时间 + 撤回按钮
+            const timeStr = time || formatTime(new Date().toISOString());
+            let footerHtml = `<span class="time">${timeStr}</span>`;
+
+            // ✅ 撤回按钮：仅自己发送 + 2分钟内 + 未被撤回
+            const isRecalled = content === '（已撤回）';
+            if (isMe && createdAt && !isRecalled) {
+                const msgTime = new Date(createdAt).getTime();
+                const diffMinutes = (Date.now() - msgTime) / 1000 / 60;
+                if (diffMinutes < 2) {
+                    footerHtml +=
+                        `<button class="recall-btn" onclick="window.recallMessage('${messageId}')">撤回</button>`;
+                }
+            }
+
+            const contentClass = isRecalled ? 'message-content recalled' : 'message-content';
+
             div.innerHTML = `
                 <div class="sender">${senderHtml}</div>
-                ${displayContent}
-                <div class="time">${time || formatTime(new Date().toISOString())}</div>
+                <div class="${contentClass}">${displayContent}</div>
+                <div class="message-footer">${footerHtml}</div>
             `;
             return div;
         }
 
-        function addMessageToBottom(content, senderName, senderEmail, isMe, time) {
-            const div = createMessageElement(content, senderName, senderEmail, isMe, time);
+        function addMessageToBottom(content, senderName, senderEmail, isMe, time, messageId, createdAt) {
+            const div = createMessageElement(content, senderName, senderEmail, isMe, time, messageId, createdAt);
             messageList.appendChild(div);
             messageList.scrollTop = messageList.scrollHeight;
         }
@@ -1066,7 +1163,9 @@
                     msg.sender_name || '匿名',
                     msg.sender_email || msg.sender_name,
                     isMe,
-                    formatTime(msg.created_at)
+                    formatTime(msg.created_at),
+                    msg.id,
+                    msg.created_at
                 );
                 fragment.appendChild(div);
             });
@@ -1285,12 +1384,14 @@
 
                 if (updateMsgError) {
                     console.warn('更新历史消息失败:', updateMsgError);
-                    // 即使失败也不影响昵称修改，只是历史消息没更新
+                    displayNameMessage.textContent = '⚠️ 昵称已修改，但历史消息未同步';
+                    displayNameMessage.style.color = '#fbbf24';
+                } else {
+                    displayNameMessage.textContent = '✅ 昵称已更新（历史消息已同步）';
+                    displayNameMessage.style.color = '#4ade80';
                 }
 
                 currentDisplayName = newName;
-                displayNameMessage.textContent = '✅ 昵称已更新（历史消息已同步）';
-                displayNameMessage.style.color = '#4ade80';
                 sidebarUserEmail.textContent = newName;
 
                 // 刷新消息列表
@@ -1350,7 +1451,9 @@
                             msg.sender_name || '匿名',
                             msg.sender_email || msg.sender_name,
                             isMe,
-                            formatTime(msg.created_at)
+                            formatTime(msg.created_at),
+                            msg.id,
+                            msg.created_at
                         );
                     });
                     cacheMessages(sorted);
@@ -1396,7 +1499,9 @@
                         msg.sender_name || '匿名',
                         msg.sender_email || msg.sender_name,
                         isMe,
-                        formatTime(msg.created_at)
+                        formatTime(msg.created_at),
+                        msg.id,
+                        msg.created_at
                     );
                 });
             } else {
@@ -1480,6 +1585,32 @@
         }
 
         // ==========================================
+        // ✅ 消息撤回功能
+        // ==========================================
+        window.recallMessage = async function(messageId) {
+            if (!messageId) return;
+            if (!confirm('确定要撤回这条消息吗？')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .update({ content: '（已撤回）' })
+                    .eq('id', messageId)
+                    .eq('sender_email', currentEmail);
+
+                if (error) {
+                    console.error('撤回失败:', error);
+                    setAuthMessage('撤回失败，请重试', 'error');
+                    setTimeout(() => {
+                        if (authMessage.textContent === '撤回失败，请重试') authMessage.textContent = '';
+                    }, 3000);
+                }
+            } catch (err) {
+                console.error('撤回失败:', err);
+            }
+        };
+
+        // ==========================================
         // 图片压缩
         // ==========================================
         function compressImage(file, maxWidth, quality) {
@@ -1556,7 +1687,8 @@
             const tempDiv = document.createElement('div');
             tempDiv.id = tempId;
             tempDiv.className = 'message me';
-            tempDiv.innerHTML = '<div class="sender"><span class="name">我</span></div><span style="opacity:0.6;">上传中…</span>';
+            tempDiv.innerHTML =
+            '<div class="sender"><span class="name">我</span></div><span style="opacity:0.6;">上传中…</span>';
             messageList.appendChild(tempDiv);
             messageList.scrollTop = messageList.scrollHeight;
 
@@ -1590,7 +1722,7 @@
         });
 
         // ==========================================
-        // 订阅实时消息
+        // ✅ 订阅实时消息（支持 INSERT + UPDATE）
         // ==========================================
         function subscribeMessages() {
             if (window.chatChannel) {
@@ -1614,7 +1746,9 @@
                             msg.sender_name || '匿名',
                             msg.sender_email || msg.sender_name,
                             false,
-                            formatTime(msg.created_at)
+                            formatTime(msg.created_at),
+                            msg.id,
+                            msg.created_at
                         );
 
                         if (document.hidden) {
@@ -1629,7 +1763,39 @@
                             }
                         }
                     } catch (e) {
-                        console.error('处理实时消息失败', e);
+                        console.error('处理新消息失败:', e);
+                    }
+                })
+                // ✅ 监听消息更新（撤回）
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'messages'
+                }, (payload) => {
+                    try {
+                        const updated = payload.new;
+                        const elements = document.querySelectorAll(`.message[data-message-id="${updated.id}"]`);
+                        elements.forEach(el => {
+                            const contentDiv = el.querySelector('.message-content');
+                            if (contentDiv) {
+                                if (updated.content === '（已撤回）') {
+                                    contentDiv.textContent = '（已撤回）';
+                                    contentDiv.className = 'message-content recalled';
+                                } else {
+                                    contentDiv.innerHTML = updated.content.replace(/</g, '&lt;').replace(
+                                        />/g, '&gt;');
+                                    contentDiv.className = 'message-content';
+                                }
+                            }
+                            // 移除撤回按钮
+                            const footer = el.querySelector('.message-footer');
+                            if (footer && updated.content === '（已撤回）') {
+                                const recallBtn = footer.querySelector('.recall-btn');
+                                if (recallBtn) recallBtn.remove();
+                            }
+                        });
+                    } catch (e) {
+                        console.error('处理消息更新失败:', e);
                     }
                 })
                 .subscribe((status) => { /* console.log('channel status', status) */ });
@@ -1736,7 +1902,7 @@
         })();
 
         loadTheme();
-        console.log('✅ MiniChat 已升级：方案A(同步历史消息) + 突出昵称显示');
+        console.log('✅ MiniChat 已升级：方案A(同步历史消息) + 突出昵称 + 消息撤回');
     </script>
 </body>
 </html>
