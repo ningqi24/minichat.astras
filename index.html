@@ -7,9 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js">
     </script>
     <style>
-        /* ===== 全局样式（与之前完全相同，省略以节省篇幅） ===== */
-        /* 你可以直接复制之前完整的样式部分，这里为节省篇幅省略 */
-        /* 但实际使用时请保留完整样式 */
+        /* ===== 全局重置 & 双主题变量 ===== */
         :root {
             --bg-primary: #0d0d0d;
             --bg-secondary: #1a1a1a;
@@ -28,6 +26,8 @@
             --radius: 16px;
             --radius-sm: 10px;
             --transition: 0.2s ease;
+            --sender-name-size: 15px;
+            --sender-email-size: 11px;
         }
         body.light-theme {
             --bg-primary: #f0f2f5;
@@ -43,7 +43,11 @@
             --border-color: #d0d5dd;
             --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: var(--bg-primary);
@@ -163,7 +167,9 @@
             height: 40px;
             width: auto;
         }
-        .login-card .logo-area h1 { display: none; }
+        .login-card .logo-area h1 {
+            display: none;
+        }
         .login-card .auth-title {
             font-size: 20px;
             font-weight: 500;
@@ -217,8 +223,12 @@
             margin-top: 16px;
             min-height: 20px;
         }
-        .login-card .auth-message.success { color: #4ade80; }
-        .login-card .auth-message.error { color: #f87171; }
+        .login-card .auth-message.success {
+            color: #4ade80;
+        }
+        .login-card .auth-message.error {
+            color: #f87171;
+        }
         .login-card .auth-toggle {
             display: flex;
             justify-content: center;
@@ -231,7 +241,9 @@
             cursor: pointer;
             text-decoration: none;
         }
-        .login-card .auth-toggle a:hover { text-decoration: underline; }
+        .login-card .auth-toggle a:hover {
+            text-decoration: underline;
+        }
         .login-card .pwd-wrapper {
             position: relative;
         }
@@ -252,7 +264,9 @@
             width: 100%;
             height: 100%;
         }
-        .main-interface.hidden { display: none; }
+        .main-interface.hidden {
+            display: none;
+        }
         .sidebar {
             width: 280px;
             flex-shrink: 0;
@@ -275,8 +289,12 @@
             max-width: 100%;
             object-fit: contain;
         }
-        .sidebar .logo-area span { display: none; }
-        .sidebar .nav { flex: 1; }
+        .sidebar .logo-area span {
+            display: none;
+        }
+        .sidebar .nav {
+            flex: 1;
+        }
         .sidebar .nav-item {
             display: flex;
             align-items: center;
@@ -386,14 +404,35 @@
             border-bottom-left-radius: 6px;
             border: 1px solid var(--border-color);
         }
+        /* ===== 🎨 突出昵称的样式 ===== */
         .chat-main .message .sender {
-            font-size: 11px;
-            font-weight: 600;
-            opacity: 0.7;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 4px 8px;
             margin-bottom: 4px;
         }
-        .chat-main .message.me .sender {
-            color: rgba(255,255,255,0.8);
+        .chat-main .message .sender .name {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .chat-main .message .sender .email {
+            font-size: 11px;
+            font-weight: 400;
+            opacity: 0.6;
+        }
+        .chat-main .message.me .sender .name {
+            color: rgba(255, 255, 255, 0.95);
+        }
+        .chat-main .message.me .sender .email {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .chat-main .message.other .sender .name {
+            color: var(--text-primary);
+        }
+        .chat-main .message.other .sender .email {
+            color: var(--text-secondary);
         }
         .chat-main .message .time {
             font-size: 10px;
@@ -964,12 +1003,13 @@
         };
 
         // ==========================================
-        // ✅ 核心改动：createMessageElement 显示格式为"昵称 (邮箱)"
+        // 🎨 核心：创建消息元素（昵称突出 + 邮箱辅助）
         // ==========================================
         function createMessageElement(content, senderName, senderEmail, isMe, time) {
             const div = document.createElement('div');
             div.className = 'message ' + (isMe ? 'me' : 'other');
             if (!content) content = '';
+
             const imageMatch = content.match(/!\[image\]\((.*?)\)/);
             let displayContent = content;
             if (imageMatch) {
@@ -979,17 +1019,35 @@
             } else {
                 displayContent = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
-            // ✅ 显示格式：昵称 (邮箱)
-            let displayName = senderName || '匿名';
+
+            // 构建发送者信息：昵称（大）+ 邮箱（小）
+            const displayName = senderName || '匿名';
+            let senderHtml = '';
             if (senderEmail && senderEmail !== senderName && !senderName.includes('@')) {
-                displayName = `${senderName} (${senderEmail})`;
+                // 正常情况：昵称 (邮箱)
+                senderHtml = `
+                    <span class="name">${displayName}</span>
+                    <span class="email">${senderEmail}</span>
+                `;
+            } else if (senderName && senderName.includes('@') && !senderEmail) {
+                // 旧消息只有邮箱，直接显示邮箱作为名称
+                senderHtml = `<span class="name">${senderName}</span>`;
+            } else if (senderEmail && senderEmail === senderName) {
+                // 如果昵称就是邮箱（降级）
+                senderHtml = `<span class="name">${senderName}</span>`;
+            } else {
+                // 兜底
+                senderHtml = `<span class="name">${displayName}</span>`;
+                if (senderEmail) {
+                    senderHtml += `<span class="email">${senderEmail}</span>`;
+                }
             }
-            // 如果 senderName 本身就是邮箱（旧消息），直接显示邮箱
-            if (senderName && senderName.includes('@') && !senderEmail) {
-                displayName = senderName;
-            }
-            div.innerHTML = '<div class="sender">' + displayName + '</div>' + displayContent +
-                '<div class="time">' + (time || formatTime(new Date().toISOString())) + '</div>';
+
+            div.innerHTML = `
+                <div class="sender">${senderHtml}</div>
+                ${displayContent}
+                <div class="time">${time || formatTime(new Date().toISOString())}</div>
+            `;
             return div;
         }
 
@@ -1002,7 +1060,6 @@
         function prependMessages(messages) {
             const fragment = document.createDocumentFragment();
             messages.forEach(msg => {
-                // ✅ 用 sender_email 判断归属
                 const isMe = (msg.sender_email === currentEmail);
                 const div = createMessageElement(
                     msg.content,
@@ -1185,6 +1242,9 @@
             }
         }
 
+        // ==========================================
+        // ✅ 方案A：修改昵称时同步更新历史消息
+        // ==========================================
         async function saveDisplayName() {
             const newName = displayNameInput.value.trim();
             if (!newName) {
@@ -1202,12 +1262,12 @@
             displayNameMessage.style.color = 'var(--text-secondary)';
 
             try {
+                // 1. 更新 profiles 表
                 const { error } = await supabase
                     .from('profiles')
                     .update({ display_name: newName })
                     .eq('id', currentUserId);
                 if (error) {
-                    // 处理唯一约束冲突
                     if (error.message && error.message.includes('duplicate key')) {
                         displayNameMessage.textContent = '❌ 昵称已被占用，请换一个';
                         displayNameMessage.style.color = '#f87171';
@@ -1216,11 +1276,26 @@
                     }
                     return;
                 }
+
+                // ✅ 2. 同步更新所有历史消息的 sender_name（方案A核心）
+                const { error: updateMsgError } = await supabase
+                    .from('messages')
+                    .update({ sender_name: newName })
+                    .eq('sender_email', currentEmail);
+
+                if (updateMsgError) {
+                    console.warn('更新历史消息失败:', updateMsgError);
+                    // 即使失败也不影响昵称修改，只是历史消息没更新
+                }
+
                 currentDisplayName = newName;
-                displayNameMessage.textContent = '✅ 昵称已更新';
+                displayNameMessage.textContent = '✅ 昵称已更新（历史消息已同步）';
                 displayNameMessage.style.color = '#4ade80';
                 sidebarUserEmail.textContent = newName;
+
+                // 刷新消息列表
                 refreshMessages();
+
             } catch (err) {
                 console.error('保存昵称失败:', err);
                 displayNameMessage.textContent = '保存失败，请重试';
@@ -1269,7 +1344,6 @@
                 if (!append) {
                     messageList.innerHTML = '';
                     sorted.forEach(msg => {
-                        // ✅ 用 sender_email 判断归属
                         const isMe = (msg.sender_email === currentEmail);
                         addMessageToBottom(
                             msg.content,
@@ -1373,7 +1447,7 @@
         }
 
         // ==========================================
-        // ✅ 发送消息：同时存 sender_name 和 sender_email
+        // 发送消息：同时存 sender_name 和 sender_email
         // ==========================================
         async function sendMessageContent(content) {
             if (!currentEmail) {
@@ -1383,7 +1457,6 @@
 
             const senderName = currentDisplayName || currentEmail.split('@')[0];
 
-            // ✅ 乐观更新：用昵称显示，判断用邮箱
             addMessageToBottom(content, senderName, currentEmail, true);
 
             try {
@@ -1391,8 +1464,8 @@
                     .from('messages')
                     .insert({
                         content: content,
-                        sender_name: senderName,    // 显示用
-                        sender_email: currentEmail   // ✅ 判断用
+                        sender_name: senderName,
+                        sender_email: currentEmail
                     });
                 if (error) throw error;
                 if (chatInput.value) chatInput.value = '';
@@ -1483,7 +1556,7 @@
             const tempDiv = document.createElement('div');
             tempDiv.id = tempId;
             tempDiv.className = 'message me';
-            tempDiv.innerHTML = '<div class="sender">我</div><span style="opacity:0.6;">上传中…</span>';
+            tempDiv.innerHTML = '<div class="sender"><span class="name">我</span></div><span style="opacity:0.6;">上传中…</span>';
             messageList.appendChild(tempDiv);
             messageList.scrollTop = messageList.scrollHeight;
 
@@ -1517,7 +1590,7 @@
         });
 
         // ==========================================
-        // ✅ 订阅实时消息：用 sender_email 判断归属
+        // 订阅实时消息
         // ==========================================
         function subscribeMessages() {
             if (window.chatChannel) {
@@ -1534,7 +1607,6 @@
                     try {
                         const msg = payload.new;
                         if (!msg) return;
-                        // ✅ 用 sender_email 判断
                         const isMe = (msg.sender_email === currentEmail);
                         if (isMe) return;
                         addMessageToBottom(
@@ -1664,7 +1736,7 @@
         })();
 
         loadTheme();
-        console.log('✅ MiniChat 已升级：方案B(显示邮箱后缀) + 方案C(邮箱判断归属)');
+        console.log('✅ MiniChat 已升级：方案A(同步历史消息) + 突出昵称显示');
     </script>
 </body>
 </html>
