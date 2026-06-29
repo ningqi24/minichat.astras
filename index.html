@@ -10,14 +10,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
-        /* ===== 全局变量 ===== */
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
         body.light-theme{--bg-primary:#f0f2f5;--bg-secondary:#fff;--bg-sidebar:#f7f8fa;--bg-card:#fff;--bg-input:#eef0f2;--bg-hover:#e8eaed;--bg-overlay:rgba(255,255,255,0.7);--text-primary:#1e293b;--text-secondary:#64748b;--text-muted:#94a3b8;--border-color:#d0d5dd;--shadow:0 8px 30px rgba(0,0,0,0.08);--bubble-me:#dfe3e8;--bubble-me-border:#c8cdd4;--quote-bg:rgba(59,130,246,0.06);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.06);--code-border:rgba(0,0,0,0.1);--link-color:#2563eb}
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;width:100vw;overflow:hidden;transition:background .3s,color .3s}
         .app{width:100vw;height:100vh;background:var(--bg-secondary);display:flex;overflow:hidden;position:relative}
-
-        /* ===== 启动画面 ===== */
         #splash{position:absolute;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a12;transition:opacity .6s ease,visibility .6s ease;overflow:hidden}
         #splash.hidden{opacity:0;visibility:hidden;pointer-events:none}
         .splash-icons{display:flex;align-items:center;gap:30px;position:relative}
@@ -29,8 +26,6 @@
         .splash-status{margin-top:24px;color:rgba(255,255,255,.25);font-size:12px;letter-spacing:1.5px;font-weight:300;text-transform:uppercase;opacity:0;animation:statusFade .8s ease 1.2s forwards,statusPulse 2.4s ease-in-out 2.0s infinite}
         @keyframes statusFade{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
         @keyframes statusPulse{0%,100%{opacity:.25}50%{opacity:.6}}
-
-        /* ===== 登录覆盖层 ===== */
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s;border-radius:0}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
         .login-card{background:var(--bg-card);padding:40px 36px;border-radius:var(--radius);width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.8);border:1px solid var(--border-color)}
@@ -54,8 +49,6 @@
         .login-card .pwd-wrapper{position:relative}
         .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;transition:background .2s,color .2s}
         .login-card .pwd-wrapper .toggle-pwd:hover{background:var(--bg-hover);color:var(--text-primary)}
-
-        /* ===== 侧边栏 & 主聊天区域 ===== */
         .sidebar .logo-area .logo-text{font-size:18px;font-weight:700;color:var(--text-primary);margin-left:4px}
         .sidebar .version-tag{font-size:10px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}
@@ -138,8 +131,6 @@
         .chat-main .message .recall-btn{background:rgba(128,128,128,.15);border:1px solid rgba(128,128,128,.1);color:var(--text-secondary);font-size:11px;cursor:pointer;padding:2px 10px;border-radius:4px;transition:all .15s ease;touch-action:manipulation}
         .chat-main .message .recall-btn:hover{background:rgba(255,100,100,.3);color:#f87171;transform:translateY(-1px)}
         .chat-main .message .recall-btn:active{transform:scale(.9)}
-
-        /* ===== 用户资料弹窗 ===== */
         .user-profile-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:500;animation:fadeIn .2s ease}
         .user-profile-modal.active{display:flex}
         .user-profile-modal .modal-content{background:var(--bg-card);border-radius:var(--radius);padding:32px;max-width:360px;width:90%;border:1px solid var(--border-color);box-shadow:var(--shadow);text-align:center}
@@ -155,8 +146,6 @@
         .user-profile-modal .modal-close{margin-top:16px;background:var(--bg-input);border:none;padding:10px;border-radius:var(--radius-sm);color:var(--text-primary);font-weight:500;cursor:pointer;width:100%;transition:all .2s ease}
         .user-profile-modal .modal-close:hover{background:var(--bg-hover);transform:translateY(-1px)}
         .user-profile-modal .modal-close:active{transform:scale(.97)}
-
-        /* ===== 头像上传 ===== */
         .avatar-upload-area{display:flex;align-items:center;gap:16px;margin:6px 0 4px}
         .avatar-upload-area .preview{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--bg-input);border:2px solid var(--border-color);flex-shrink:0}
         .avatar-upload-area .upload-btn{padding:6px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:12px;cursor:pointer;transition:all .2s ease}
@@ -164,8 +153,6 @@
         .avatar-upload-area .upload-btn:active{transform:scale(.95)}
         .avatar-upload-area input[type="file"]{display:none}
         .avatar-upload-status{font-size:12px;color:var(--text-secondary);margin-top:2px}
-
-        /* ===== 附件区域 ===== */
         .attachment-area{display:flex;flex-wrap:wrap;gap:8px;padding:4px 24px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);min-height:0}
         .attachment-area:empty{display:none}
         .attachment-item{display:flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:4px 8px 4px 4px;font-size:12px;color:var(--text-secondary);max-width:200px}
@@ -179,8 +166,6 @@
         .attachment-item.quote-attachment .qa-label{font-size:10px;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:3px;text-transform:uppercase;letter-spacing:.5px}
         .attachment-item.quote-attachment .qa-author{font-size:12px;font-weight:700;color:var(--quote-author)}
         .attachment-item.quote-attachment .qa-text{font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4}
-
-        /* ===== 输入区域 ===== */
         .chat-main .input-area{padding:12px 24px 20px;background:var(--bg-secondary);border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;position:relative}
         .chat-main .input-area .input-group{flex:1;display:flex;align-items:center;gap:8px;min-width:0;position:relative}
         .chat-main .input-area .input-group textarea{flex:1;padding:10px 14px;border-radius:24px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:15px;outline:none;transition:var(--transition);resize:vertical;min-height:48px;max-height:150px;line-height:1.5;font-family:inherit;white-space:pre-wrap;word-wrap:break-word}
@@ -191,15 +176,18 @@
         .chat-main .input-area .btn-icon:hover{background:var(--bg-hover);color:var(--text-primary);transform:translateY(-1px)}
         .chat-main .input-area .btn-icon:active{transform:scale(.9)}
         .chat-main .input-area .btn-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-        
-        /* ===== 新发送按钮 - 圆润丝滑 ===== */
         .chat-main .input-area .send-btn{background:var(--accent);border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;flex-shrink:0}
         .chat-main .input-area .send-btn:hover{background:var(--accent-hover);box-shadow:0 4px 14px rgba(59,130,246,.3);transform:translateY(-2px)}
         .chat-main .input-area .send-btn:active{transform:scale(.92)}
         .chat-main .input-area .send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-        .chat-main .input-area .send-btn svg{width:22px;height:22px;display:block;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-
-        /* ===== 表情选择器 - 丰富版 ===== */
+        .chat-main .input-area .send-btn svg{width:22px;height:22px;display:block;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;viewBox="0 0 24 24"}
+        .mention-dropdown{display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);max-height:150px;overflow-y:auto;z-index:50;box-shadow:var(--shadow);padding:4px 0}
+        .mention-dropdown.active{display:block}
+        .mention-dropdown .mention-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;transition:background .2s ease}
+        .mention-dropdown .mention-item:hover{background:var(--bg-hover)}
+        .mention-dropdown .mention-item img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+        .mention-dropdown .mention-item .name{font-size:13px;color:var(--text-primary)}
+        .mention-dropdown .mention-item .email{font-size:11px;color:var(--text-muted);margin-left:4px}
         .emoji-picker{display:none;position:absolute;bottom:70px;left:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;box-shadow:var(--shadow);z-index:300;max-width:340px;max-height:260px;overflow-y:auto;grid-template-columns:repeat(8,1fr);gap:4px}
         .emoji-picker.active{display:grid}
         .emoji-picker span{font-size:26px;cursor:pointer;padding:4px 2px;border-radius:6px;transition:background .15s ease,transform .1s ease;text-align:center;user-select:none}
@@ -207,8 +195,6 @@
         .emoji-picker span:active{transform:scale(.85)}
         .emoji-picker::-webkit-scrollbar{width:3px}
         .emoji-picker::-webkit-scrollbar-thumb{background:var(--text-muted);border-radius:10px}
-
-        /* ===== 文件上传遮罩弹窗 ===== */
         .upload-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:350;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s,visibility .25s}
         .upload-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
         .upload-overlay .upload-dialog{background:var(--bg-card);border-radius:var(--radius);padding:32px 40px;min-width:280px;max-width:360px;border:1px solid var(--border-color);box-shadow:var(--shadow);position:relative;text-align:center}
@@ -219,8 +205,6 @@
         .upload-overlay .upload-dialog p{font-size:14px;color:var(--text-secondary);margin-bottom:4px}
         .upload-overlay .upload-dialog .upload-spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--border-color);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-top:8px}
         @keyframes spin{to{transform:rotate(360deg)}}
-
-        /* ===== 设置弹窗 - 自适应宽度 ===== */
         .settings-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:300;transition:opacity .25s,visibility .25s;opacity:0;visibility:hidden;pointer-events:none}
         .settings-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
         .settings-panel{background:var(--bg-card);border-radius:var(--radius);padding:32px 36px;width:min(88%, 900px);max-width:900px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto;transition:all .2s ease}
@@ -249,20 +233,15 @@
         .settings-panel .close-settings:hover{background:var(--bg-hover);transform:translateY(-1px)}
         .settings-panel .close-settings:active{transform:scale(.97)}
         .settings-panel .panel-version{margin-top:12px;text-align:center;font-size:11px;color:var(--text-muted)}
-
-        /* ===== 动画 ===== */
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes highlightPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.6)}50%{box-shadow:0 0 0 6px rgba(59,130,246,.3)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
         .message-highlight{animation:highlightPulse .8s ease 3;border-radius:var(--radius-sm)}
-
-        /* ===== 响应式 ===== */
         @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.emoji-picker{left:10px;bottom:60px;max-width:260px;grid-template-columns:repeat(7,1fr)}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}}
         @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-icons img{height:40px}.splash-icons{gap:14px}.splash-status{font-size:10px;margin-top:16px}.emoji-picker{max-width:220px;grid-template-columns:repeat(6,1fr)}.emoji-picker span{font-size:22px}}
     </style>
 </head>
 <body>
 <div class="app" id="app">
-    <!-- ===== 启动画面 ===== -->
     <div id="splash" role="status" aria-live="polite">
         <div class="splash-icons">
             <img class="icon-left" src="assets/Inspired.svg" alt="Inspired" />
@@ -270,8 +249,6 @@
         </div>
         <div class="splash-status">✦ 加载中 ✦</div>
     </div>
-
-    <!-- ===== 登录覆盖层 ===== -->
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
@@ -284,8 +261,6 @@
             <div class="auth-message" id="authMessage"></div>
         </div>
     </div>
-
-    <!-- ===== 主界面 ===== -->
     <div class="main-interface hidden" id="mainInterface">
         <aside class="sidebar">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><span class="logo-text">MiniChat</span><span class="version-tag" id="sidebarVersion"></span></div>
@@ -319,8 +294,6 @@
             </div>
         </main>
     </div>
-
-    <!-- ===== 文件上传遮罩弹窗 ===== -->
     <div class="upload-overlay" id="uploadOverlay">
         <div class="upload-dialog">
             <button class="close-upload" id="closeUploadBtn">&times;</button>
@@ -330,8 +303,6 @@
             <div class="upload-spinner"></div>
         </div>
     </div>
-
-    <!-- ===== 设置弹窗 ===== -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
             <h2>设置</h2>
@@ -343,8 +314,6 @@
             <div class="panel-version" id="panelVersion"></div>
         </div>
     </div>
-
-    <!-- ===== 用户资料弹窗 ===== -->
     <div class="user-profile-modal" id="userProfileModal">
         <div class="modal-content">
             <img class="avatar-large" id="profileAvatar" src="" alt="头像"/>
@@ -359,15 +328,14 @@
 </div>
 
 <script>
-/* ===== 版本号 v2.4.0 ===== */
-var APP_VERSION = '2.4.0';
+/* ===== 版本号 v2.4.1 ===== */
+var APP_VERSION = '2.4.1';
 
-/* ===== 强制缓存刷新机制 ===== */
+/* ===== 强制缓存刷新 ===== */
 (function forceCacheRefresh() {
     var storedVersion = sessionStorage.getItem('minichat_version');
     if (storedVersion !== APP_VERSION) {
         sessionStorage.setItem('minichat_version', APP_VERSION);
-        // 注销所有 Service Worker 并强制刷新
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(regs) {
                 var promises = regs.map(function(reg) { return reg.unregister(); });
@@ -386,12 +354,10 @@ var APP_VERSION = '2.4.0';
 document.getElementById('sidebarVersion').textContent = 'v' + APP_VERSION;
 document.getElementById('panelVersion').textContent = 'MiniChat v' + APP_VERSION;
 
-/* ===== Supabase 配置 ===== */
 var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
 if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ===== DOM 引用 ===== */
 var $ = function(id) { return document.getElementById(id); };
 var loginOverlay = $('loginOverlay'),
     mainInterface = $('mainInterface'),
@@ -441,7 +407,6 @@ var loginOverlay = $('loginOverlay'),
     uploadOverlay = $('uploadOverlay'),
     closeUploadBtn = $('closeUploadBtn');
 
-/* ===== 全局状态 ===== */
 var currentEmail = '',
     currentUserId = '',
     currentDisplayName = '',
@@ -461,7 +426,7 @@ var isLoadingMore = false,
     unreadCount = 0;
 var isUploadingFile = false;
 
-/* ===== 启动画面控制 ===== */
+/* ===== 启动画面 ===== */
 (function controlSplash() {
     var DURATION = 2000;
     var splash = document.getElementById('splash');
@@ -496,23 +461,16 @@ var isUploadingFile = false;
     }
 })();
 
-/* ===== 丰富表情列表（QQ风格 Unicode Emoji） ===== */
+/* ===== 丰富表情 ===== */
 var EMOJI_LIST = [
-    // 笑脸 & 情感
-    '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '☺️', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡', '😠', '🤬',
-    // 手势
-    '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳',
-    // 动物 & 自然
-    '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊',
-    // 食物 & 饮品
-    '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍡', '🍢', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🧊',
-    // 活动 & 运动
-    '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '⛳', '🏹', '🎣', '🥊', '🥋', '🎽', '⛸️', '🎿', '🏂', '🏋️', '🤼', '🤸', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️',
-    // 符号 & 其他
-    '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '💤', '💦', '💨', '🕳️', '💣', '💥', '💫', '💀', '☠️', '⚠️', '🌀', '🌪️', '🌈', '☀️', '☁️', '⛅', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '❄️', '☃️', '⛄', '🌊', '🔥'
+    '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘','😗','😙','😚','☺️','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬',
+    '👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','👈','👉','👆','🖕','👇','☝️','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳',
+    '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊',
+    '🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🥯','🍞','🥖','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍡','🍢','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🧊',
+    '⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','⛳','🏹','🎣','🥊','🥋','🎽','⛸️','🎿','🏂','🏋️','🤼','🤸','⛹️','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️',
+    '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','💤','💦','💨','🕳️','💣','💥','💫','💀','☠️','⚠️','🌀','🌪️','🌈','☀️','☁️','⛅','🌤️','🌥️','🌦️','🌧️','🌨️','🌩️','🌫️','🌬️','❄️','☃️','⛄','🌊','🔥'
 ];
 
-/* ===== 渲染表情选择器 ===== */
 function renderEmojiPicker() {
     emojiPicker.innerHTML = '';
     EMOJI_LIST.forEach(function(emoji) {
@@ -530,36 +488,18 @@ renderEmojiPicker();
 
 /* ===== 工具函数 ===== */
 function bustCache(url) { if (!url) return ''; if (url.includes('ui-avatars.com')) return url; var sep = url.includes('?') ? '&' : '?'; return url + sep + '_t=' + Date.now(); }
-
 function getAvatarUrl(email) { if (!email) return getDefaultAvatar(''); var info = currentUserMap[email] || {}; var ou = Object.values(onlineUsers).find(function(u) { return u.email === email; }); var base = ou && ou.avatar_url ? ou.avatar_url : info.avatar_url || getDefaultAvatar(email); return bustCache(base); }
-
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
-
 function esc(s) { return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : ''; }
-
 function formatTime(iso) { return iso ? new Date(iso).toLocaleString('zh-CN', { hour12: false }) : '未知'; }
-
 function formatTimeShort(iso) { return new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }); }
-
 function setAuthMessage(msg, type) { authMessage.textContent = msg; authMessage.className = 'auth-message'; if (type === 'success') authMessage.classList.add('success'); if (type === 'error') authMessage.classList.add('error'); }
-
 function autoResizeTextarea() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight, 48), 150) + 'px'; }
-
-function insertAtCursor(text) {
-    chatInput.value += text;
-    chatInput.focus();
-    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-    autoResizeTextarea();
-}
+function insertAtCursor(text) { chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input', { bubbles: true })); autoResizeTextarea(); }
 
 /* ===== 主题 ===== */
-function loadTheme() { if (localStorage.getItem('minichat_theme') === 'light') { document.body.classList.add('light-theme');
-        themeToggle.classList.remove('active'); } else { document.body.classList.remove('light-theme');
-        themeToggle.classList.add('active'); } }
-
-function toggleTheme() { var l = document.body.classList.toggle('light-theme');
-    themeToggle.classList.toggle('active');
-    localStorage.setItem('minichat_theme', l ? 'light' : 'dark'); }
+function loadTheme() { if (localStorage.getItem('minichat_theme') === 'light') { document.body.classList.add('light-theme'); themeToggle.classList.remove('active'); } else { document.body.classList.remove('light-theme'); themeToggle.classList.add('active'); } }
+function toggleTheme() { var l = document.body.classList.toggle('light-theme'); themeToggle.classList.toggle('active'); localStorage.setItem('minichat_theme', l ? 'light' : 'dark'); }
 
 /* ===== 图片压缩 ===== */
 function compressImage(file, mw, q) {
@@ -588,20 +528,13 @@ function compressImage(file, mw, q) {
 }
 
 /* ===== 文件上传遮罩 ===== */
-function showUploadOverlay() {
-    uploadOverlay.classList.add('active');
-    isUploadingFile = true;
-}
+function showUploadOverlay() { uploadOverlay.classList.add('active');
+    isUploadingFile = true; }
 
-function hideUploadOverlay() {
-    uploadOverlay.classList.remove('active');
-    isUploadingFile = false;
-}
-
-closeUploadBtn.addEventListener('click', function() {
-    hideUploadOverlay();
-    fileInput.value = '';
-});
+function hideUploadOverlay() { uploadOverlay.classList.remove('active');
+    isUploadingFile = false; }
+closeUploadBtn.addEventListener('click', function() { hideUploadOverlay();
+    fileInput.value = ''; });
 
 /* ===== 头像上传 ===== */
 async function uploadAvatar(file) {
@@ -702,23 +635,35 @@ function renderMessageContent(raw) {
     return text;
 }
 
-/* ===== 引用功能 ===== */
-function addQuoteAttachment(senderName, senderEmail, content, time) {
+/* ===== 引用相关（核心修复） ===== */
+
+// 存储引用的数据：作者、原始ISO时间、邮箱、内容摘要
+function addQuoteAttachment(senderName, senderEmail, content, isoTime) {
     var plain = content || '';
     plain = plain.replace(/!\[image\]\([^)]*\)/g, '[图片]').replace(/\[audio\]\([^)]*\)/g, '[音频]').replace(/\[quote:[^\]]*\]/g, '').trim();
     if (!plain) plain = '[空消息]';
     plain = plain.split('\n')[0].substring(0, 100);
-    attachments.push({ id: 'quote-' + Date.now(), type: 'quote', quoteAuthor: senderName || '匿名', quoteEmail: senderEmail || '', quoteText: plain, quoteTime: time || '' });
+    attachments.push({
+        id: 'quote-' + Date.now(),
+        type: 'quote',
+        quoteAuthor: senderName || '匿名',
+        quoteEmail: senderEmail || '',
+        quoteText: plain,
+        quoteIsoTime: isoTime || new Date().toISOString()  // 存储原始ISO时间
+    });
     renderAttachments();
     chatInput.focus();
 }
 
+// 跳转到引用消息
 function scrollToQuote(author, time, email) {
+    console.log('🔍 引用跳转 - 作者:', author, '时间:', time, '邮箱:', email);
     if (!author) { setAuthMessage('引用信息缺失', 'error');
         setTimeout(function() { setAuthMessage(''); }, 2000); return; }
     var targetTime = new Date(time).getTime();
     if (isNaN(targetTime)) { setAuthMessage('引用时间无效', 'error');
         setTimeout(function() { setAuthMessage(''); }, 2000); return; }
+
     var elements = messageList.querySelectorAll('.message');
     var bestMatch = null,
         bestDiff = Infinity;
@@ -729,20 +674,30 @@ function scrollToQuote(author, time, email) {
         var senderName = senderNameEl ? senderNameEl.textContent.trim() : '';
         var msgTime = el.dataset.createdAt ? new Date(el.dataset.createdAt).getTime() : NaN;
         if (isNaN(msgTime)) continue;
+
+        // 匹配条件：优先邮箱，其次作者名
         var match = false;
         if (email && senderEmail === email) match = true;
         else if (!email && senderName === author) match = true;
         else if (email && senderName === author && senderEmail !== email) match = true;
+
         if (match) {
             var diff = Math.abs(msgTime - targetTime);
             if (diff < 60000 && diff < bestDiff) { bestDiff = diff;
                 bestMatch = el; }
         }
     }
-    if (bestMatch) { bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    if (bestMatch) {
+        console.log('✅ 找到匹配消息，滚动到:', bestMatch);
+        bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
         bestMatch.classList.add('message-highlight');
-        setTimeout(function() { bestMatch.classList.remove('message-highlight'); }, 2400); } else { setAuthMessage('未找到原始消息（可能已删除或未加载）', 'error');
-        setTimeout(function() { setAuthMessage(''); }, 2500); }
+        setTimeout(function() { bestMatch.classList.remove('message-highlight'); }, 2400);
+    } else {
+        console.warn('❌ 未找到匹配消息');
+        setAuthMessage('未找到原始消息（可能已删除或未加载）', 'error');
+        setTimeout(function() { setAuthMessage(''); }, 2500);
+    }
 }
 
 /* ===== 创建消息元素 ===== */
@@ -753,12 +708,13 @@ function createMessageElement(msg) {
         isMe = msg.isMe,
         time = msg.time,
         id = msg.id,
-        created_at = msg.created_at;
+        created_at = msg.created_at; // 原始ISO时间
     var div = document.createElement('div');
     div.className = 'message ' + (isMe ? 'me' : 'other');
     if (id) div.dataset.messageId = id;
-    if (created_at) div.dataset.createdAt = created_at;
+    if (created_at) div.dataset.createdAt = created_at; // 存储原始ISO
     if (sender_email) div.dataset.senderEmail = sender_email;
+
     var isRecalled = (content === '（已撤回）');
     var aw = document.createElement('div');
     aw.className = 'avatar-wrapper';
@@ -769,6 +725,7 @@ function createMessageElement(msg) {
     aw.appendChild(ai);
     aw.addEventListener('click', function(e) { e.stopPropagation();
         showUserProfile(sender_email); });
+
     var bubble = document.createElement('div');
     bubble.className = 'bubble';
     var sd = document.createElement('div');
@@ -784,24 +741,31 @@ function createMessageElement(msg) {
     sd.addEventListener('click', function(e) { e.stopPropagation();
         showUserProfile(sender_email); });
     bubble.appendChild(sd);
+
     var cd = document.createElement('div');
     cd.className = 'message-content';
     cd.innerHTML = renderMessageContent(content);
     bubble.appendChild(cd);
+
     var ft = document.createElement('div');
     ft.className = 'message-footer';
     var ts = document.createElement('span');
     ts.className = 'time';
     ts.textContent = time || formatTimeShort(new Date().toISOString());
     ft.appendChild(ts);
+
     if (!isRecalled) {
+        // 引用按钮：传递原始ISO时间
         var qb = document.createElement('button');
         qb.className = 'action-btn';
         qb.title = '引用回复';
         qb.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
-        qb.addEventListener('click', function(e) { e.stopPropagation();
-            addQuoteAttachment(sender_name, sender_email, content, time); });
+        qb.addEventListener('click', function(e) {
+            e.stopPropagation();
+            addQuoteAttachment(sender_name, sender_email, content, created_at); // 传原始ISO
+        });
         ft.appendChild(qb);
+
         var fb = document.createElement('button');
         fb.className = 'action-btn';
         fb.title = '复制内容';
@@ -813,6 +777,7 @@ function createMessageElement(msg) {
                 ft.appendChild(tip);
                 setTimeout(function() { tip.remove(); }, 1500); }).catch(function() {}); });
         ft.appendChild(fb);
+
         if (isMe && created_at) {
             var age = (Date.now() - new Date(created_at).getTime()) / 1000 / 60;
             if (age < 2) {
@@ -882,7 +847,6 @@ function switchMode(mode) {
     document.getElementById('switchToSignup').addEventListener('click', function() { switchMode(isLoginMode ? 'signup' : 'login'); });
     setAuthMessage('');
 }
-
 async function handleAuth() {
     var email = authEmail.value.trim(),
         pwd = authPassword.value.trim();
@@ -916,7 +880,6 @@ async function handleAuth() {
         btnLogin.disabled = false;
         btnLogin.style.opacity = '1'; }
 }
-
 async function ensureProfile(uid, email) {
     var data = (await supabase.from('profiles').select('id').eq('id', uid).maybeSingle()).data;
     if (!data) await supabase.from('profiles').insert({ id: uid, email: email, last_login: new Date().toISOString(), display_name: email.split('@')[0], avatar_url: getDefaultAvatar(email) });
@@ -940,7 +903,6 @@ async function loadDisplayName() {
     currentUserMap[currentEmail].avatar_url = currentAvatarUrl;
     currentUserMap[currentEmail].display_name = currentDisplayName;
 }
-
 async function saveDisplayName() {
     var n = displayNameInput.value.trim();
     if (!n) { displayNameMessage.textContent = '昵称不能为空';
@@ -965,7 +927,6 @@ async function saveDisplayName() {
         displayNameMessage.textContent = '保存失败';
         displayNameMessage.style.color = '#f87171'; }
 }
-
 async function refreshSettingsData() {
     await loadDisplayName();
     for (var email in currentUserMap) { if (currentUserMap[email].avatar_url) refreshAllAvatars(email, currentUserMap[email].avatar_url); }
@@ -973,17 +934,25 @@ async function refreshSettingsData() {
 
 /* ===== 全局事件监听 ===== */
 function handleDocumentClick(e) {
+    // 先处理撤回按钮
     var recallBtn = e.target.closest('.recall-btn');
     if (recallBtn) { e.preventDefault(); if (recallBtn.dataset.messageId) window.recallMessage(recallBtn.dataset.messageId); return; }
+
+    // 处理引用块点击
     var quote = e.target.closest('.quote-block');
     if (quote) {
         e.preventDefault();
         var author = quote.dataset.author || quote.getAttribute('data-author');
         var time = quote.dataset.time || quote.getAttribute('data-time');
         var email = quote.dataset.email || quote.getAttribute('data-email') || '';
-        if (author && time) scrollToQuote(author, time, email);
-        else { setAuthMessage('引用数据不完整', 'error');
-            setTimeout(function() { setAuthMessage(''); }, 3000); }
+        console.log('📝 引用块被点击 - author:', author, 'time:', time, 'email:', email);
+        if (author && time) {
+            scrollToQuote(author, time, email);
+        } else {
+            console.warn('⚠️ 引用数据缺失:', quote.outerHTML);
+            setAuthMessage('引用数据不完整', 'error');
+            setTimeout(function() { setAuthMessage(''); }, 3000);
+        }
         return;
     }
 }
@@ -1000,6 +969,7 @@ function setupGlobalEventListeners() {
     document.removeEventListener('scroll', handleDocumentScroll);
     document.addEventListener('click', handleDocumentClick);
     document.addEventListener('scroll', handleDocumentScroll, true);
+    console.log('✅ 全局事件监听已设置');
 }
 
 /* ===== 进入聊天 ===== */
@@ -1148,8 +1118,11 @@ async function sendMessageContent(content) {
     try {
         var fc = text;
         var qa = attachments.filter(function(a) { return a.type === 'quote'; });
-        qa.forEach(function(q) { var emailPart = q.quoteEmail ? '|' + q.quoteEmail : '';
-            fc = '[quote:' + q.quoteAuthor + '|' + q.quoteTime + emailPart + '|' + q.quoteText + ']\n' + fc; });
+        qa.forEach(function(q) {
+            var emailPart = q.quoteEmail ? '|' + q.quoteEmail : '';
+            // 关键：使用 q.quoteIsoTime (原始ISO时间)
+            fc = '[quote:' + q.quoteAuthor + '|' + q.quoteIsoTime + emailPart + '|' + q.quoteText + ']\n' + fc;
+        });
         var na = attachments.filter(function(a) { return !a.existing && a.type !== 'quote'; });
         var nmd = await uploadNewAttachments(na);
         if (nmd.length) { if (fc) fc += '\n';
@@ -1354,17 +1327,14 @@ window.previewImage = function(url) {
 };
 
 /* ===== 文件上传遮罩控制 ===== */
-// 点击附件按钮时显示遮罩，然后触发文件选择
 attachBtn.addEventListener('click', function(e) {
     e.preventDefault();
     showUploadOverlay();
-    // 延迟触发文件选择，让遮罩先渲染
     setTimeout(function() {
         fileInput.click();
     }, 150);
 });
 
-// 文件选择完成后关闭遮罩
 fileInput.addEventListener('change', function(e) {
     hideUploadOverlay();
     var f = e.target.files;
@@ -1376,10 +1346,8 @@ fileInput.addEventListener('change', function(e) {
     fileInput.value = '';
 });
 
-// 监听窗口焦点变化，检测用户是否取消了文件选择
 var uploadCancelDetect = function() {
     if (isUploadingFile) {
-        // 用户从文件选择器返回但未选择文件，关闭遮罩
         setTimeout(function() {
             if (isUploadingFile) {
                 hideUploadOverlay();
@@ -1390,7 +1358,6 @@ var uploadCancelDetect = function() {
 };
 window.addEventListener('focus', uploadCancelDetect);
 
-// 点击遮罩外部（背景）关闭
 uploadOverlay.addEventListener('click', function(e) {
     if (e.target === uploadOverlay) {
         hideUploadOverlay();
