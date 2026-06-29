@@ -279,12 +279,21 @@
         .version-update-modal .modal-box .modal-actions .btn-refresh{background:var(--accent);color:#fff}
         .version-update-modal .modal-box .modal-actions .btn-refresh:hover{background:var(--accent-hover);transform:translateY(-1px)}
         .version-update-modal .modal-box .modal-actions .btn-refresh:active{transform:scale(.95)}
+
+        /* ===== 自定义右键菜单 ===== */
+        .context-menu{display:none;position:fixed;background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-color);box-shadow:var(--shadow);padding:6px 0;min-width:140px;z-index:800;overflow:hidden}
+        .context-menu.active{display:block}
+        .context-menu .menu-item{padding:8px 20px;font-size:14px;cursor:pointer;transition:background .15s;color:var(--text-primary);display:flex;align-items:center;gap:10px}
+        .context-menu .menu-item:hover{background:var(--bg-hover)}
+        .context-menu .menu-item svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+
         @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.emoji-picker{left:10px;bottom:60px;max-width:260px;grid-template-columns:repeat(7,1fr)}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}.quote-jump-modal .modal-box{padding:20px}.version-update-modal .modal-box{padding:24px}}
         @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-icons img{height:40px}.splash-icons{gap:14px}.splash-status{font-size:10px;margin-top:16px}.emoji-picker{max-width:220px;grid-template-columns:repeat(6,1fr)}.emoji-picker span{font-size:22px}}
     </style>
 </head>
 <body>
 <div class="app" id="app">
+    <!-- ===== 启动画面 ===== -->
     <div id="splash" role="status" aria-live="polite">
         <div class="splash-icons">
             <img class="icon-left" src="assets/Inspired.svg" alt="Inspired" />
@@ -292,6 +301,8 @@
         </div>
         <div class="splash-status">✦ 加载中 ✦</div>
     </div>
+
+    <!-- ===== 登录 ===== -->
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
@@ -304,6 +315,8 @@
             <div class="auth-message" id="authMessage"></div>
         </div>
     </div>
+
+    <!-- ===== 主界面 ===== -->
     <div class="main-interface hidden" id="mainInterface">
         <aside class="sidebar">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><span class="logo-text">MiniChat</span><span class="version-tag" id="sidebarVersion"></span></div>
@@ -339,6 +352,8 @@
             </div>
         </main>
     </div>
+
+    <!-- ===== 上传遮罩 ===== -->
     <div class="upload-overlay" id="uploadOverlay">
         <div class="upload-dialog">
             <button class="close-upload" id="closeUploadBtn">
@@ -352,6 +367,8 @@
             <div class="upload-spinner"></div>
         </div>
     </div>
+
+    <!-- ===== 设置 ===== -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
             <h2>设置</h2>
@@ -363,6 +380,8 @@
             <div class="panel-version" id="panelVersion"></div>
         </div>
     </div>
+
+    <!-- ===== 用户资料弹窗 ===== -->
     <div class="user-profile-modal" id="userProfileModal">
         <div class="modal-content">
             <img class="avatar-large" id="profileAvatar" src="" alt="头像"/>
@@ -374,6 +393,8 @@
             <button class="modal-close" id="closeProfileModal">关闭</button>
         </div>
     </div>
+
+    <!-- ===== 引用跳转弹窗 ===== -->
     <div class="quote-jump-modal" id="quoteJumpModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -396,6 +417,8 @@
             <div class="jump-status" id="qjStatus"></div>
         </div>
     </div>
+
+    <!-- ===== 版本更新弹窗 ===== -->
     <div class="version-update-modal" id="versionUpdateModal">
         <div class="modal-box">
             <h3>🔄 发现新版本</h3>
@@ -407,6 +430,14 @@
                 <button class="btn-later" id="versionLater">稍后提醒</button>
                 <button class="btn-refresh" id="versionRefresh">立即刷新 (Ctrl+F5)</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== 自定义右键菜单 ===== -->
+    <div class="context-menu" id="contextMenu">
+        <div class="menu-item" id="ctxMention">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            @他
         </div>
     </div>
 </div>
@@ -422,18 +453,21 @@ var APP_VERSION = '2.7.1';
 
     fetch('vision.json?v=' + Date.now())
         .then(function(response) {
-            if (!response.ok) throw new Error('无法获取 vision.json');
+            if (!response.ok) throw new Error('HTTP ' + response.status);
             return response.json();
         })
         .then(function(data) {
             var remoteVersion = data.version || '';
+            console.log('📦 远程版本:', remoteVersion, '当前版本:', currentVersion);
             if (remoteVersion && remoteVersion !== currentVersion) {
                 document.getElementById('newVerDisplay').textContent = remoteVersion;
                 document.getElementById('versionUpdateModal').classList.add('active');
                 localStorage.setItem('minichat_latest_version', remoteVersion);
             }
         })
-        .catch(function() {});
+        .catch(function(err) {
+            console.warn('⚠️ 版本检测失败 (vision.json 可能不存在):', err.message);
+        });
 })();
 
 (function enforceLocalCache() {
@@ -494,7 +528,7 @@ document.getElementById('versionLater').addEventListener('click', function() {
                     if (newWorker) {
                         newWorker.onstatechange = function() {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // 可选：主动刷新
+                                // 可选的自动更新通知
                             }
                         };
                     }
@@ -566,7 +600,9 @@ var loginOverlay = $('loginOverlay'),
     qjContent = $('qjContent'),
     qjCancel = $('qjCancel'),
     qjJump = $('qjJump'),
-    qjStatus = $('qjStatus');
+    qjStatus = $('qjStatus'),
+    contextMenu = $('contextMenu'),
+    ctxMention = $('ctxMention');
 
 var currentEmail = '',
     currentUserId = '',
@@ -622,7 +658,7 @@ var isUploadingFile = false;
     }
 })();
 
-/* ===== Emoji 列表 ===== */
+/* ===== Emoji ===== */
 var EMOJI_LIST = [
     '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘','😗','😙','😚','☺️','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬',
     '👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','👈','👉','👆','🖕','👇','☝️','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳',
@@ -824,7 +860,7 @@ qjCancel.addEventListener('click', closeQuoteJumpModal);
 quoteJumpModal.addEventListener('click', function(e) { if (e.target === quoteJumpModal) closeQuoteJumpModal(); });
 
 async function loadHistoryUntilMessageId(messageId) {
-    var maxAttempts = 10;
+    var maxAttempts = 50;
     var attempt = 0;
     while (attempt < maxAttempts) {
         attempt++;
@@ -832,7 +868,6 @@ async function loadHistoryUntilMessageId(messageId) {
         if (existing) return true;
         if (!hasMoreMessages) return false;
         await loadHistory(true);
-        // 检查是否已加载该消息
         var found = messageList.querySelector('[data-message-id="' + messageId + '"]');
         if (found) return true;
     }
@@ -863,7 +898,6 @@ qjJump.addEventListener('click', function() {
         return;
     }
 
-    // 先检查当前列表
     var elements = messageList.querySelectorAll('.message');
     var bestMatch = null;
     var bestDiff = Infinity;
@@ -905,7 +939,6 @@ qjJump.addEventListener('click', function() {
         return;
     }
 
-    // 如果未找到且存在 messageId，尝试加载更多历史
     if (messageId) {
         qjStatus.textContent = '⏳ 正在加载更多历史消息...';
         qjStatus.style.color = 'var(--text-secondary)';
@@ -966,20 +999,18 @@ function createMessageElement(msg) {
     aw.appendChild(ai);
     aw.addEventListener('click', function(e) { e.stopPropagation();
         showUserProfile(sender_email); });
-    // 右键 @ 功能
+    // 右键菜单
     aw.addEventListener('contextmenu', function(e) {
         e.preventDefault();
-        var mentionName = sender_name || sender_email.split('@')[0];
-        // 检查输入框光标位置，插入 @+昵称+空格
-        var v = chatInput.value;
-        var pos = chatInput.selectionStart;
-        var before = v.substring(0, pos);
-        var after = v.substring(pos);
-        chatInput.value = before + '@' + mentionName + ' ' + after;
-        chatInput.selectionStart = chatInput.selectionEnd = before.length + mentionName.length + 2;
-        chatInput.focus();
-        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-        autoResizeTextarea();
+        var rect = aw.getBoundingClientRect();
+        var x = e.clientX || rect.left + rect.width / 2;
+        var y = e.clientY || rect.top + rect.height / 2;
+        // 存储当前头像对应的用户信息
+        contextMenu.dataset.targetEmail = sender_email;
+        contextMenu.dataset.targetName = sender_name || sender_email.split('@')[0];
+        contextMenu.style.left = x + 'px';
+        contextMenu.style.top = y + 'px';
+        contextMenu.classList.add('active');
     });
 
     var bubble = document.createElement('div');
@@ -1053,6 +1084,27 @@ function createMessageElement(msg) {
     div.appendChild(bubble);
     return div;
 }
+
+// 右键菜单点击 @他
+ctxMention.addEventListener('click', function() {
+    var targetName = contextMenu.dataset.targetName || '';
+    if (targetName) {
+        insertAtCursor('@' + targetName + ' ');
+    }
+    contextMenu.classList.remove('active');
+});
+
+// 点击其他地方关闭右键菜单
+document.addEventListener('click', function(e) {
+    if (!contextMenu.contains(e.target)) {
+        contextMenu.classList.remove('active');
+    }
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        contextMenu.classList.remove('active');
+    }
+});
 
 function addMessageToBottom(msg) { messageList.appendChild(createMessageElement(msg));
     messageList.scrollTop = messageList.scrollHeight; }
