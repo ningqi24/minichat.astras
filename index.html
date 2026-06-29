@@ -9,13 +9,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- ===== 缓存控制：禁止缓存HTML ===== -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <!-- ===== 版本号注入 ===== -->
-    <meta name="version" content="2.7.0" />
+    <meta name="version" content="2.7.1" />
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
@@ -267,8 +265,6 @@
         .quote-jump-modal .modal-box .jump-status{margin-top:12px;font-size:13px;color:var(--text-muted);text-align:center;min-height:20px}
         .quote-jump-modal .modal-box .jump-status .status-btn{background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;margin-left:6px;transition:all .2s ease}
         .quote-jump-modal .modal-box .jump-status .status-btn:hover{background:var(--accent-hover)}
-
-        /* ===== 版本更新提示弹窗 ===== */
         .version-update-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:700;animation:fadeIn .2s ease}
         .version-update-modal.active{display:flex}
         .version-update-modal .modal-box{background:var(--bg-card);border-radius:var(--radius);padding:32px;max-width:400px;width:90%;border:1px solid var(--border-color);box-shadow:var(--shadow);text-align:center}
@@ -283,7 +279,6 @@
         .version-update-modal .modal-box .modal-actions .btn-refresh{background:var(--accent);color:#fff}
         .version-update-modal .modal-box .modal-actions .btn-refresh:hover{background:var(--accent-hover);transform:translateY(-1px)}
         .version-update-modal .modal-box .modal-actions .btn-refresh:active{transform:scale(.95)}
-
         @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.emoji-picker{left:10px;bottom:60px;max-width:260px;grid-template-columns:repeat(7,1fr)}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}.quote-jump-modal .modal-box{padding:20px}.version-update-modal .modal-box{padding:24px}}
         @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-icons img{height:40px}.splash-icons{gap:14px}.splash-status{font-size:10px;margin-top:16px}.emoji-picker{max-width:220px;grid-template-columns:repeat(6,1fr)}.emoji-picker span{font-size:22px}}
     </style>
@@ -401,7 +396,6 @@
             <div class="jump-status" id="qjStatus"></div>
         </div>
     </div>
-    <!-- ===== 版本更新提示弹窗 ===== -->
     <div class="version-update-modal" id="versionUpdateModal">
         <div class="modal-box">
             <h3>🔄 发现新版本</h3>
@@ -418,17 +412,12 @@
 </div>
 
 <script>
-/* ===== 版本号 v2.7.0 ===== */
-var APP_VERSION = '2.7.0';
+/* ===== 版本号 ===== */
+var APP_VERSION = '2.7.1';
 
-/* ================================================================
- * 多重缓存控制策略 + vision.json 版本检测
- * ================================================================ */
-
-// ===== 策略1: 从 vision.json 获取远程版本号 =====
+/* ===== 版本检测与缓存控制 ===== */
 (function checkRemoteVersion() {
     var currentVersion = APP_VERSION;
-    // 显示当前版本
     document.getElementById('currentVerDisplay').textContent = currentVersion;
 
     fetch('vision.json?v=' + Date.now())
@@ -439,29 +428,19 @@ var APP_VERSION = '2.7.0';
         .then(function(data) {
             var remoteVersion = data.version || '';
             if (remoteVersion && remoteVersion !== currentVersion) {
-                // 显示更新弹窗
                 document.getElementById('newVerDisplay').textContent = remoteVersion;
                 document.getElementById('versionUpdateModal').classList.add('active');
-                // 存储新版本号以便后续使用
                 localStorage.setItem('minichat_latest_version', remoteVersion);
             }
         })
-        .catch(function(err) {
-            console.log('⚠️ 版本检测失败:', err);
-        });
+        .catch(function() {});
 })();
 
-// ===== 策略2: localStorage 版本对比强制刷新 =====
 (function enforceLocalCache() {
     var currentVersion = APP_VERSION;
     var storedVersion = localStorage.getItem('minichat_version');
-    var metaVersion = document.querySelector('meta[name="version"]');
-    if (metaVersion) metaVersion.setAttribute('content', currentVersion);
-
     if (storedVersion && storedVersion !== currentVersion) {
-        // 版本不一致，强制刷新
         localStorage.setItem('minichat_version', currentVersion);
-        // 清除可能存在的旧缓存
         if ('caches' in window) {
             caches.keys().then(function(names) {
                 names.forEach(function(name) {
@@ -473,14 +452,11 @@ var APP_VERSION = '2.7.0';
         }
         location.reload(true);
     } else if (!storedVersion) {
-        // 首次访问，存储版本
         localStorage.setItem('minichat_version', currentVersion);
     }
 })();
 
-// ===== 版本更新弹窗事件 =====
 document.getElementById('versionRefresh').addEventListener('click', function() {
-    // 强制刷新并清除缓存
     if ('caches' in window) {
         caches.keys().then(function(names) {
             var promises = names.map(function(name) { return caches.delete(name); });
@@ -498,21 +474,17 @@ document.getElementById('versionRefresh').addEventListener('click', function() {
 
 document.getElementById('versionLater').addEventListener('click', function() {
     document.getElementById('versionUpdateModal').classList.remove('active');
-    // 记录已忽略的版本，避免每次打开都弹窗
     localStorage.setItem('minichat_ignored_version', document.getElementById('newVerDisplay').textContent);
 });
 
-// 如果用户已经忽略了某个版本，不再弹窗
 (function checkIgnoredVersion() {
     var ignored = localStorage.getItem('minichat_ignored_version');
     var newVerDisplay = document.getElementById('newVerDisplay');
     if (ignored && newVerDisplay.textContent === ignored) {
-        // 如果忽略的版本与当前新版本一致，关闭弹窗
         document.getElementById('versionUpdateModal').classList.remove('active');
     }
 })();
 
-// ===== Service Worker 更新 =====
 (function setupServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION)
@@ -522,16 +494,13 @@ document.getElementById('versionLater').addEventListener('click', function() {
                     if (newWorker) {
                         newWorker.onstatechange = function() {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('🔄 新版本Service Worker已就绪');
-                                // 可以提示用户刷新，但我们已经有了 vision.json 检测，这里作为补充
+                                // 可选：主动刷新
                             }
                         };
                     }
                 };
             })
-            .catch(function(err) {
-                console.log('⚠️ Service Worker 注册失败:', err);
-            });
+            .catch(function() {});
     }
 })();
 
@@ -653,7 +622,7 @@ var isUploadingFile = false;
     }
 })();
 
-/* ===== 丰富表情 ===== */
+/* ===== Emoji 列表 ===== */
 var EMOJI_LIST = [
     '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘','😗','😙','😚','☺️','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬',
     '👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','👈','👉','👆','🖕','👇','☝️','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳',
@@ -798,12 +767,10 @@ function renderMessageContent(raw) {
     var quotes = [],
         images = [],
         audios = [];
-    // 新的引用格式：包含消息ID
     text = text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([^\|\]]+)\|([\s\S]*?)\]/g, function(_, a, t, e, id, b) {
         quotes.push({ author: a, time: t, email: e, messageId: id, body: b });
         return '\x00Q' + quotes.length + 'Q\x00';
     });
-    // 兼容旧格式（无ID）
     text = text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([\s\S]*?)\]/g, function(_, a, t, e, b) {
         quotes.push({ author: a, time: t, email: e, messageId: '', body: b });
         return '\x00Q' + quotes.length + 'Q\x00';
@@ -856,54 +823,20 @@ closeQuoteJumpBtn.addEventListener('click', closeQuoteJumpModal);
 qjCancel.addEventListener('click', closeQuoteJumpModal);
 quoteJumpModal.addEventListener('click', function(e) { if (e.target === quoteJumpModal) closeQuoteJumpModal(); });
 
-// 加载更多历史直到找到指定消息
-async function loadHistoryUntilMessageId(messageId, targetTime) {
-    return new Promise(function(resolve, reject) {
-        var loadedCount = 0;
-        var maxAttempts = 5; // 最多加载5次（100条）
-        var attempt = 0;
-
-        function doLoad() {
-            if (attempt >= maxAttempts) {
-                resolve(false);
-                return;
-            }
-            attempt++;
-            // 检查当前列表是否已包含该消息
-            var existing = messageList.querySelector('[data-message-id="' + messageId + '"]');
-            if (existing) {
-                resolve(true);
-                return;
-            }
-            // 如果没有更多历史，停止
-            if (!hasMoreMessages) {
-                resolve(false);
-                return;
-            }
-            // 加载历史（追加到顶部）
-            loadHistory(true).then(function() {
-                // 再次检查
-                var found = messageList.querySelector('[data-message-id="' + messageId + '"]');
-                if (found) {
-                    resolve(true);
-                } else {
-                    // 继续加载
-                    doLoad();
-                }
-            }).catch(function(err) {
-                reject(err);
-            });
-        }
-
-        // 先检查当前列表
-        var existingNow = messageList.querySelector('[data-message-id="' + messageId + '"]');
-        if (existingNow) {
-            resolve(true);
-            return;
-        }
-        // 如果消息不在当前列表，开始加载
-        doLoad();
-    });
+async function loadHistoryUntilMessageId(messageId) {
+    var maxAttempts = 10;
+    var attempt = 0;
+    while (attempt < maxAttempts) {
+        attempt++;
+        var existing = messageList.querySelector('[data-message-id="' + messageId + '"]');
+        if (existing) return true;
+        if (!hasMoreMessages) return false;
+        await loadHistory(true);
+        // 检查是否已加载该消息
+        var found = messageList.querySelector('[data-message-id="' + messageId + '"]');
+        if (found) return true;
+    }
+    return false;
 }
 
 qjJump.addEventListener('click', function() {
@@ -930,7 +863,7 @@ qjJump.addEventListener('click', function() {
         return;
     }
 
-    // 先尝试在已加载的消息中查找
+    // 先检查当前列表
     var elements = messageList.querySelectorAll('.message');
     var bestMatch = null;
     var bestDiff = Infinity;
@@ -944,16 +877,10 @@ qjJump.addEventListener('click', function() {
         if (isNaN(msgTime)) continue;
 
         var match = false;
-        // 优先使用消息ID匹配
-        if (messageId && el.dataset.messageId === messageId) {
-            match = true;
-        } else if (email && senderEmail === email) {
-            match = true;
-        } else if (!email && senderName === author) {
-            match = true;
-        } else if (email && senderName === author && senderEmail !== email) {
-            match = true;
-        }
+        if (messageId && el.dataset.messageId === messageId) match = true;
+        else if (email && senderEmail === email) match = true;
+        else if (!email && senderName === author) match = true;
+        else if (email && senderName === author && senderEmail !== email) match = true;
 
         if (match) {
             var diff = Math.abs(msgTime - targetTime);
@@ -978,13 +905,12 @@ qjJump.addEventListener('click', function() {
         return;
     }
 
-    // 如果未找到，且我们有消息ID，尝试加载更多历史
+    // 如果未找到且存在 messageId，尝试加载更多历史
     if (messageId) {
         qjStatus.textContent = '⏳ 正在加载更多历史消息...';
         qjStatus.style.color = 'var(--text-secondary)';
-        loadHistoryUntilMessageId(messageId, targetTime).then(function(found) {
+        loadHistoryUntilMessageId(messageId).then(function(found) {
             if (found) {
-                // 再次查找
                 var el = messageList.querySelector('[data-message-id="' + messageId + '"]');
                 if (el) {
                     qjStatus.textContent = '✅ 已定位到原文！';
@@ -1005,8 +931,7 @@ qjJump.addEventListener('click', function() {
                 qjStatus.textContent = '❌ 未找到原始消息（可能已删除或超出历史范围）';
                 qjStatus.style.color = '#f87171';
             }
-        }).catch(function(err) {
-            console.error(err);
+        }).catch(function() {
             qjStatus.textContent = '❌ 加载历史失败，请手动滚动加载更多后重试';
             qjStatus.style.color = '#f87171';
         });
@@ -1041,6 +966,21 @@ function createMessageElement(msg) {
     aw.appendChild(ai);
     aw.addEventListener('click', function(e) { e.stopPropagation();
         showUserProfile(sender_email); });
+    // 右键 @ 功能
+    aw.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        var mentionName = sender_name || sender_email.split('@')[0];
+        // 检查输入框光标位置，插入 @+昵称+空格
+        var v = chatInput.value;
+        var pos = chatInput.selectionStart;
+        var before = v.substring(0, pos);
+        var after = v.substring(pos);
+        chatInput.value = before + '@' + mentionName + ' ' + after;
+        chatInput.selectionStart = chatInput.selectionEnd = before.length + mentionName.length + 2;
+        chatInput.focus();
+        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+        autoResizeTextarea();
+    });
 
     var bubble = document.createElement('div');
     bubble.className = 'bubble';
@@ -1142,7 +1082,7 @@ async function loadHistory(append) {
             msgs.forEach(function(m) { addMessageToBottom(m); }); } else { prependMessages(msgs); }
         if (data.length < PAGE_SIZE) hasMoreMessages = false;
         isLoadingMore = false;
-        return msgs; // 返回加载的消息列表
+        return msgs;
     } catch (e) { console.error(e);
         isLoadingMore = false;
         throw e; }
@@ -1751,7 +1691,7 @@ profileModal.addEventListener('click', function(e) { if (e.target === this) prof
 
 loadTheme();
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then(function() { console.log('✅ SW v' + APP_VERSION); }).catch(function(e) { console.warn('⚠️ SW:', e); });
+    navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then(function() { console.log('✅ SW v' + APP_VERSION); }).catch(function() {});
 }
 </script>
 </body>
