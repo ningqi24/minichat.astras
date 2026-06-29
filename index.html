@@ -200,9 +200,56 @@
         .typing-dots span:nth-child(2){animation-delay:.2s}
         .typing-dots span:nth-child(3){animation-delay:.4s}
         @keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
-        .settings-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:300;border-radius:0;transition:opacity .25s,visibility .25s;opacity:0;visibility:hidden;pointer-events:none}
-        .settings-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
-        .settings-panel{background:var(--bg-card);border-radius:var(--radius);padding:32px 36px;width:100%;max-width:400px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto}
+
+        /* ===== 设置弹窗 - 磨砂性能优化 + 桌面铺满留空 ===== */
+        .settings-overlay{
+            position:absolute;
+            inset:0;
+            background:rgba(0,0,0,0.65); /* 纯色半透明，无模糊，性能最佳 */
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            z-index:300;
+            transition:opacity .25s,visibility .25s;
+            opacity:0;
+            visibility:hidden;
+            pointer-events:none;
+        }
+        .settings-overlay.active{
+            opacity:1;
+            visibility:visible;
+            pointer-events:auto;
+        }
+        .settings-panel{
+            background:var(--bg-card);
+            border-radius:var(--radius);
+            padding:32px 36px;
+            width:calc(100% - 48px); /* 桌面端四周留空隙 */
+            max-width:1100px;         /* 限制最大宽度，防止过宽 */
+            border:1px solid var(--border-color);
+            box-shadow:0 20px 60px rgba(0,0,0,.6);
+            max-height:90vh;
+            overflow-y:auto;
+            transition:all .2s ease;
+        }
+
+        /* 移动端适配：全屏显示 */
+        @media (max-width: 768px) {
+            .settings-panel{
+                width:100%;
+                max-width:100%;
+                border-radius:0;
+                padding:24px 20px;
+                max-height:100vh;
+                height:100%;
+                box-shadow:none;
+                border:none;
+            }
+            .settings-overlay{
+                background:rgba(0,0,0,0.7);
+            }
+        }
+
         .settings-panel h2{font-size:22px;font-weight:600;margin-bottom:24px}
         .settings-panel .setting-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border-color)}
         .settings-panel .setting-item:last-child{border-bottom:none}
@@ -227,6 +274,7 @@
         .settings-panel .close-settings:hover{background:var(--bg-hover);transform:translateY(-1px)}
         .settings-panel .close-settings:active{transform:scale(.97)}
         .settings-panel .panel-version{margin-top:12px;text-align:center;font-size:11px;color:var(--text-muted)}
+
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes highlightPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.6)}50%{box-shadow:0 0 0 6px rgba(59,130,246,.3)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
         .message-highlight{animation:highlightPulse .8s ease 3;border-radius:var(--radius-sm)}
@@ -310,20 +358,17 @@
     </div>
 </div>
 <script>
-/* ===== 版本号 v2.3.3 ===== */
-const APP_VERSION='2.3.3';
+/* ===== 版本号 v2.3.4 ===== */
+var APP_VERSION='2.3.4';
 
-// 强制清除浏览器缓存（但保留 localStorage）
 (function clearCacheOnce() {
     if (!sessionStorage.getItem('cache_cleared')) {
         sessionStorage.setItem('cache_cleared', 'true');
-        // 取消所有 Service Worker 注册，移除缓存
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 var promises = registrations.map(function(reg) { return reg.unregister(); });
                 return Promise.all(promises);
             }).then(function() {
-                // 强制从服务器重新加载（绕过缓存）
                 location.reload(true);
             }).catch(function() {
                 location.reload(true);
@@ -845,7 +890,14 @@ window.addEventListener('beforeunload',async function(){if(window.chatChannel)tr
 btnLogin.addEventListener('click',handleAuth);
 document.getElementById('switchToSignup').addEventListener('click',function(){switchMode('signup');});
 document.getElementById('togglePwd').addEventListener('click',function(){var t=authPassword.getAttribute('type')==='password'?'text':'password';authPassword.setAttribute('type',t);this.textContent=t==='password'?'显示':'隐藏';});
-settingsNav.addEventListener('click',async function(){await refreshSettingsData();settingsOverlay.classList.add('active');});
+
+/* 设置按钮 - 立即显示弹窗，异步刷新数据 */
+settingsNav.addEventListener('click',function(){
+    settingsOverlay.classList.add('active');
+    // 异步刷新数据，不阻塞界面
+    refreshSettingsData().catch(function(e){console.error(e);});
+});
+
 closeSettingsEl.addEventListener('click',closeSettingsFunc);
 settingsOverlay.addEventListener('click',function(e){if(e.target===this)closeSettingsFunc();});
 themeToggle.addEventListener('click',toggleTheme);
