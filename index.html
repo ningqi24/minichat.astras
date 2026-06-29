@@ -8,8 +8,15 @@
     <meta name="theme-color" content="#0d0d0d">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- ===== 版本号注入（用于缓存控制） ===== -->
-    <meta name="version" content="2.5.0" />
+    
+    <!-- ===== 缓存控制：禁止缓存HTML ===== -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- ===== 版本号注入 ===== -->
+    <meta name="version" content="2.6.0" />
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
@@ -238,8 +245,6 @@
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes highlightPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.6)}50%{box-shadow:0 0 0 6px rgba(59,130,246,.3)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
         .message-highlight{animation:highlightPulse .8s ease 3;border-radius:var(--radius-sm)}
-        
-        /* ===== 引用跳转弹窗样式 ===== */
         .quote-jump-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:600;animation:fadeIn .2s ease}
         .quote-jump-modal.active{display:flex}
         .quote-jump-modal .modal-box{background:var(--bg-card);border-radius:var(--radius);padding:28px 32px;max-width:420px;width:90%;border:1px solid var(--border-color);box-shadow:var(--shadow)}
@@ -259,14 +264,12 @@
         .quote-jump-modal .modal-box .modal-actions .btn-jump:hover{background:var(--accent-hover);transform:translateY(-1px)}
         .quote-jump-modal .modal-box .modal-actions .btn-jump:active{transform:scale(.95)}
         .quote-jump-modal .modal-box .jump-status{margin-top:12px;font-size:13px;color:var(--text-muted);text-align:center;min-height:20px}
-
         @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.emoji-picker{left:10px;bottom:60px;max-width:260px;grid-template-columns:repeat(7,1fr)}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}.quote-jump-modal .modal-box{padding:20px}}
         @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-icons img{height:40px}.splash-icons{gap:14px}.splash-status{font-size:10px;margin-top:16px}.emoji-picker{max-width:220px;grid-template-columns:repeat(6,1fr)}.emoji-picker span{font-size:22px}}
     </style>
 </head>
 <body>
 <div class="app" id="app">
-    <!-- ===== 启动画面 ===== -->
     <div id="splash" role="status" aria-live="polite">
         <div class="splash-icons">
             <img class="icon-left" src="assets/Inspired.svg" alt="Inspired" />
@@ -274,8 +277,6 @@
         </div>
         <div class="splash-status">✦ 加载中 ✦</div>
     </div>
-
-    <!-- ===== 登录覆盖层 ===== -->
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
@@ -288,8 +289,6 @@
             <div class="auth-message" id="authMessage"></div>
         </div>
     </div>
-
-    <!-- ===== 主界面 ===== -->
     <div class="main-interface hidden" id="mainInterface">
         <aside class="sidebar">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><span class="logo-text">MiniChat</span><span class="version-tag" id="sidebarVersion"></span></div>
@@ -315,7 +314,9 @@
                     <textarea id="chatInput" placeholder="输入消息…（Shift+Enter换行）" rows="1"></textarea>
                     <div class="mention-dropdown" id="mentionDropdown"></div>
                     <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none" multiple/>
-                    <button class="btn-icon" id="attachBtn" title="添加附件"><svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+                    <button class="btn-icon" id="attachBtn" title="添加附件">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    </button>
                 </div>
                 <button class="send-btn" id="btnSend" disabled>
                     <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/><circle cx="11" cy="13" r="1.5"/></svg>
@@ -323,19 +324,17 @@
             </div>
         </main>
     </div>
-
-    <!-- ===== 文件上传遮罩弹窗 ===== -->
     <div class="upload-overlay" id="uploadOverlay">
         <div class="upload-dialog">
-            <button class="close-upload" id="closeUploadBtn">&times;</button>
+            <button class="close-upload" id="closeUploadBtn">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
             <span class="upload-icon">📎</span>
             <h3>正在选择文件...</h3>
             <p>请从系统对话框中选择图片或音频</p>
             <div class="upload-spinner"></div>
         </div>
     </div>
-
-    <!-- ===== 设置弹窗 ===== -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
             <h2>设置</h2>
@@ -347,8 +346,6 @@
             <div class="panel-version" id="panelVersion"></div>
         </div>
     </div>
-
-    <!-- ===== 用户资料弹窗 ===== -->
     <div class="user-profile-modal" id="userProfileModal">
         <div class="modal-content">
             <img class="avatar-large" id="profileAvatar" src="" alt="头像"/>
@@ -360,13 +357,13 @@
             <button class="modal-close" id="closeProfileModal">关闭</button>
         </div>
     </div>
-
-    <!-- ===== 引用跳转弹窗 ===== -->
     <div class="quote-jump-modal" id="quoteJumpModal">
         <div class="modal-box">
             <div class="modal-header">
                 <h3>📎 引用消息</h3>
-                <button class="close-btn" id="closeQuoteJumpBtn">&times;</button>
+                <button class="close-btn" id="closeQuoteJumpBtn">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
             <div class="quote-info">
                 <div class="qi-author" id="qjAuthor">作者 <span class="qi-time" id="qjTime">时间</span></div>
@@ -382,22 +379,76 @@
 </div>
 
 <script>
-/* ===== 版本号 v2.5.0 ===== */
-var APP_VERSION = '2.5.0';
+/* ===== 版本号 v2.6.0 ===== */
+var APP_VERSION = '2.6.0';
 
 /* ================================================================
- * 1. 缓存控制：自动检测版本更新，强制刷新
+ * 多重缓存控制策略（四重保障）
+ * 1. Meta标签禁止缓存HTML
+ * 2. localStorage版本号对比 + 强制刷新
+ * 3. Service Worker自动更新 + skipWaiting + clients.claim
+ * 4. 资源URL附加版本号指纹
  * ================================================================ */
-(function autoClearCache() {
+
+// ===== 策略1 & 2: 版本号检测 + 强制刷新 =====
+(function enforceCacheControl() {
     var currentVersion = APP_VERSION;
     var storedVersion = localStorage.getItem('minichat_version');
     var metaVersion = document.querySelector('meta[name="version"]');
     if (metaVersion) metaVersion.setAttribute('content', currentVersion);
 
+    // 如果版本不一致，强制从服务器重新加载
     if (storedVersion !== currentVersion) {
         localStorage.setItem('minichat_version', currentVersion);
-        // 强制从服务器重新加载，绕过所有缓存
+        // 清除可能存在的旧缓存
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                    if (name.includes('minichat') || name.includes('sw')) {
+                        caches.delete(name);
+                    }
+                });
+            }).catch(function() {});
+        }
+        // 强制重新加载（绕过所有缓存）
         location.reload(true);
+    }
+})();
+
+// ===== 策略3: Service Worker 自动更新 =====
+(function setupServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION)
+            .then(function(registration) {
+                // 检测更新
+                registration.onupdatefound = function() {
+                    var newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.onstatechange = function() {
+                            // 新SW已安装，立即激活
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // 有新版本可用，通知用户或自动刷新
+                                console.log('🔄 新版本Service Worker已就绪');
+                                // 自动刷新页面以应用新版本
+                                if (confirm('发现新版本，点击确定立即更新')) {
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                    window.location.reload();
+                                }
+                            }
+                        };
+                    }
+                };
+            })
+            .catch(function(err) {
+                console.log('⚠️ Service Worker 注册失败:', err);
+            });
+
+        // 监听来自SW的消息
+        navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'REFRESH_REQUIRED') {
+                window.location.reload();
+            }
+        });
     }
 })();
 
@@ -692,18 +743,14 @@ function renderMessageContent(raw) {
     return text;
 }
 
-/* ================================================================
- * 2. 引用跳转：弹窗 + scrollIntoView 精准定位
- * ================================================================ */
-var pendingQuoteData = null;  // 存储当前弹窗对应的引用数据
+/* ===== 引用跳转 ===== */
+var pendingQuoteData = null;
 
 function openQuoteJumpModal(author, time, email, content) {
-    // 填充弹窗信息
     qjAuthor.textContent = author || '匿名';
     qjTime.textContent = time ? formatTimeShort(time) : '';
     qjContent.textContent = content || '[空消息]';
     qjStatus.textContent = '';
-    // 存储数据供跳转使用
     pendingQuoteData = { author: author, time: time, email: email || '' };
     quoteJumpModal.classList.add('active');
 }
@@ -713,12 +760,10 @@ function closeQuoteJumpModal() {
     pendingQuoteData = null;
 }
 
-// 关闭弹窗的各种方式
 closeQuoteJumpBtn.addEventListener('click', closeQuoteJumpModal);
 qjCancel.addEventListener('click', closeQuoteJumpModal);
 quoteJumpModal.addEventListener('click', function(e) { if (e.target === quoteJumpModal) closeQuoteJumpModal(); });
 
-// 跳转逻辑
 qjJump.addEventListener('click', function() {
     if (!pendingQuoteData) return;
     var data = pendingQuoteData;
@@ -771,13 +816,11 @@ qjJump.addEventListener('click', function() {
     if (bestMatch) {
         qjStatus.textContent = '✅ 已定位到原文！';
         qjStatus.style.color = '#4ade80';
-        // 滚动到目标位置[reference:11][reference:12]
         bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
         bestMatch.classList.add('message-highlight');
         setTimeout(function() {
             bestMatch.classList.remove('message-highlight');
         }, 2400);
-        // 延迟关闭弹窗，让用户看到跳转结果
         setTimeout(function() {
             closeQuoteJumpModal();
         }, 1200);
@@ -1023,17 +1066,14 @@ function handleDocumentClick(e) {
     var recallBtn = e.target.closest('.recall-btn');
     if (recallBtn) { e.preventDefault(); if (recallBtn.dataset.messageId) window.recallMessage(recallBtn.dataset.messageId); return; }
 
-    // 引用块点击 → 弹出跳转弹窗
     var quote = e.target.closest('.quote-block');
     if (quote) {
         e.preventDefault();
         var author = quote.dataset.author || quote.getAttribute('data-author');
         var time = quote.dataset.time || quote.getAttribute('data-time');
         var email = quote.dataset.email || quote.getAttribute('data-email') || '';
-        // 提取被引用的内容（纯文本）
         var contentEl = quote.querySelector('.quote-body') || quote;
         var content = contentEl.textContent ? contentEl.textContent.trim() : '';
-        // 去掉作者和时间前缀
         content = content.replace(/^[^\s]+\s+/, '').trim();
         if (author && time) {
             openQuoteJumpModal(author, time, email, content);
@@ -1520,7 +1560,7 @@ profileModal.addEventListener('click', function(e) { if (e.target === this) prof
 
 loadTheme();
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then(function() { console.log('✅ SW v' + APP_VERSION); }).catch(function(e) { console.warn('⚠️ SW:', e); });
+    navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then(function() { console.log('✅ SW v' + APP_VERSION); }).catch(function(e) { console.warn('⚠️ SW:', e); });
 }
 </script>
 </body>
