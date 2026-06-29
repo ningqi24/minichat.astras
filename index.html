@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.7.1" />
+    <meta name="version" content="2.7.2" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
@@ -91,7 +91,7 @@
         .online-user-list{display:flex;flex-direction:column;gap:6px}
         .online-user-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border-color)}
         .online-user-item:last-child{border-bottom:none}
-        .online-user-item .avatar-small{width:24px;height:24px;border-radius:50%;object-fit:cover;background:var(--bg-input);flex-shrink:0}
+        .online-user-item .avatar-small{width:24px;height:24px;border-radius:50%;object-fit:cover;background:var(--bg-input);flex-shrink:0;cursor:pointer}
         .online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ade80;flex-shrink:0}
         .online-user-info{display:flex;flex-direction:column;min-width:0;flex:1}
         .online-user-name{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -143,11 +143,7 @@
         .user-profile-modal .modal-content .avatar-large{width:96px;height:96px;border-radius:50%;object-fit:cover;background:var(--bg-input);margin:0 auto 12px;border:3px solid var(--accent)}
         .user-profile-modal .modal-content .display-name{font-size:20px;font-weight:700;margin-bottom:4px}
         .user-profile-modal .modal-content .email{font-size:14px;color:var(--text-secondary);margin-bottom:12px}
-        .user-profile-modal .modal-content .detail-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:13px}
-        .user-profile-modal .modal-content .detail-item:last-child{border-bottom:none}
-        .user-profile-modal .modal-content .detail-item .label{color:var(--text-secondary)}
-        .user-profile-modal .modal-content .detail-item .value{font-weight:500}
-        .user-profile-modal .modal-content .status-badge{display:inline-block;padding:2px 12px;border-radius:20px;font-size:12px;font-weight:600;background:#4ade80;color:#000;margin-top:4px}
+        .user-profile-modal .modal-content .status-badge{display:inline-block;padding:2px 12px;border-radius:20px;font-size:12px;font-weight:600;background:#4ade80;color:#000;margin:4px 0 12px}
         .user-profile-modal .modal-content .status-badge.offline{background:var(--text-muted);color:#fff}
         .user-profile-modal .modal-close{margin-top:16px;background:var(--bg-input);border:none;padding:10px;border-radius:var(--radius-sm);color:var(--text-primary);font-weight:500;cursor:pointer;width:100%;transition:all .2s ease}
         .user-profile-modal .modal-close:hover{background:var(--bg-hover);transform:translateY(-1px)}
@@ -284,6 +280,15 @@
         .context-menu .menu-item{padding:8px 20px;font-size:14px;cursor:pointer;transition:background .15s;color:var(--text-primary);display:flex;align-items:center;gap:10px}
         .context-menu .menu-item:hover{background:var(--bg-hover)}
         .context-menu .menu-item svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+        /* typing indicator */
+        .typing-indicator{display:none;align-items:center;gap:6px;padding:8px 16px;margin:8px 24px;background:var(--bg-card);border-radius:12px;font-size:13px;color:var(--text-secondary);border:1px solid var(--border-color);box-shadow:0 2px 8px rgba(0,0,0,.1);animation:fadeIn .2s ease}
+        .typing-indicator.active{display:flex}
+        .typing-dots{display:flex;align-items:center;gap:3px}
+        .typing-dots span{width:5px;height:5px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.4s infinite ease-in-out}
+        .typing-dots span:nth-child(1){animation-delay:0s}
+        .typing-dots span:nth-child(2){animation-delay:0.2s}
+        .typing-dots span:nth-child(3){animation-delay:0.4s}
+        @keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:0.3}30%{transform:translateY(-4px);opacity:1}}
         @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.emoji-picker{left:10px;bottom:60px;max-width:260px;grid-template-columns:repeat(7,1fr)}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}.quote-jump-modal .modal-box{padding:20px}.version-update-modal .modal-box{padding:24px}}
         @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-icons img{height:40px}.splash-icons{gap:14px}.splash-status{font-size:10px;margin-top:16px}.emoji-picker{max-width:220px;grid-template-columns:repeat(6,1fr)}.emoji-picker span{font-size:22px}}
     </style>
@@ -379,8 +384,6 @@
             <div class="display-name" id="profileDisplayName">昵称</div>
             <div class="email" id="profileEmail">邮箱</div>
             <div class="status-badge" id="profileStatus">在线</div>
-            <div class="detail-item"><span class="label">注册时间</span><span class="value" id="profileCreatedAt">-</span></div>
-            <div class="detail-item"><span class="label">最后登录</span><span class="value" id="profileLastLogin">-</span></div>
             <button class="modal-close" id="closeProfileModal">关闭</button>
         </div>
     </div>
@@ -438,7 +441,7 @@
 </div>
 
 <script>
-var APP_VERSION = '2.7.1';
+var APP_VERSION = '2.7.2';
 
 (function checkRemoteVersion() {
     var currentVersion = APP_VERSION;
@@ -451,7 +454,7 @@ var APP_VERSION = '2.7.1';
         })
         .then(function(data) {
             var remoteVersion = data.version || '';
-            console.log('📦 远程版本:', remoteVersion, '当前版本:', currentVersion);
+            console.log('远程版本:', remoteVersion, '当前版本:', currentVersion);
             if (remoteVersion && remoteVersion !== currentVersion) {
                 document.getElementById('newVerDisplay').textContent = remoteVersion;
                 document.getElementById('versionUpdateModal').classList.add('active');
@@ -459,7 +462,7 @@ var APP_VERSION = '2.7.1';
             }
         })
         .catch(function(err) {
-            console.warn('⚠️ 版本检测失败 (vision.json 可能不存在):', err.message);
+            console.warn('版本检测失败:', err.message);
         });
 })();
 
@@ -577,8 +580,6 @@ var loginOverlay = $('loginOverlay'),
     profileDisplayName = $('profileDisplayName'),
     profileEmail = $('profileEmail'),
     profileStatus = $('profileStatus'),
-    profileCreatedAt = $('profileCreatedAt'),
-    profileLastLogin = $('profileLastLogin'),
     closeProfileModal = $('closeProfileModal'),
     emojiBtn = $('emojiBtn'),
     emojiPicker = $('emojiPicker'),
@@ -684,8 +685,31 @@ function setAuthMessage(msg, type) { authMessage.textContent = msg; authMessage.
 function autoResizeTextarea() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight, 48), 150) + 'px'; }
 function insertAtCursor(text) { chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input', { bubbles: true })); autoResizeTextarea(); }
 
-function loadTheme() { if (localStorage.getItem('minichat_theme') === 'light') { document.body.classList.add('light-theme'); themeToggle.classList.remove('active'); } else { document.body.classList.remove('light-theme'); themeToggle.classList.add('active'); } }
-function toggleTheme() { var l = document.body.classList.toggle('light-theme'); themeToggle.classList.toggle('active'); localStorage.setItem('minichat_theme', l ? 'light' : 'dark'); }
+function loadTheme() {
+    var saved = localStorage.getItem('minichat_theme');
+    if (saved === 'light') {
+        document.body.classList.add('light-theme');
+        themeToggle.classList.remove('active');
+    } else if (saved === 'dark') {
+        document.body.classList.remove('light-theme');
+        themeToggle.classList.add('active');
+    } else {
+        var hours = new Date().getHours();
+        var isLight = hours >= 6 && hours < 18;
+        if (isLight) {
+            document.body.classList.add('light-theme');
+            themeToggle.classList.remove('active');
+        } else {
+            document.body.classList.remove('light-theme');
+            themeToggle.classList.add('active');
+        }
+    }
+}
+function toggleTheme() {
+    var isLight = document.body.classList.toggle('light-theme');
+    themeToggle.classList.toggle('active');
+    localStorage.setItem('minichat_theme', isLight ? 'light' : 'dark');
+}
 
 function compressImage(file, mw, q) {
     return new Promise(function(res, rej) {
@@ -776,8 +800,7 @@ function showUserProfile(email) {
     var on = !!ou;
     profileStatus.textContent = on ? '在线' : '离线';
     profileStatus.className = 'status-badge' + (on ? '' : ' offline');
-    profileCreatedAt.textContent = info.created_at ? formatTime(info.created_at) : '未知';
-    profileLastLogin.textContent = info.last_login ? formatTime(info.last_login) : '未知';
+    // 已删除注册时间和最后登录显示
     profileModal.classList.add('active');
 }
 
@@ -1470,6 +1493,7 @@ function renderOnlineUsers() {
         avatar.className = 'avatar-small';
         avatar.src = bustCache(u.avatar_url || getDefaultAvatar(u.email));
         avatar.onerror = function() { this.src = getDefaultAvatar(this.email); };
+        avatar.addEventListener('click', function(e) { e.stopPropagation(); showUserProfile(u.email); });
         var dot = document.createElement('span');
         dot.className = 'online-dot';
         var info = document.createElement('div');
