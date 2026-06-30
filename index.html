@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.7.8" />
+    <meta name="version" content="2.7.9" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
@@ -448,7 +448,7 @@
 </div>
 
 <script>
-var APP_VERSION = '2.7.8';
+var APP_VERSION = '2.7.9';
 // === 版本检测 ===
 function checkForUpdate() {
     var currentVersion = APP_VERSION;
@@ -538,8 +538,12 @@ function toggleTheme() {
 
 // === 表情面板 (修复 unicode 显示) ===
 function toEmojiChar(code) {
-    if (typeof code === 'string' && code.startsWith('U+')) {
+    if (typeof code !== 'string') return code;
+    if (code.startsWith('U+')) {
         return String.fromCodePoint(parseInt(code.slice(2), 16));
+    }
+    if (/^[0-9A-Fa-f]+$/.test(code)) {
+        return String.fromCodePoint(parseInt(code, 16));
     }
     return code;
 }
@@ -548,18 +552,21 @@ var allEmojiData = {};
 async function loadEmojiData() {
     try {
         const [emojiRes, kaoRes] = await Promise.all([
-            fetch('./data/emojihtb-all.json').then(r=>r.json()),
-            fetch('./data/kaomoji.json').then(r=>r.json())
+            fetch('./data/emojihtb-all.json').then(r => r.json()),
+            fetch('./data/kaomoji.json').then(r => r.json())
         ]);
         const emojiGroups = {};
         if (Array.isArray(emojiRes)) {
             emojiRes.forEach(item => {
                 const cat = item.category || '其他';
                 if (!emojiGroups[cat]) emojiGroups[cat] = [];
-                if (item.unicode) {
-                    emojiGroups[cat].push(toEmojiChar(item.unicode));
+                let unicodeStr = item.unicode;
+                if (Array.isArray(unicodeStr)) unicodeStr = unicodeStr[0];
+                if (unicodeStr) {
+                    emojiGroups[cat].push(toEmojiChar(unicodeStr));
                 } else if (item.htmlCode && item.htmlCode.length) {
-                    emojiGroups[cat].push({ __html: item.htmlCode[0] });
+                    let htmlStr = Array.isArray(item.htmlCode) ? item.htmlCode[0] : item.htmlCode;
+                    emojiGroups[cat].push({ __html: htmlStr });
                 }
             });
         } else {
