@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.7.6" />
+    <meta name="version" content="2.7.7" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
@@ -214,32 +214,35 @@
         .upload-overlay .upload-dialog p{font-size:14px;color:var(--text-secondary);margin-bottom:4px}
         .upload-overlay .upload-dialog .upload-spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--border-color);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-top:8px}
         @keyframes spin{to{transform:rotate(360deg)}}
+        /* ===== 设置面板全新设计 ===== */
         .settings-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:300;transition:opacity .25s,visibility .25s;opacity:0;visibility:hidden;pointer-events:none}
         .settings-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
-        .settings-panel{background:var(--bg-card);border-radius:var(--radius);padding:32px;width:min(90%, 600px);max-width:600px;border:1px solid var(--border-color);box-shadow:var(--shadow);max-height:90vh;overflow-y:auto;transition:opacity .2s ease;opacity:0}
-        .settings-overlay.active .settings-panel{opacity:1}
-        .settings-panel h2{font-size:22px;font-weight:600;margin-bottom:24px}
-        .setting-item{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border-color)}
+        .settings-panel{background:var(--bg-card);border-radius:var(--radius);padding:28px 32px;width:min(94%, 560px);max-width:560px;border:1px solid var(--border-color);box-shadow:var(--shadow);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:24px}
+        .settings-group{background:var(--bg-input);border-radius:var(--radius-sm);padding:20px}
+        .settings-group-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+        .settings-group-title::before{content:'';width:4px;height:16px;background:var(--accent);border-radius:2px}
+        .setting-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color)}
         .setting-item:last-child{border-bottom:none}
-        .item-info{flex:1;margin-right:20px}
-        .item-info .label{font-size:15px;font-weight:500;margin-bottom:2px}
-        .item-info .desc{font-size:13px;color:var(--text-secondary)}
-        .btn-save,.btn-danger,.btn-accent{padding:8px 18px;border:none;border-radius:var(--radius-sm);font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease}
+        .setting-label{font-size:15px;font-weight:500;color:var(--text-primary)}
+        .setting-desc{font-size:12px;color:var(--text-muted);margin-top:2px}
+        .setting-control{margin-left:16px;flex-shrink:0}
+        .btn-save,.btn-danger,.btn-accent{padding:8px 18px;border:none;border-radius:var(--radius-sm);font-weight:600;font-size:13px;cursor:pointer;transition:all .2s ease}
         .btn-save,.btn-accent{background:var(--accent);color:#fff}
         .btn-save:hover,.btn-accent:hover{background:var(--accent-hover);transform:translateY(-1px)}
         .btn-danger{background:#dc2626;color:#fff}
         .btn-danger:hover{background:#b91c1c;transform:translateY(-1px)}
-        .nickname-row{display:flex;gap:8px;width:100%}
-        .nickname-row input{flex:1;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;outline:none}
-        .toggle-switch{width:48px;height:28px;background:var(--bg-input);border-radius:14px;cursor:pointer;transition:background .25s;position:relative;flex-shrink:0}
+        .nickname-row{display:flex;gap:8px;align-items:center;width:100%}
+        .nickname-row input{flex:1;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:14px;outline:none}
+        .toggle-switch{width:48px;height:28px;background:var(--bg-input);border-radius:14px;cursor:pointer;transition:background .25s;position:relative}
         .toggle-switch .knob{width:24px;height:24px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:transform .25s;box-shadow:0 2px 6px rgba(0,0,0,.2)}
         .toggle-switch.active{background:var(--accent)}
         .toggle-switch.active .knob{transform:translateX(20px)}
-        .close-settings{margin-top:24px;background:var(--bg-input);border:none;padding:12px;border-radius:var(--radius-sm);color:var(--text-primary);font-weight:500;cursor:pointer;width:100%;transition:all .2s ease}
-        .close-settings:hover{background:var(--bg-hover)}
-        .panel-info{margin-top:20px;padding:16px;background:var(--bg-input);border-radius:var(--radius-sm);font-size:13px;color:var(--text-secondary);line-height:1.8}
+        .settings-footer{margin-top:8px;display:flex;flex-direction:column;gap:12px}
+        .panel-info{font-size:13px;color:var(--text-secondary);line-height:1.6;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm)}
         .panel-info a{color:var(--accent);text-decoration:none}
-        .panel-version{margin-top:12px;text-align:center;font-size:11px;color:var(--text-muted)}
+        .close-settings{background:var(--bg-input);border:none;padding:12px;border-radius:var(--radius-sm);color:var(--text-primary);font-weight:500;cursor:pointer;width:100%;transition:all .2s ease}
+        .close-settings:hover{background:var(--bg-hover)}
+        .panel-version{text-align:center;font-size:11px;color:var(--text-muted)}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes highlightPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.6)}50%{box-shadow:0 0 0 6px rgba(59,130,246,.3)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
         .message-highlight{animation:highlightPulse .8s ease 3;border-radius:var(--radius-sm)}
@@ -350,40 +353,56 @@
     </div>
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
-            <h2>设置</h2>
-            <div class="setting-item">
-                <div class="item-info"><div class="label">头像</div><div class="desc">点击下方按钮上传新头像</div></div>
-                <div class="avatar-upload-area"><img class="preview" id="avatarPreview" src="" alt="头像预览"/><button class="upload-btn" id="avatarUploadBtn">上传</button><input type="file" id="avatarFileInput" accept="image/*"/></div>
-                <div class="avatar-upload-status" id="avatarUploadStatus"></div>
+            <div class="settings-group">
+                <div class="settings-group-title">个人资料</div>
+                <div class="setting-item">
+                    <div class="setting-info"><div class="setting-label">头像</div><div class="setting-desc">点击上传新头像</div></div>
+                    <div class="setting-control" style="display:flex;align-items:center;gap:12px">
+                        <div class="avatar-upload-area"><img class="preview" id="avatarPreview" src="" alt="头像预览"/><button class="upload-btn" id="avatarUploadBtn" style="padding:6px 14px;font-size:12px">上传</button><input type="file" id="avatarFileInput" accept="image/*"/></div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info"><div class="setting-label">显示昵称</div><div class="setting-desc">其他成员将看到这个名字</div></div>
+                    <div class="setting-control" style="flex:1;max-width:260px">
+                        <div class="nickname-row"><input type="text" id="displayNameInput" placeholder="输入昵称" maxlength="20"/><button class="btn-save" id="saveDisplayName" style="padding:10px 16px">保存</button></div>
+                        <div class="nickname-msg" id="displayNameMessage" style="font-size:12px;margin-top:4px"></div>
+                    </div>
+                </div>
             </div>
-            <div class="setting-item">
-                <div class="item-info"><div class="label">显示昵称</div><div class="desc">其他成员将看到这个名字</div></div>
-                <div class="nickname-row"><input type="text" id="displayNameInput" placeholder="输入昵称" maxlength="20"/><button class="btn-save" id="saveDisplayName">保存</button></div>
-                <div class="nickname-msg" id="displayNameMessage"></div>
+            <div class="settings-group">
+                <div class="settings-group-title">外观</div>
+                <div class="setting-item">
+                    <div class="setting-info"><div class="setting-label">深色模式</div><div class="setting-desc">切换日间/夜间主题</div></div>
+                    <div class="setting-control"><div class="toggle-switch active" id="themeToggle"><div class="knob"></div></div></div>
+                </div>
             </div>
-            <div class="setting-item">
-                <div class="item-info"><div class="label">深色模式</div><div class="desc">切换日间/夜间主题</div></div>
-                <div class="toggle-switch active" id="themeToggle"><div class="knob"></div></div>
+            <div class="settings-group">
+                <div class="settings-group-title">更新</div>
+                <div class="setting-item">
+                    <div class="setting-info"><div class="setting-label">版本检测</div><div class="setting-desc">手动检查更新</div></div>
+                    <div class="setting-control"><button class="btn-accent" id="checkUpdateBtn">检测更新</button></div>
+                </div>
+                <div class="setting-item" style="display:none"><div class="setting-info" id="updateCheckStatus"></div></div>
             </div>
-            <div class="setting-item">
-                <div class="item-info"><div class="label">版本检测</div><div class="desc">手动检测是否有新版本</div></div>
-                <button class="btn-accent" id="checkUpdateBtn">检测更新</button>
-                <div class="item-info" id="updateCheckStatus"></div>
+            <div class="settings-group">
+                <div class="settings-group-title">账户</div>
+                <div class="setting-item">
+                    <div class="setting-info"><div class="setting-label">退出登录</div><div class="setting-desc">退出后需重新登录</div></div>
+                    <div class="setting-control"><button class="btn-danger" id="settingsLogout">退出</button></div>
+                </div>
             </div>
-            <div class="setting-item">
-                <div class="item-info"><div class="label">退出登录</div><div class="desc">退出后需重新登录</div></div>
-                <button class="btn-danger" id="settingsLogout">退出</button>
+            <div class="settings-footer">
+                <div class="panel-info">
+                    <strong>开发者连接</strong><br>
+                    <a href="https://astras.cc" target="_blank">Astras.cc</a> · <a href="https://github.com/ningqi24/minichat.astras" target="_blank">GitHub 仓库</a><br>
+                    By <a href="https://github.com/ningqi24" target="_blank">ningqi24</a><br>
+                    License: MIT<br>
+                    Inspired by "SimpleChat" (<a href="https://space.bilibili.com/1447858895" target="_blank">B站</a>)<br>
+                    Basied on "Chatmini" "Astras.cc" "Supabase.com" "Spacemail.com"
+                </div>
+                <button class="close-settings" id="closeSettings">关闭设置</button>
+                <div class="panel-version" id="panelVersion"></div>
             </div>
-            <button class="close-settings" id="closeSettings">关闭设置</button>
-            <div class="panel-info">
-                <strong>开发者连接</strong><br>
-                <a href="https://astras.cc" target="_blank">Astras.cc</a> · <a href="https://github.com/ningqi24/minichat.astras" target="_blank">GitHub 仓库</a><br>
-                By <a href="https://github.com/ningqi24" target="_blank">ningqi24</a><br>
-                License: MIT<br>
-                Inspired by "SimpleChat" (<a href="https://space.bilibili.com/1447858895" target="_blank">B站</a>)<br>
-                Basied on "Chatmini" "Astras.cc" "Supabase.com" "Spacemail.com"
-            </div>
-            <div class="panel-version" id="panelVersion"></div>
         </div>
     </div>
     <div class="user-profile-modal" id="userProfileModal">
@@ -429,7 +448,7 @@
 </div>
 
 <script>
-var APP_VERSION = '2.7.6';
+var APP_VERSION = '2.7.7';
 // === 版本检测 ===
 function checkForUpdate() {
     var currentVersion = APP_VERSION;
@@ -441,10 +460,9 @@ function checkForUpdate() {
             if (remoteVersion && remoteVersion !== currentVersion) {
                 document.getElementById('newVerDisplay').textContent = remoteVersion;
                 document.getElementById('versionUpdateModal').classList.add('active');
-                localStorage.setItem('minichat_latest_version', remoteVersion);
             } else {
                 var statusEl = document.getElementById('updateCheckStatus');
-                if (statusEl) { statusEl.textContent = '当前已是最新版本'; statusEl.style.color = '#4ade80'; setTimeout(function(){ statusEl.textContent = ''; }, 3000); }
+                if (statusEl) { statusEl.textContent = '当前已是最新版本'; statusEl.style.color = '#4ade80'; statusEl.parentElement.style.display = 'flex'; setTimeout(function(){ statusEl.textContent = ''; statusEl.parentElement.style.display = 'none'; }, 3000); }
             }
         })
         .catch(function(err) { console.warn('版本检测失败:', err.message); });
@@ -518,7 +536,7 @@ function toggleTheme() {
     localStorage.setItem('minichat_theme', isLight ? 'light' : 'dark');
 }
 
-// === 表情面板 (本地文件) ===
+// === 表情面板 (使用 unicode 字段，修复显示问题) ===
 var allEmojiData = {};
 async function loadEmojiData() {
     try {
@@ -531,7 +549,13 @@ async function loadEmojiData() {
             emojiRes.forEach(item => {
                 const cat = item.category || '其他';
                 if (!emojiGroups[cat]) emojiGroups[cat] = [];
-                emojiGroups[cat].push(item.htmlCode || item.character);
+                // 优先使用 unicode 字段，否则尝试用 innerHTML 解析 htmlCode
+                if (item.unicode) {
+                    emojiGroups[cat].push(item.unicode);
+                } else if (item.htmlCode && item.htmlCode.length) {
+                    // htmlCode 是 HTML 实体数组，我们存储一个临时对象，渲染时用 innerHTML
+                    emojiGroups[cat].push({ __html: item.htmlCode[0] });
+                }
             });
         } else {
             Object.entries(emojiRes).forEach(([cat, list]) => { emojiGroups[cat] = list; });
@@ -570,10 +594,18 @@ function renderGrid(items) {
     if (!items.length) { emojiGrid.innerHTML = '<div class="emoji-loading">暂无表情</div>'; return; }
     items.forEach(emoji => {
         const span = document.createElement('span');
-        span.className = 'emoji-item' + (emoji.length > 2 ? ' kaomoji-item' : '');
-        span.textContent = emoji;
+        span.className = 'emoji-item' + (typeof emoji === 'string' && emoji.length > 2 ? ' kaomoji-item' : '');
+        // 根据类型渲染
+        if (typeof emoji === 'string') {
+            span.textContent = emoji;
+        } else if (emoji && emoji.__html) {
+            span.innerHTML = emoji.__html;   // HTML 实体解析
+        } else {
+            span.textContent = String(emoji);
+        }
         span.addEventListener('click', () => {
-            insertAtCursor(emoji);
+            const text = span.textContent || span.innerText;
+            insertAtCursor(text);
             emojiPanel.classList.remove('active');
             emojiVisible = false;
         });
