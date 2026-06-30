@@ -1774,40 +1774,37 @@ function enterChat() {
 }
 
 // ============================================================
-// 启动逻辑（修复卡顿）
+// 启动
 // ============================================================
 (function() {
-    var splashEl = document.getElementById('splash');
-    function hideSplashAndShowLogin() {
-        if (!splashEl) return;
-        splashEl.classList.add('hidden');
-        loginOverlay.classList.remove('hidden');
-        setTimeout(function(){ if (splashEl.parentNode) splashEl.remove(); }, 600);
+    var splash = document.getElementById('splash');
+    var loginOverlay = document.getElementById('loginOverlay');
+    // 立即隐藏 splash
+    if (splash) {
+        splash.classList.add('hidden');
+        setTimeout(function(){ if (splash && splash.parentNode) splash.remove(); }, 600);
     }
-
-    // 0.5 秒后强制显示登录界面（无论自动登录是否成功）
-    setTimeout(hideSplashAndShowLogin, 500);
-
-    // 尝试自动登录
-    setTimeout(function(){
-        try {
-            var raw = localStorage.getItem('minichat_user');
-            if (raw) {
-                var user = JSON.parse(raw);
-                if (user && user.email) {
-                    window.currentEmail = user.email;
-                    window.currentUserId = user.id || '';
-                    supabase.auth.getSession().then(function(data) {
-                        if (data.data.session && typeof window.enterChat === 'function') {
-                            window.enterChat();
-                        }
-                    }).catch(function(e){
-                        console.warn('自动登录失败', e);
-                    });
-                }
+    if (loginOverlay) loginOverlay.classList.remove('hidden');
+    // 检查登录状态
+    try {
+        var raw = localStorage.getItem('minichat_user');
+        if (raw) {
+            var user = JSON.parse(raw);
+            if (user && user.email) {
+                window.currentEmail = user.email;
+                window.currentUserId = user.id || '';
+                window.supabase.auth.getSession().then(function(data) {
+                    if (data.data.session && typeof window.enterChat === 'function') {
+                        window.enterChat();
+                    }
+                }).catch(function(e) {
+                    console.warn('获取 session 失败:', e);
+                });
             }
-        } catch(e) {}
-    }, 600);
+        }
+    } catch(e) {
+        console.warn('启动检查失败:', e);
+    }
 })();
 
 loadTheme();
