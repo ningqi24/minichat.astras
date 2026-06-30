@@ -357,11 +357,11 @@
         <main class="chat-main">
             <div class="chat-header">
                 <div class="chat-title">全局聊天<small># 所有成员</small></div>
-                <div class="chat-header-right"><span id="onlineStatus">● 在线</span><button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="online-users-btn" id="onlineUsersBtn" title="在线用户"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="online-badge" id="onlineBadge">0</span></button></div>
+                <div class="chat-header-right"><span id="onlineStatus">● 在线</span><button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10.5" cy="10.5" rx="6" ry="6.5" transform="rotate(-12 10.5 10.5)"/><line x1="15.5" y1="15.5" x2="20" y2="20" stroke-width="2.8"/><line x1="7.3" y1="8.8" x2="13.7" y2="8.8" stroke-width="1.4"/><line x1="7.3" y1="11.8" x2="11.6" y2="11.8" stroke-width="1.4"/></svg></button><button class="online-users-btn" id="onlineUsersBtn" title="在线用户"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="online-badge" id="onlineBadge">0</span></button></div>
             </div>
             <div class="search-bar" id="searchBar">
                 <div class="search-input-wrap">
-                    <svg class="search-input-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <svg class="search-input-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10.5" cy="10.5" rx="6" ry="6.5" transform="rotate(-12 10.5 10.5)"/><line x1="15.5" y1="15.5" x2="20" y2="20" stroke-width="2.8"/><line x1="7.3" y1="8.8" x2="13.7" y2="8.8" stroke-width="1.4"/><line x1="7.3" y1="11.8" x2="11.6" y2="11.8" stroke-width="1.4"/></svg>
                     <input type="text" id="searchInput" placeholder="搜索消息…" autocomplete="off" spellcheck="false" aria-label="搜索消息">
                     <button class="search-clear-btn" id="searchClearInput" type="button" title="清空 (Ctrl+Backspace)" aria-label="清空输入">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -610,12 +610,17 @@ messageList.addEventListener('scroll', function() {
 var Search = {
     open: false,
     term: '',
-    results: [],          // 已匹配的消息元素(顺序)
+    results: [],          // 本地高亮的消息元素(顺序)
+    remoteMatches: [],    // 远程返回的全部匹配 [id, content, created_at, ...]
+    serverTotal: 0,       // 远程返回的匹配数
     index: -1,            // 当前选中项在 results 中的下标
     debounceId: null,
     refreshTimer: null,
     observer: null,
     observerPaused: false,
+    serverSearchToken: 0, // 用于取消过期请求
+    serverSearching: false,
+    loadingHistory: false,
 
     init: function() {
         this.elBar     = searchBar;
@@ -658,7 +663,8 @@ var Search = {
             if (self.observerPaused || !self.term || !self.open) return;
             clearTimeout(self.refreshTimer);
             self.refreshTimer = setTimeout(function() {
-                if (self.term && self.open) self.runSearch(self.term, true);
+                // DOM 变化只重跑本地高亮,不重新查服务器
+                if (self.term && self.open) self.runSearch(self.term, true, true);
             }, 300);
         });
         this.observer.observe(messageList, { childList: true, subtree: true });
@@ -743,9 +749,13 @@ var Search = {
         }
     },
 
-    runSearch: function(term, isRefresh) {
+    runSearch: function(term, isRefresh, skipServerSearch) {
         if (!this.open) return;
         var self = this;
+
+        // 记住刷新前的当前消息,保持焦点
+        var prevMsg = (this.index >= 0 && this.index < this.results.length) ? this.results[this.index] : null;
+
         this.withObserverPaused(function() {
             self.clearHighlights();
             self.term = term;
@@ -753,22 +763,17 @@ var Search = {
             if (!term || !term.trim()) {
                 self.results = [];
                 self.index = -1;
+                self.remoteMatches = [];
+                self.serverTotal = 0;
                 self.setStatus('');
                 self.updateNavButtons();
                 return;
             }
 
-            var regex = new RegExp(escRegex(term), 'gi');
-            var messages = messageList.querySelectorAll('.message');
-            var matched = [];
-            for (var i = 0; i < messages.length; i++) {
-                if (highlightInElement(messages[i], regex)) matched.push(messages[i]);
-            }
+            var matched = self.localSearchAndHighlight(term);
             self.results = matched;
 
-            // 选择下标:刷新时尽量保持当前消息,新搜索时从头开始
-            var prevMsg = (self.index >= 0 && self.index < self.results.length) ? self.results[self.index] : null;
-            self.results = matched;
+            // 选择下标
             if (!isRefresh) {
                 self.index = matched.length > 0 ? 0 : -1;
             } else if (prevMsg && matched.indexOf(prevMsg) >= 0) {
@@ -779,14 +784,117 @@ var Search = {
                 self.index = -1;
             }
 
-            if (matched.length === 0) {
-                self.setStatus('无结果', true);
-            } else {
-                self.setStatus((self.index + 1) + ' / ' + matched.length, false);
+            if (matched.length > 0) {
+                self.setStatus(self.formatStatus(), false);
                 self.scrollToCurrent();
+            } else {
+                self.index = -1;
+                // 本地没有但可能服务器有;如果服务器还在查,显示进度
+                self.setStatus(self.serverSearching ? '搜索中…' : '无结果', !self.serverSearching);
             }
             self.updateNavButtons();
         });
+
+        if (skipServerSearch) return;
+        if (!term || !term.trim()) return;
+        this.runServerSearch(term);
+    },
+
+    // 只在 DOM 中查找并高亮,不入远端
+    localSearchAndHighlight: function(term) {
+        var regex = new RegExp(escRegex(term), 'gi');
+        var messages = messageList.querySelectorAll('.message');
+        var matched = [];
+        for (var i = 0; i < messages.length; i++) {
+            if (highlightInElement(messages[i], regex)) matched.push(messages[i]);
+        }
+        return matched;
+    },
+
+    formatStatus: function() {
+        var n = this.results.length;
+        if (n === 0) return this.serverSearching ? '搜索中…' : '';
+        var total = this.serverTotal;
+        var label = (this.index + 1) + ' / ' + n;
+        if (total && total > n) label += '  (共 ' + total + ')';
+        return label;
+    },
+
+    // 远端搜索 + 按需加载老历史
+    runServerSearch: async function(term) {
+        this.serverSearchToken += 1;
+        var token = this.serverSearchToken;
+        this.serverSearching = true;
+        var self = this;
+
+        var remote = [];
+        try {
+            remote = await searchMessagesRemote(term);
+        } catch (e) {
+            remote = [];
+        }
+        // 期间用户改了词 / 关闭了面板 / 启动了新搜索
+        if (token !== this.serverSearchToken || !this.open || this.term !== term) {
+            if (token === this.serverSearchToken) this.serverSearching = false;
+            return;
+        }
+        this.serverSearching = false;
+        this.remoteMatches = remote;
+        this.serverTotal = remote.length;
+
+        if (remote.length === 0) {
+            // 最终状态:本地为空、远程也为空 → 无结果
+            this.runSearch(term, true, true);
+            return;
+        }
+
+        // 找出不在 DOM 中的远端结果
+        var missing = [];
+        for (var i = 0; i < remote.length; i++) {
+            var r = remote[i];
+            if (!document.querySelector('[data-message-id="' + r.id + '"]')) {
+                missing.push(r);
+            }
+        }
+
+        if (missing.length === 0) {
+            // 都在 DOM 里,重跑本地高亮
+            this.runSearch(term, true, true);
+            return;
+        }
+
+        // 需要加载老历史:找到 missing 中最老的 created_at
+        var oldestNeeded = missing[0].created_at;
+        for (var j = 1; j < missing.length; j++) {
+            if (missing[j].created_at < oldestNeeded) oldestNeeded = missing[j].created_at;
+        }
+
+        // 如果 oldestNeeded 比当前已加载的最新还新(不应该,除非并发变动),跳过加载
+        if (oldestTimestamp && oldestNeeded >= oldestTimestamp) {
+            this.runSearch(term, true, true);
+            return;
+        }
+
+        // 显示进度并加载
+        this.loadingHistory = true;
+        this.setStatus('加载历史…', false);
+        var lastStatusUpdate = 0;
+        try {
+            await loadHistoryForSearch(oldestNeeded, function(pages) {
+                // 节流:每 3 页才更新一次状态
+                if (pages - lastStatusUpdate >= 3 || pages === 1) {
+                    lastStatusUpdate = pages;
+                    self.setStatus('加载历史… (' + (pages * PAGE_SIZE) + '+)', false);
+                }
+            });
+        } catch (e) {
+            console.warn('[Search] 加载历史失败:', e);
+        }
+
+        // 加载完后再检查一次
+        if (token !== this.serverSearchToken || !this.open || this.term !== term) return;
+        this.loadingHistory = false;
+        this.runSearch(term, true, true);
     },
 
     next: function() {
@@ -1193,6 +1301,57 @@ async function loadHistory(append) {
     } catch(e) { console.error(e); isLoadingMore = false; }
 }
 async function refreshMessages() { messageList.innerHTML = ''; hasMoreMessages = true; oldestTimestamp = null; await loadHistory(false); }
+
+// === 远程搜索（查询全部历史）===
+async function searchMessagesRemote(term) {
+    if (!term || !term.trim()) return [];
+    if (typeof supabase === 'undefined' || !supabase) return [];
+    try {
+        // 转义 LIKE 通配符
+        var safe = term.replace(/[%_\\]/g, '\\$&');
+        var res = await supabase
+            .from('messages')
+            .select('id, content, sender_email, sender_name, created_at')
+            .ilike('content', '%' + safe + '%')
+            .order('created_at', { ascending: false })
+            .limit(200);
+        if (res.error) throw res.error;
+        return res.data || [];
+    } catch (e) {
+        console.error('[Search] 远程搜索失败:', e);
+        return [];
+    }
+}
+
+// 为搜索结果加载更老的历史 (一次拉一页 loadHistory(true),直到 oldestTimestamp <= oldestNeeded)
+async function loadHistoryForSearch(oldestNeeded, onProgress) {
+    var MAX_PAGES = 100; // 上限 2000 条
+    var pagesLoaded = 0;
+    // 记住是否靠底部,防止预加载老消息导致视口跳动
+    var distToBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
+    var wasNearBottom = distToBottom < 120;
+    while (
+        hasMoreMessages &&
+        oldestTimestamp &&
+        oldestNeeded &&
+        oldestTimestamp > oldestNeeded &&
+        pagesLoaded < MAX_PAGES
+    ) {
+        var oldHeight = messageList.scrollHeight;
+        await loadHistory(true);
+        pagesLoaded++;
+        var newHeight = messageList.scrollHeight;
+        if (wasNearBottom) {
+            // 原本贴底 → 保持贴底
+            messageList.scrollTop = messageList.scrollHeight;
+        } else {
+            // 中间位置 → 保持视觉位置稳定(向下推与新高度同等的距离)
+            messageList.scrollTop += (newHeight - oldHeight);
+        }
+        if (typeof onProgress === 'function') onProgress(pagesLoaded);
+    }
+    return pagesLoaded;
+}
 
 // === 消息渲染（增加时间分割线） ===
 var lastTimeDivider = 0;
