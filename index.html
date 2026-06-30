@@ -487,17 +487,7 @@ function updateNewMsgButton() {
     }
 }
 
-newMessagesBtn.addEventListener('click', function() {
-    messageList.scrollTop = messageList.scrollHeight;
-    isUserAtBottom = true;
-    unreadCount = 0;
-    updateNewMsgButton();
-});
-
-messageList.addEventListener('scroll', function() {
-    isUserAtBottom = checkIfAtBottom();
-    updateNewMsgButton();
-});
+// 事件绑定移到 DOM 引用声明之后,避免 messageList 未定义报错
 
 // === 版本检测 ===
 function checkForUpdate() {
@@ -541,6 +531,19 @@ var loginOverlay = $('loginOverlay'), mainInterface = $('mainInterface'), authEm
 var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '', isLoginMode = true, currentUserMap = {}, attachments = [], onlineUsers = {}, onlineCount = 0, isSending = false, lastSendTime = 0;
 var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
 var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null, unreadCount = 0, isUploadingFile = false;
+
+// === 消息列表与新消息按钮事件 ===
+newMessagesBtn.addEventListener('click', function() {
+    messageList.scrollTop = messageList.scrollHeight;
+    isUserAtBottom = true;
+    unreadCount = 0;
+    updateNewMsgButton();
+});
+
+messageList.addEventListener('scroll', function() {
+    isUserAtBottom = checkIfAtBottom();
+    updateNewMsgButton();
+});
 
 // === 启动画面 ===
 (function() {
