@@ -12,7 +12,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="version" content="2.9.0" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- 加载 Supabase SDK（带 fallback 检测） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" integrity="sha256-..."></script>
     <style>
         /* ===== 全部样式与之前一致，仅增加会话列表相关微调 ===== */
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
@@ -559,6 +560,17 @@
 </div>
 
 <script>
+// ============================================================
+// 关键修复：检查 Supabase SDK 是否成功加载
+// ============================================================
+if (typeof window.supabase === 'undefined') {
+    alert('❌ Supabase SDK 加载失败，请检查网络连接后刷新页面。\n若问题持续，可尝试更换 CDN 或使用 VPN。');
+    throw new Error('Supabase SDK not loaded');
+}
+// 创建本地引用，后续所有代码均使用此变量
+var supabase = window.supabase;
+
+// ============================================================
 var APP_VERSION = '2.9.0';
 // ==================== 新增全局状态 ====================
 var currentConversationId = 1;                // 当前会话ID
@@ -635,10 +647,15 @@ document.getElementById('versionRefresh').addEventListener('click', function() {
 });
 document.getElementById('versionLater').addEventListener('click', function() { document.getElementById('versionUpdateModal').classList.remove('active'); });
 
-// === Supabase ===
+// === Supabase 配置（使用已加载的 window.supabase） ===
 var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
-if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 如果 window.supabase 已存在，则无需重新创建；否则创建并挂载（但上面已检查存在）
+if (!window.supabase) {
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+// 确保全局引用一致
+supabase = window.supabase;
 
 // === DOM 引用 ===
 var $ = function(id) { return document.getElementById(id); };
@@ -2248,4 +2265,4 @@ window.previewImage = function(url) {
 };
 </script>
 </body>
-</html>v
+</html>
