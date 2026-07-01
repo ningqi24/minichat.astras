@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.9.6" />
+    <meta name="version" content="2.9.7" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -577,7 +577,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '2.9.6';
+var APP_VERSION = '2.9.7';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -638,25 +638,38 @@ function bustCache(url) {
 }
 
 function getAvatarUrl(email) {
-    if (!email) return getDefaultAvatar('');
-    if (failedAvatars[email]) return getDefaultAvatar(email);
-    var info = currentUserMap[email] || {};
-    var ou = Object.values(onlineUsers).find(u => u.email === email);
-    var url = ou ? ou.avatar_url : info.avatar_url;
-    if (!url || url === 'null' || url === 'undefined') {
-        failedAvatars[email] = true;
-        return getDefaultAvatar(email);
-    }
-    return bustCache(url);
-}
+            if (!email) return getDefaultAvatar('');
+            // 如果该邮箱的头像已被标记失败，直接返回默认头像
+            if (failedAvatars[email]) {
+                return getDefaultAvatar(email);
+            }
+            var info = currentUserMap[email] || {};
+            var ou = Object.values(onlineUsers).find(u => u.email === email);
+            var url = ou ? ou.avatar_url : info.avatar_url;
+            if (!url || url === 'null' || url === 'undefined') {
+                failedAvatars[email] = true;
+                // 同时更新缓存，避免后续再尝试
+                if (currentUserMap[email]) {
+                    currentUserMap[email].avatar_url = getDefaultAvatar(email);
+                }
+                return getDefaultAvatar(email);
+            }
+            return bustCache(url);
+        }
 
 function handleAvatarError(img, email) {
-    if (!email) { img.src = getDefaultAvatar('用户'); return; }
-    failedAvatars[email] = true;
-    if (currentUserMap[email]) currentUserMap[email].avatar_url = getDefaultAvatar(email);
-    img.src = getDefaultAvatar(email);
-    img.onerror = null;
-}
+            if (!email) {
+                img.src = getDefaultAvatar('用户');
+                img.onerror = null;
+                return;
+            }
+            failedAvatars[email] = true;
+            if (currentUserMap[email]) {
+                currentUserMap[email].avatar_url = getDefaultAvatar(email);
+            }
+            img.src = getDefaultAvatar(email);
+            img.onerror = null; // 防止循环
+        }
 
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 function formatTime(iso) { return new Date(iso).toLocaleString('zh-CN',{hour12:false}); }
@@ -817,47 +830,59 @@ function decodeHtmlEntities(str) {
     return textarea.value;
 }
 var allEmojiData = {};
-async function loadEmojiData() {
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        const headers = { 'Cache-Control': 'no-cache, no-store' };
-        const [emojiRes, kaoRes] = await Promise.all([
-            fetch('./data/emojihtb-all.json?v=' + Date.now(), { signal: controller.signal, headers: headers, cache: 'no-store' })
-                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
-            fetch('./data/kaomoji.json?v=' + Date.now(), { signal: controller.signal, headers: headers, cache: 'no-store' })
-                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        ]);
-        clearTimeout(timeout);
-        const emojiGroups = {};
-        if (Array.isArray(emojiRes)) {
-            emojiRes.forEach(item => {
-                const cat = item.category || '其他';
-                if (!emojiGroups[cat]) emojiGroups[cat] = [];
-                let unicodeStr = item.unicode;
-                if (Array.isArray(unicodeStr)) unicodeStr = unicodeStr[0];
-                if (unicodeStr) {
-                    emojiGroups[cat].push(toEmojiChar(unicodeStr));
-                } else if (item.htmlCode && item.htmlCode.length) {
-                    let htmlStr = Array.isArray(item.htmlCode) ? item.htmlCode[0] : item.htmlCode;
-                    emojiGroups[cat].push({ __html: htmlStr });
+async function loadEmojiData(retry) {
+            retry = retry || 0;
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 5000);
+                const headers = { 'Cache-Control': 'no-cache, no-store' };
+                // 添加随机参数避免缓存
+                const ts = Date.now() + '_' + Math.random();
+                const [emojiRes, kaoRes] = await Promise.all([
+                    fetch('./data/emojihtb-all.json?v=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
+                        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
+                    fetch('./data/kaomoji.json?v=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
+                        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                ]);
+                clearTimeout(timeout);
+                const emojiGroups = {};
+                if (Array.isArray(emojiRes)) {
+                    emojiRes.forEach(item => {
+                        const cat = item.category || '其他';
+                        if (!emojiGroups[cat]) emojiGroups[cat] = [];
+                        let unicodeStr = item.unicode;
+                        if (Array.isArray(unicodeStr)) unicodeStr = unicodeStr[0];
+                        if (unicodeStr) {
+                            emojiGroups[cat].push(toEmojiChar(unicodeStr));
+                        } else if (item.htmlCode && item.htmlCode.length) {
+                            let htmlStr = Array.isArray(item.htmlCode) ? item.htmlCode[0] : item.htmlCode;
+                            emojiGroups[cat].push({ __html: htmlStr });
+                        }
+                    });
+                } else {
+                    Object.entries(emojiRes).forEach(([cat, list]) => { emojiGroups[cat] = list; });
                 }
-            });
-        } else {
-            Object.entries(emojiRes).forEach(([cat, list]) => { emojiGroups[cat] = list; });
+                const kaoGroups = {};
+                for (const [cat, list] of Object.entries(kaoRes)) {
+                    const decodedList = list.map(item => decodeHtmlEntities(item));
+                    kaoGroups['颜文字_' + cat] = decodedList;
+                }
+                allEmojiData = { ...emojiGroups, ...kaoGroups };
+                renderTabs();
+                emojiLoadFailed = false;
+            } catch(e) {
+                if (e.name === 'AbortError' || e.message.includes('aborted')) {
+                    console.warn('表情加载超时，尝试重试', retry+1);
+                    if (retry < 2) {
+                        setTimeout(() => loadEmojiData(retry+1), 1000);
+                        return;
+                    }
+                }
+                console.warn('表情加载失败:', e.message);
+                emojiLoadFailed = true;
+                if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败，请刷新</div>';
+            }
         }
-        const kaoGroups = {};
-        for (const [cat, list] of Object.entries(kaoRes)) {
-            const decodedList = list.map(item => decodeHtmlEntities(item));
-            kaoGroups['颜文字_' + cat] = decodedList;
-        }
-        allEmojiData = { ...emojiGroups, ...kaoGroups };
-        renderTabs();
-    } catch(e) {
-        console.warn('表情加载失败:', e.message);
-        if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败</div>';
-    }
-}
 function renderTabs() {
     if (!emojiTabs || !emojiGrid) return;
     emojiTabs.innerHTML = '';
@@ -1857,40 +1882,40 @@ async function fetchUserProfiles(emails) {
     return m;
 }
 function showUserProfile(email) {
-    if (!email) return;
-    var info = currentUserMap[email] || {};
-    if (email === currentEmail) info = { display_name: currentDisplayName, avatar_url: currentAvatarUrl };
-    var ou = Object.values(onlineUsers).find(u => u.email === email);
-    if (ou) { info.display_name = ou.display_name || info.display_name; info.avatar_url = ou.avatar_url || info.avatar_url; }
-    if (profileAvatar) {
-        profileAvatar.src = bustCache(info.avatar_url || getDefaultAvatar(email));
-        profileAvatar.onerror = function() { this.src = getDefaultAvatar(email); this.onerror = null; };
-    }
-    if (profileDisplayName) profileDisplayName.textContent = info.display_name || email.split('@')[0];
-    if (profileEmail) profileEmail.textContent = email;
-    if (profileStatus) {
-        profileStatus.textContent = !!ou ? '在线' : '离线';
-        profileStatus.className = 'status-badge' + (!!ou ? '' : ' offline');
-    }
-    if (profileModal) profileModal.classList.add('active');
-}
+            if (!email) return;
+            var info = currentUserMap[email] || {};
+            if (email === currentEmail) info = { display_name: currentDisplayName, avatar_url: currentAvatarUrl };
+            var ou = Object.values(onlineUsers).find(u => u.email === email);
+            if (ou) { info.display_name = ou.display_name || info.display_name; info.avatar_url = ou.avatar_url || info.avatar_url; }
+            if (profileAvatar) {
+                profileAvatar.src = getAvatarUrl(email);
+                profileAvatar.onerror = function() { handleAvatarError(this, email); };
+            }
+            if (profileDisplayName) profileDisplayName.textContent = info.display_name || email.split('@')[0];
+            if (profileEmail) profileEmail.textContent = email;
+            if (profileStatus) {
+                profileStatus.textContent = !!ou ? '在线' : '离线';
+                profileStatus.className = 'status-badge' + (!!ou ? '' : ' offline');
+            }
+            if (profileModal) profileModal.classList.add('active');
+        }
 
 // ===================== 显示名称 =====================
 async function loadDisplayName() {
-    if (!currentUserId) return;
-    try {
-        var data = (await supabase.from('profiles').select('display_name,avatar_url').eq('id', currentUserId).single()).data;
-        if (data) { currentDisplayName = data.display_name || currentEmail.split('@')[0]; currentAvatarUrl = data.avatar_url || getDefaultAvatar(currentEmail); }
-        else { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
-    } catch(e) { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
-    if (displayNameInput) displayNameInput.value = currentDisplayName;
-    if (sidebarUserEmail) sidebarUserEmail.textContent = currentDisplayName;
-    if (avatarPreview) {
-        avatarPreview.src = bustCache(currentAvatarUrl);
-        avatarPreview.onerror = function() { this.src = getDefaultAvatar(currentEmail); this.onerror = null; };
-    }
-    currentUserMap[currentEmail] = { avatar_url: currentAvatarUrl, display_name: currentDisplayName };
-}
+            if (!currentUserId) return;
+            try {
+                var data = (await supabase.from('profiles').select('display_name,avatar_url').eq('id', currentUserId).single()).data;
+                if (data) { currentDisplayName = data.display_name || currentEmail.split('@')[0]; currentAvatarUrl = data.avatar_url || getDefaultAvatar(currentEmail); }
+                else { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
+            } catch(e) { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
+            if (displayNameInput) displayNameInput.value = currentDisplayName;
+            if (sidebarUserEmail) sidebarUserEmail.textContent = currentDisplayName;
+            if (avatarPreview) {
+                avatarPreview.src = getAvatarUrl(currentEmail);
+                avatarPreview.onerror = function() { handleAvatarError(this, currentEmail); };
+            }
+            currentUserMap[currentEmail] = { avatar_url: currentAvatarUrl, display_name: currentDisplayName };
+        }
 async function saveDisplayName() {
     if (!displayNameInput) return;
     var n = displayNameInput.value.trim();
@@ -1914,40 +1939,48 @@ async function saveDisplayName() {
 
 // ===================== 头像上传 =====================
 function refreshAllAvatars(email, newUrl) {
-    document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(img => {
-        img.src = bustCache(newUrl);
-        img.onerror = function() { handleAvatarError(this, email); };
-    });
-}
+            // 如果该邮箱已标记失败，则强制使用默认头像
+            if (failedAvatars[email]) {
+                document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(img => {
+                    img.src = getDefaultAvatar(email);
+                    img.onerror = null;
+                });
+                return;
+            }
+            document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(img => {
+                img.src = bustCache(newUrl);
+                img.onerror = function() { handleAvatarError(this, email); };
+            });
+        }
 async function uploadAvatar(file) {
-    if (!currentUserId) { alert('请先登录'); return; }
-    if (!file || !file.type.startsWith('image/')) { if (avatarUploadStatus) { avatarUploadStatus.textContent = '请选择图片'; avatarUploadStatus.style.color = '#f87171'; } return; }
-    var pf = file;
-    if (file.size > 200*1024) try { pf = await compressImage(file, 512, 0.7); } catch(e) {}
-    if (pf.size > 5*1024*1024) { if (avatarUploadStatus) { avatarUploadStatus.textContent = '图片不能超过5MB'; avatarUploadStatus.style.color = '#f87171'; } return; }
-    if (avatarUploadStatus) { avatarUploadStatus.textContent = '上传中…'; }
-    try {
-        var ext = pf.name.split('.').pop(), fn = 'avatar_'+currentUserId+'_'+Date.now()+'.'+ext, fp = 'public/'+fn;
-        var ue = (await supabase.storage.from('avatars').upload(fp, pf, { cacheControl:'0', upsert:true })).error;
-        if (ue) throw ue;
-        var pub = supabase.storage.from('avatars').getPublicUrl(fp).data.publicUrl;
-        var ue2 = (await supabase.from('profiles').update({ avatar_url: pub }).eq('id', currentUserId)).error;
-        if (ue2) throw ue2;
-        currentAvatarUrl = pub;
-        currentUserMap[currentEmail].avatar_url = pub;
-        // 清除该邮箱的失败缓存
-        delete failedAvatars[currentEmail];
-        refreshAllAvatars(currentEmail, pub);
-        if (avatarPreview) {
-            avatarPreview.src = bustCache(pub);
-            avatarPreview.onerror = function() { handleAvatarError(this, currentEmail); };
+            if (!currentUserId) { alert('请先登录'); return; }
+            if (!file || !file.type.startsWith('image/')) { if (avatarUploadStatus) { avatarUploadStatus.textContent = '请选择图片'; avatarUploadStatus.style.color = '#f87171'; } return; }
+            var pf = file;
+            if (file.size > 200*1024) try { pf = await compressImage(file, 512, 0.7); } catch(e) {}
+            if (pf.size > 5*1024*1024) { if (avatarUploadStatus) { avatarUploadStatus.textContent = '图片不能超过5MB'; avatarUploadStatus.style.color = '#f87171'; } return; }
+            if (avatarUploadStatus) { avatarUploadStatus.textContent = '上传中…'; }
+            try {
+                var ext = pf.name.split('.').pop(), fn = 'avatar_'+currentUserId+'_'+Date.now()+'.'+ext, fp = 'public/'+fn;
+                var ue = (await supabase.storage.from('avatars').upload(fp, pf, { cacheControl:'0', upsert:true })).error;
+                if (ue) throw ue;
+                var pub = supabase.storage.from('avatars').getPublicUrl(fp).data.publicUrl;
+                var ue2 = (await supabase.from('profiles').update({ avatar_url: pub }).eq('id', currentUserId)).error;
+                if (ue2) throw ue2;
+                currentAvatarUrl = pub;
+                currentUserMap[currentEmail].avatar_url = pub;
+                // 清除失败标记
+                delete failedAvatars[currentEmail];
+                refreshAllAvatars(currentEmail, pub);
+                if (avatarPreview) {
+                    avatarPreview.src = bustCache(pub);
+                    avatarPreview.onerror = function() { handleAvatarError(this, currentEmail); };
+                }
+                if (avatarUploadStatus) { avatarUploadStatus.textContent = '头像已更新'; avatarUploadStatus.style.color = '#4ade80'; }
+                if (presenceChannel) {
+                    try { await presenceChannel.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName, avatar_url: pub, online_at: new Date().toISOString() }); } catch(e) {}
+                }
+            } catch(err) { console.error(err); if (avatarUploadStatus) { avatarUploadStatus.textContent = '上传失败'; avatarUploadStatus.style.color = '#f87171'; } }
         }
-        if (avatarUploadStatus) { avatarUploadStatus.textContent = '头像已更新'; avatarUploadStatus.style.color = '#4ade80'; }
-        if (presenceChannel) {
-            try { await presenceChannel.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName, avatar_url: pub, online_at: new Date().toISOString() }); } catch(e) {}
-        }
-    } catch(err) { console.error(err); if (avatarUploadStatus) { avatarUploadStatus.textContent = '上传失败'; avatarUploadStatus.style.color = '#f87171'; } }
-}
 function compressImage(file, mw, q) {
     return new Promise((res,rej) => {
         var r = new FileReader();
@@ -2029,64 +2062,63 @@ async function uploadNewAttachments(list) {
 
 // ===================== 发送消息 =====================
 async function sendMessageContent(content) {
-    if (!currentEmail) return;
-    var text = (content || '').trim();
-    var hasText = text.length > 0, hasNew = attachments.some(a => !a.existing);
-    if (!hasText && !hasNew) return;
-    var now = Date.now();
-    if (now - lastSendTime < MIN_SEND_INTERVAL) { setAuthMessage('发送太快','error'); setTimeout(() => setAuthMessage(''), 1500); return; }
-    if (isSending) return;
-    isSending = true; lastSendTime = now;
-    if (btnSend) btnSend.disabled = true;
-    if (chatInput) chatInput.disabled = true;
-    var senderName = currentDisplayName || currentEmail.split('@')[0];
-    try {
-        var fc = text;
-        attachments.filter(a => a.type === 'quote').forEach(q => {
-            fc = '[quote:'+q.quoteAuthor+'|'+q.quoteIsoTime+(q.quoteEmail?'|'+q.quoteEmail:'')+(q.quoteMessageId?'|'+q.quoteMessageId:'')+'|'+q.quoteText+']\n' + fc;
-        });
-        var na = attachments.filter(a => !a.existing && a.type !== 'quote');
-        var nmd = await uploadNewAttachments(na);
-        if (nmd.length) { if (fc) fc += '\n'; fc += nmd.join('\n'); }
-        if (!fc.trim()) { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; return; }
-        var mentions = text.match(/@(\S+)/g) || [];
-        var mentionedIds = [];
-        for (var id in onlineUsers) {
-            var u = onlineUsers[id];
-            if (u.email === currentEmail) continue;
-            if (mentions.some(m => u.display_name?.includes(m.slice(1)) || u.email?.includes(m.slice(1)))) mentionedIds.push(id);
+            if (!currentEmail) return;
+            var text = (content || '').trim();
+            var hasText = text.length > 0, hasNew = attachments.some(a => !a.existing);
+            if (!hasText && !hasNew) return;
+            var now = Date.now();
+            if (now - lastSendTime < MIN_SEND_INTERVAL) { setAuthMessage('发送太快','error'); setTimeout(() => setAuthMessage(''), 1500); return; }
+            if (isSending) return;
+            isSending = true; lastSendTime = now;
+            if (btnSend) btnSend.disabled = true;
+            if (chatInput) chatInput.disabled = true;
+            var senderName = currentDisplayName || currentEmail.split('@')[0];
+            try {
+                var fc = text;
+                attachments.filter(a => a.type === 'quote').forEach(q => {
+                    fc = '[quote:'+q.quoteAuthor+'|'+q.quoteIsoTime+(q.quoteEmail?'|'+q.quoteEmail:'')+(q.quoteMessageId?'|'+q.quoteMessageId:'')+'|'+q.quoteText+']\n' + fc;
+                });
+                var na = attachments.filter(a => !a.existing && a.type !== 'quote');
+                var nmd = await uploadNewAttachments(na);
+                if (nmd.length) { if (fc) fc += '\n'; fc += nmd.join('\n'); }
+                if (!fc.trim()) { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; return; }
+                var mentions = text.match(/@(\S+)/g) || [];
+                var mentionedIds = [];
+                for (var id in onlineUsers) {
+                    var u = onlineUsers[id];
+                    if (u.email === currentEmail) continue;
+                    if (mentions.some(m => u.display_name?.includes(m.slice(1)) || u.email?.includes(m.slice(1)))) mentionedIds.push(id);
+                }
+                if (mentionedIds.length && window.chatChannel) window.chatChannel.send({ type:'broadcast', event:'mention', payload:{ from: senderName, users: mentionedIds } });
+                var tempId = 'temp-'+Date.now();
+                addMessageToBottom({ id: tempId, content: fc, sender_name: senderName, sender_email: currentEmail, isMe: true, time: formatTimeShort(new Date().toISOString()), created_at: new Date().toISOString() });
+                if (chatInput) { chatInput.value = ''; attachments = []; renderAttachments(); autoResizeTextarea(); }
+                // 构造插入对象：全局会话不设 conversation_id（null），私聊设置
+                var insertObj = {
+                    content: fc,
+                    sender_name: senderName,
+                    sender_email: currentEmail
+                };
+                if (currentConversationId !== '00000000-0000-0000-0000-000000000000') {
+                    insertObj.conversation_id = currentConversationId;
+                }
+                var res = await supabase.from('messages').insert(insertObj).select().single();
+                if (res.error) throw res.error;
+                var data = res.data;
+                if (data && messageList) {
+                    var te = messageList.querySelector('[data-message-id="'+tempId+'"]');
+                    if (te) te.replaceWith(createMessageElement({ id: data.id, content: data.content, sender_name: data.sender_name || senderName, sender_email: data.sender_email || currentEmail, isMe: true, time: formatTimeShort(data.created_at), created_at: data.created_at }));
+                }
+            } catch(err) {
+                console.error(err);
+                if (text && chatInput) { chatInput.value = text; autoResizeTextarea(); }
+                setAuthMessage('发送失败: ' + (err.message || '未知错误'),'error');
+                if (messageList) {
+                    var te = messageList.querySelector('[data-message-id^="temp-"]');
+                    if (te) te.remove();
+                }
+            } finally { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; }
         }
-        if (mentionedIds.length && window.chatChannel) window.chatChannel.send({ type:'broadcast', event:'mention', payload:{ from: senderName, users: mentionedIds } });
-        var tempId = 'temp-'+Date.now();
-        addMessageToBottom({ id: tempId, content: fc, sender_name: senderName, sender_email: currentEmail, isMe: true, time: formatTimeShort(new Date().toISOString()), created_at: new Date().toISOString() });
-        if (chatInput) { chatInput.value = ''; attachments = []; renderAttachments(); autoResizeTextarea(); }
-        // 构造插入对象
-        var insertObj = {
-            content: fc,
-            sender_name: senderName,
-            sender_email: currentEmail
-        };
-        // 全局会话不设置 conversation_id（即 null），私聊设置
-        if (currentConversationId !== '00000000-0000-0000-0000-000000000000') {
-            insertObj.conversation_id = currentConversationId;
-        }
-        var res = await supabase.from('messages').insert(insertObj).select().single();
-        if (res.error) throw res.error;
-        var data = res.data;
-        if (data && messageList) {
-            var te = messageList.querySelector('[data-message-id="'+tempId+'"]');
-            if (te) te.replaceWith(createMessageElement({ id: data.id, content: data.content, sender_name: data.sender_name || senderName, sender_email: data.sender_email || currentEmail, isMe: true, time: formatTimeShort(data.created_at), created_at: data.created_at }));
-        }
-    } catch(err) {
-        console.error(err);
-        if (text && chatInput) { chatInput.value = text; autoResizeTextarea(); }
-        setAuthMessage('发送失败','error');
-        if (messageList) {
-            var te = messageList.querySelector('[data-message-id^="temp-"]');
-            if (te) te.remove();
-        }
-    } finally { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; }
-}
 window.recallMessage = async function(mid) {
     if (!mid || !confirm('确定撤回？')) return;
     try {
