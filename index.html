@@ -1489,9 +1489,9 @@ function enterChat() {
     mainInterface.classList.remove('hidden');
     hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
     document.title = 'MiniChat';
+    // 先起 presence channel(与 loadDisplayName 解耦,避免一个失败全部不跑)
+    try { setupPresenceChannel(); } catch(e) { console.warn('presence init failed:', e); }
     loadDisplayName().then(function() {
-        // 先起 presence channel(全局在线状态/typing/mention 通知)
-        setupPresenceChannel();
         // 拉取会话列表 → 默认进全局会话
         loadUserConversations().then(function() {
             var def = userConversations.find(c => c.conversation_id === 1) || userConversations[0];
@@ -2077,10 +2077,16 @@ function showTypingIndicator(dn) {
 }
 
 // === 实时频道 ===
-// 全局 presence + typing + @通知 channel（不随会话切换）
+// 全局 presence + typing + @通知 channel(不随会话切换)
+var presenceRetryCount = 0;
 function setupPresenceChannel() {
+    if (typeof supabase === 'undefined' || !supabase || !supabase.channel)        { console.warn('[presence] supabase 未加载,跳过'); return; }
+    if (!currentUserId) { console.warn('[presence] currentUserId 未设置,跳过'); return; }
     if (presenceChannel) { try { presenceChannel.unsubscribe(); } catch(e){} presenceChannel = null; }
-    var ch = supabase.channel('presence-room', { config: { presence: { key: currentUserId } } });
+    var ch;
+    try {
+        ch = supabase.channel('presence-room', { config: { presence: { key: currentUserId } } });
+    } catch(e) { console.error('[presence] 创建 channel 失败:', e); return; }
     ch.on('presence', { event:'sync' }, () => {
         var s = ch.presenceState(), us = {}, c = 0;
         for (var k in s) { var p = s[k][0]; if (!p) continue; var em = p.email || '';
@@ -2097,6 +2103,8 @@ function setupPresenceChannel() {
             else { setAuthMessage(data.payload.from + ' 提到了你','success'); setTimeout(() => setAuthMessage(''), 5000); }
         }
     });
+    // 监听 connection 状态,断线重连
+    ch.on('system', { event: 'error' }, (e) => console.warn('[presence] system error:', e));
     // 也监听会话列表变更（会让人实时出现在侧边栏）
     ch.on('postgres_changes', { event:'*', schema:'public', table:'conversation_participants', filter: 'user_id=eq.' + currentUserId }, function() {
         loadUserConversations();
@@ -2105,21 +2113,28 @@ function setupPresenceChannel() {
     // 作用:为非当前会话增未读 + 更新侧边栏预览
     ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, function(payload) {
         var m = payload.new; if (!m) return;
-        // 自己发的不计
         if (m.sender_email === currentEmail) return;
-        // 如果是当前会话,具体渲染逻辑交给各会话的 channel
         if (m.conversation_id === currentConversationId) return;
         unreadByConv[m.conversation_id] = (unreadByConv[m.conversation_id] || 0) + 1;
         updateConvPreview(m.conversation_id, m);
     });
     ch.subscribe(async status => {
         if (status === 'SUBSCRIBED') {
-            await ch.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName || currentEmail.split('@')[0], avatar_url: currentAvatarUrl, online_at: new Date().toISOString() });
+            presenceRetryCount = 0;
+            try { await ch.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName || currentEmail.split('@')[0], avatar_url: currentAvatarUrl, online_at: new Date().toISOString() }); }
+            catch(e) { console.warn('[presence] track 失败:', e); }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn('[presence] 订阅状态异常:', status, '重试次数:', presenceRetryCount);
+            if (presenceRetryCount < 3 && currentUserId) {
+                presenceRetryCount++;
+                setTimeout(function() { try { setupPresenceChannel(); } catch(e) {} }, 3000 * presenceRetryCount);
+            }
         }
     });
     presenceChannel = ch;
     // 保留一个 window 别名,供老代码路径使用
     window.chatChannel = ch;
+    console.log('[presence] 已发起订阅,userId=', currentUserId);
 }
 
 // 订阅某个会话的消息流
