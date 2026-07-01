@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="3.0.0" />
+    <meta name="version" content="3.0.1" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -577,7 +577,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '3.0.0';
+var APP_VERSION = '3.0.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -623,22 +623,22 @@ var currentConversationId = '00000000-0000-0000-0000-000000000000';
 var conversationList = [];
 var presenceChannel = null;
 var failedAvatars = {};
+        var avatarCache = {}; // 头像 URL 缓存，避免重复请求导致 NS_BINDING_ABORTED
 
 // ===================== 工具函数（增强） =====================
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
 
 function bustCache(url) {
             if (!url) return '';
-            // ui-avatars 不需要缓存清除
+            // ui-avatars.com 不需要缓存清除
             if (url.includes('ui-avatars.com')) return url;
-            // Supabase 存储 URL：只在 URL 中没有 _t 参数时才添加，避免重复刷新
-            if (url.includes('supabase.co')) {
-                // 如果已经包含 _t 参数，不再添加新的（防止 mid-flight URL 变更导致 NS_BINDING_ABORTED）
-                if (url.includes('_t=')) return url;
-                var separator = url.includes('?') ? '&' : '?';
-                return url + separator + '_t=' + Date.now();
-            }
-            return url;
+            // 如果已经缓存过，直接返回缓存的 URL（避免同一资源被多次请求不同 URL）
+            if (avatarCache[url]) return avatarCache[url];
+            // 生成带时间戳的 URL 并缓存
+            var separator = url.includes('?') ? '&' : '?';
+            var cachedUrl = url + separator + '_t=' + Date.now();
+            avatarCache[url] = cachedUrl;
+            return cachedUrl;
         }
 
 function getAvatarUrl(email) {
@@ -2053,6 +2053,8 @@ async function uploadAvatar(file) {
                 currentUserMap[currentEmail].avatar_url = pub;
                 // 清除失败标记
                 delete failedAvatars[currentEmail];
+                // 清除头像缓存，确保新头像 URL 能被重新处理
+                avatarCache = {};
                 refreshAllAvatars(currentEmail, pub);
                 if (avatarPreview) {
                     avatarPreview.src = bustCache(pub);
