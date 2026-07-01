@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.9.7" />
+    <meta name="version" content="2.9.8" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -577,7 +577,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '2.9.7';
+var APP_VERSION = '2.9.8';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -686,25 +686,25 @@ function insertAtCursor(text) { if (!chatInput) return; chatInput.value += text;
 
 // ===================== 版本检测 =====================
 function checkForUpdate() {
-    var currentVersion = APP_VERSION;
-    var el = document.getElementById('currentVerDisplay');
-    if (el) el.textContent = currentVersion;
-    fetch('./data/vision.json?v=' + Date.now())
-        .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
-        .then(function(data) {
-            var remoteVersion = data.version || '';
-            if (remoteVersion && remoteVersion !== currentVersion) {
-                document.getElementById('newVerDisplay').textContent = remoteVersion;
-                var modal = document.getElementById('versionUpdateModal');
-                if (modal) modal.classList.add('active');
-            } else {
-                var statusEl = document.getElementById('updateCheckStatus');
-                if (statusEl) { statusEl.textContent = '当前已是最新版本'; statusEl.style.color = '#4ade80'; var parent = statusEl.parentElement; if (parent) parent.style.display = 'flex'; setTimeout(function(){ statusEl.textContent = ''; if (parent) parent.style.display = 'none'; }, 3000); }
-            }
-        })
-        .catch(function(err) { console.warn('版本检测失败:', err.message); });
-}
-checkForUpdate();
+            var currentVersion = APP_VERSION;
+            var el = document.getElementById('currentVerDisplay');
+            if (el) el.textContent = currentVersion;
+            fetch('./data/vision.json?t=' + Date.now() + '&v=' + Math.random(), { cache: 'no-store' })
+                .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
+                .then(function(data) {
+                    var remoteVersion = data.version || '';
+                    if (remoteVersion && remoteVersion !== currentVersion) {
+                        document.getElementById('newVerDisplay').textContent = remoteVersion;
+                        var modal = document.getElementById('versionUpdateModal');
+                        if (modal) modal.classList.add('active');
+                    } else {
+                        var statusEl = document.getElementById('updateCheckStatus');
+                        if (statusEl) { statusEl.textContent = '当前已是最新版本'; statusEl.style.color = '#4ade80'; var parent = statusEl.parentElement; if (parent) parent.style.display = 'flex'; setTimeout(function(){ statusEl.textContent = ''; if (parent) parent.style.display = 'none'; }, 3000); }
+                    }
+                })
+                .catch(function(err) { console.warn('版本检测失败:', err.message); });
+        }
+        checkForUpdate();
 (function enforceLocalCache() {
     var storedVer = localStorage.getItem('minichat_version');
     if (storedVer && storedVer !== APP_VERSION) {
@@ -836,12 +836,11 @@ async function loadEmojiData(retry) {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 5000);
                 const headers = { 'Cache-Control': 'no-cache, no-store' };
-                // 添加随机参数避免缓存
                 const ts = Date.now() + '_' + Math.random();
                 const [emojiRes, kaoRes] = await Promise.all([
-                    fetch('./data/emojihtb-all.json?v=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
+                    fetch('./data/emojihtb-all.json?t=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
                         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
-                    fetch('./data/kaomoji.json?v=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
+                    fetch('./data/kaomoji.json?t=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
                         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
                 ]);
                 clearTimeout(timeout);
@@ -871,19 +870,17 @@ async function loadEmojiData(retry) {
                 renderTabs();
                 emojiLoadFailed = false;
             } catch(e) {
-                if (e.name === 'AbortError' || e.message.includes('aborted')) {
-                    console.warn('表情加载超时，尝试重试', retry+1);
-                    if (retry < 2) {
-                        setTimeout(() => loadEmojiData(retry+1), 1000);
-                        return;
-                    }
-                }
                 console.warn('表情加载失败:', e.message);
+                if (retry < 3) {
+                    console.log('表情加载超时，尝试重试', retry+1);
+                    setTimeout(() => loadEmojiData(retry+1), 1000);
+                    return;
+                }
                 emojiLoadFailed = true;
-                if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败，请刷新</div>';
+                if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败</div>';
             }
         }
-function renderTabs() {
+        function renderTabs() {
     if (!emojiTabs || !emojiGrid) return;
     emojiTabs.innerHTML = '';
     const cats = Object.keys(allEmojiData);
@@ -1001,47 +998,62 @@ function setupPresenceChannel() {
 
 // ===================== 聊天核心 =====================
 function enterChat() {
-    if (!loginOverlay || !mainInterface) return;
-    loginOverlay.classList.add('hidden');
-    mainInterface.classList.remove('hidden');
-    hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
-    document.title = 'MiniChat';
-    loadDisplayName().then(() => {
-        setupPresenceChannel();
-        loadConversations().then(() => {
-            if (conversationList.length) {
-                const first = conversationList[0];
-                switchConversation(first.id);
+            if (!loginOverlay || !mainInterface) return;
+            loginOverlay.classList.add('hidden');
+            mainInterface.classList.remove('hidden');
+            hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
+            document.title = 'MiniChat';
+            loadDisplayName().then(() => {
+                setupPresenceChannel();
+                loadConversations().then(() => {
+                    var globalExists = conversationList.some(c => c.id === '00000000-0000-0000-0000-000000000000');
+                    if (!globalExists) {
+                        conversationList.unshift({
+                            id: '00000000-0000-0000-0000-000000000000',
+                            type: 'global',
+                            name: '全局聊天',
+                            participants: []
+                        });
+                        renderConversationList();
+                    }
+                    if (currentConversationId !== '00000000-0000-0000-0000-000000000000') {
+                        currentConversationId = '00000000-0000-0000-0000-000000000000';
+                    }
+                    if (messageList) messageList.innerHTML = '';
+                    loadHistory(false);
+                    subscribeMessages(currentConversationId);
+                    if (chatTitle) chatTitle.innerHTML = '全局聊天 <small># 所有成员</small>';
+                    document.querySelectorAll('.nav-item').forEach(el => {
+                        el.classList.toggle('active', el.dataset.conversationId === currentConversationId);
+                    });
+                });
+            });
+            localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
+            loadTheme();
+            if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+            setupGlobalEventListeners();
+            if (btnSend) btnSend.disabled = false;
+            if (chatInput) {
+                chatInput.addEventListener('input', autoResizeTextarea);
+                autoResizeTextarea();
+                chatInput.addEventListener('focus', function() {
+                    setTimeout(function() {
+                        if (messageList) {
+                            messageList.scrollTop = messageList.scrollHeight;
+                            isUserAtBottom = true;
+                            updateNewMsgButton();
+                        }
+                    }, 100);
+                });
             }
-        });
-    });
-    localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
-    loadTheme();
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-    setupGlobalEventListeners();
-    if (btnSend) btnSend.disabled = false;
-    if (chatInput) {
-        chatInput.addEventListener('input', autoResizeTextarea);
-        autoResizeTextarea();
-        chatInput.addEventListener('focus', function() {
-            setTimeout(function() {
-                if (messageList) {
-                    messageList.scrollTop = messageList.scrollHeight;
-                    isUserAtBottom = true;
-                    updateNewMsgButton();
-                }
-            }, 100);
-        });
-    }
-    // 设置按钮点击事件（确保绑定）
-    if (settingsNav) {
-        settingsNav.addEventListener('click', function() {
-            if (settingsOverlay) settingsOverlay.classList.add('active');
-        });
-    }
-}
+            if (settingsNav) {
+                settingsNav.addEventListener('click', function() {
+                    if (settingsOverlay) settingsOverlay.classList.add('active');
+                });
+            }
+        }
 
-async function handleLogout() {
+        async function handleLogout() {
     if (presenceChannel) {
         try { await presenceChannel.untrack(); } catch(e) {}
         presenceChannel.unsubscribe();
@@ -1194,44 +1206,76 @@ async function switchConversation(convId) {
 
 // ===================== 消息加载 =====================
 async function loadHistory(append) {
-    if (isLoadingMore || !hasMoreMessages || !messageList) return;
-    isLoadingMore = true;
-    try {
-        let q = supabase
-            .from('messages')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(PAGE_SIZE);
-        // 判断当前会话类型
-        if (currentConversationId === '00000000-0000-0000-0000-000000000000') {
-            // 全局聊天：查询 conversation_id 为 NULL 或等于全局 ID（兼容旧数据）
-            q = q.or('conversation_id.is.null,conversation_id.eq.00000000-0000-0000-0000-000000000000');
-        } else {
-            q = q.eq('conversation_id', currentConversationId);
+            if (!messageList) return;
+            if (isLoadingMore) return;
+            if (!hasMoreMessages && append) return;
+            isLoadingMore = true;
+            try {
+                let query = supabase
+                    .from('messages')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(PAGE_SIZE);
+                if (currentConversationId === '00000000-0000-0000-0000-000000000000') {
+                    query = query.or('conversation_id.is.null,conversation_id.eq.00000000-0000-0000-0000-000000000000');
+                } else {
+                    query = query.eq('conversation_id', currentConversationId);
+                }
+                if (oldestTimestamp) {
+                    query = query.lt('created_at', oldestTimestamp);
+                }
+                const { data, error } = await query;
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    hasMoreMessages = false;
+                    isLoadingMore = false;
+                    if (!append) {
+                        messageList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;">暂无消息，发送第一条吧</div>';
+                    }
+                    return;
+                }
+                var sorted = data.reverse();
+                oldestTimestamp = sorted[0].created_at;
+                var emails = [...new Set(sorted.map(m => m.sender_email).filter(Boolean))];
+                if (emails.length) {
+                    var profiles = await fetchUserProfiles(emails);
+                    Object.assign(currentUserMap, profiles);
+                }
+                var msgs = sorted.map(m => {
+                    var me = m.sender_email === currentEmail;
+                    var ui = currentUserMap[m.sender_email] || {};
+                    return {
+                        id: m.id,
+                        content: m.content,
+                        sender_name: m.sender_name || ui.display_name || '匿名',
+                        sender_email: m.sender_email,
+                        isMe: me,
+                        time: formatTimeShort(m.created_at),
+                        created_at: m.created_at
+                    };
+                });
+                if (!append) {
+                    messageList.innerHTML = '';
+                    msgs.forEach(m => addMessageToBottom(m));
+                } else {
+                    prependMessages(msgs);
+                }
+                if (data.length < PAGE_SIZE) {
+                    hasMoreMessages = false;
+                } else {
+                    hasMoreMessages = true;
+                }
+                isLoadingMore = false;
+            } catch (e) {
+                console.error('加载历史失败:', e);
+                isLoadingMore = false;
+                if (!append) {
+                    messageList.innerHTML = '<div style="text-align:center;color:#f87171;padding:40px 0;">加载消息失败，请刷新重试</div>';
+                }
+            }
         }
-        if (oldestTimestamp) q = q.lt('created_at', oldestTimestamp);
-        const res = await q;
-        if (res.error) throw res.error;
-        var data = res.data;
-        if (!data || !data.length) { hasMoreMessages = false; isLoadingMore = false; return; }
-        var sorted = data.reverse();
-        oldestTimestamp = sorted[0].created_at;
-        var emails = [...new Set(sorted.map(m => m.sender_email).filter(Boolean))];
-        if (emails.length) Object.assign(currentUserMap, await fetchUserProfiles(emails));
-        var msgs = sorted.map(m => {
-            var me = m.sender_email === currentEmail;
-            var ui = currentUserMap[m.sender_email] || {};
-            return { id: m.id, content: m.content, sender_name: m.sender_name || ui.display_name || '匿名', sender_email: m.sender_email, isMe: me, time: formatTimeShort(m.created_at), created_at: m.created_at };
-        });
-        if (!append) { messageList.innerHTML = ''; msgs.forEach(m => addMessageToBottom(m)); }
-        else { prependMessages(msgs); }
-        if (data.length < PAGE_SIZE) hasMoreMessages = false;
-        isLoadingMore = false;
-    } catch(e) { console.error(e); isLoadingMore = false; }
-}
 
-// 关键修改 2: 发送消息时，全局消息不设置 conversation_id（设为 null）
-async function refreshMessages() { if (messageList) messageList.innerHTML = ''; hasMoreMessages = true; oldestTimestamp = null; await loadHistory(false); }
+        async function refreshMessages() { if (messageList) messageList.innerHTML = ''; hasMoreMessages = true; oldestTimestamp = null; await loadHistory(false); }
 
 // ===================== 消息渲染 =====================
 var lastTimeDivider = 0;
@@ -2337,26 +2381,29 @@ function setupGlobalEventListeners() {
 }
 
 // ===================== 初始化 =====================
-var switcher = document.getElementById('switchToSignup');
-if (switcher) switcher.addEventListener('click', () => switchMode('signup'));
-var togglePwd = document.getElementById('togglePwd');
-if (togglePwd) {
-    togglePwd.addEventListener('click', function() {
-        if (!authPassword) return;
-        var t = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-        authPassword.setAttribute('type', t);
-        this.textContent = t === 'password' ? '显示' : '隐藏';
-    });
-}
-if (btnLogin) btnLogin.addEventListener('click', handleAuth);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { unreadCount = 0; document.title = 'MiniChat'; updateNewMsgButton(); } });
-window.addEventListener('beforeunload', async () => { if (presenceChannel) { try { await presenceChannel.untrack(); } catch(e) {} presenceChannel.unsubscribe(); } if (window.chatChannel) { window.chatChannel.unsubscribe(); } });
-loadTheme();
-var sidebarVer = document.getElementById('sidebarVersion');
-if (sidebarVer) sidebarVer.textContent = 'v'+APP_VERSION;
-var panelVer = document.getElementById('panelVersion');
-if (panelVer) panelVer.textContent = 'MiniChat v'+APP_VERSION;
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js?v='+APP_VERSION);
+        document.addEventListener('DOMContentLoaded', function() {
+            var switcher = document.getElementById('switchToSignup');
+            if (switcher) switcher.addEventListener('click', () => switchMode('signup'));
+            var togglePwd = document.getElementById('togglePwd');
+            if (togglePwd) {
+                togglePwd.addEventListener('click', function() {
+                    if (!authPassword) return;
+                    var t = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                    authPassword.setAttribute('type', t);
+                    this.textContent = t === 'password' ? '显示' : '隐藏';
+                });
+            }
+            if (btnLogin) btnLogin.addEventListener('click', handleAuth);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) { unreadCount = 0; document.title = 'MiniChat'; updateNewMsgButton(); } });
+            window.addEventListener('beforeunload', async () => { if (presenceChannel) { try { await presenceChannel.untrack(); } catch(e) {} presenceChannel.unsubscribe(); } if (window.chatChannel) { window.chatChannel.unsubscribe(); } });
+            loadTheme();
+            var sidebarVer = document.getElementById('sidebarVersion');
+            if (sidebarVer) sidebarVer.textContent = 'v'+APP_VERSION;
+            var panelVer = document.getElementById('panelVersion');
+            if (panelVer) panelVer.textContent = 'MiniChat v'+APP_VERSION;
+            // 禁用 Service Worker，避免资源拦截问题
+            // if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js?v='+APP_VERSION);
+        });
 </script>
 </body>
 </html>
