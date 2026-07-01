@@ -789,10 +789,34 @@ document.getElementById('versionRefresh').addEventListener('click', function() {
     else location.reload(true);
 });
 document.getElementById('versionLater').addEventListener('click', function() { document.getElementById('versionUpdateModal').classList.remove('active'); });
-// === Supabase ===
+// === Supabase 初始化(带多 CDN fallback) ===
 var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
-if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+(function initSupabase(scripts, idx) {
+    if (idx >= scripts.length) {
+        // 所有 CDN 都失败,给用户明确提示
+        document.head.appendChild(Object.assign(document.createElement('style'), {
+            textContent: '#supabase-error{position:fixed;inset:0;z-index:99999;background:#0d0d0d;color:#e8e8e8;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:40px;text-align:center}#supabase-error h2{color:#f87171;margin-bottom:12px}#supabase-error p{color:#a0a0a0;max-width:480px;line-height:1.6;margin-bottom:20px}#supabase-error code{background:#2a2a2a;padding:2px 8px;border-radius:4px;font-size:13px}'
+        }));
+        var err = document.createElement('div');
+        err.id = 'supabase-error';
+        err.innerHTML = '<h2>⚠ 无法加载聊天服务</h2><p>浏览器无法连接后台服务器(Supabase CDN 加载失败)。这通常是因为网络或浏览器扩展拦截了请求。</p><p>请尝试: 刷新页面 / 禁用广告拦截插件 / 换个浏览器</p><p><code id="supabase-cdn-status"></code></p>';
+        document.body.appendChild(err);
+        return;
+    }
+    var src = scripts[idx];
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function() {
+        if (typeof supabase !== 'undefined' && supabase && supabase.auth) {
+            window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            initSupabase(scripts, idx + 1);
+        }
+    };
+    s.onerror = function() { initSupabase(scripts, idx + 1); };
+    document.head.appendChild(s);
+})(['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js', 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.0.0/supabase.min.js'], 0);
 // === DOM 引用 ===
 var $ = function(id) { return document.getElementById(id); };
 var loginOverlay = $('loginOverlay'), mainInterface = $('mainInterface'), authEmail = $('authEmail'), authPassword = $('authPassword'), authMessage = $('authMessage'), authTitle = $('authTitle'), authSub = $('authSub'), btnLogin = $('btnLogin'), messageList = $('messageList'), chatInput = $('chatInput'), sidebarUserEmail = $('sidebarUserEmail'), btnSend = $('btnSend'), fileInput = $('fileInput'), attachBtn = $('attachBtn'), settingsOverlay = $('settingsOverlay'), themeToggle = $('themeToggle'), settingsLogout = $('settingsLogout'), closeSettingsEl = $('closeSettings'), settingsNav = $('settingsNav'), displayNameInput = $('displayNameInput'), saveDisplayNameBtn = $('saveDisplayName'), displayNameMessage = $('displayNameMessage'), onlineStatus = $('onlineStatus'), onlineBadge = $('onlineBadge'), onlineModal = $('onlineModal'), onlineUserList = $('onlineUserList'), modalOnlineCount = $('modalOnlineCount'), onlineUsersBtn = $('onlineUsersBtn'), closeOnlineModal = $('closeOnlineModal'), avatarPreview = $('avatarPreview'), avatarUploadBtn = $('avatarUploadBtn'), avatarFileInput = $('avatarFileInput'), avatarUploadStatus = $('avatarUploadStatus'), profileModal = $('userProfileModal'), profileAvatar = $('profileAvatar'), profileDisplayName = $('profileDisplayName'), profileEmail = $('profileEmail'), profileStatus = $('profileStatus'), closeProfileModal = $('closeProfileModal'), emojiBtn = $('emojiBtn'), emojiPanel = $('emojiPanel'), emojiTabs = $('emojiTabs'), emojiGrid = $('emojiGrid'), attachmentArea = $('attachmentArea'), mentionDropdown = $('mentionDropdown'), uploadOverlay = $('uploadOverlay'), closeUploadBtn = $('closeUploadBtn'), quoteJumpModal = $('quoteJumpModal'), closeQuoteJumpBtn = $('closeQuoteJumpBtn'), qjAuthor = $('qjAuthor'), qjTime = $('qjTime'), qjContent = $('qjContent'), qjCancel = $('qjCancel'), qjJump = $('qjJump'), qjStatus = $('qjStatus'), contextMenu = $('contextMenu'), ctxMention = $('ctxMention');
