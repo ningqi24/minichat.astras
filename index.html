@@ -11,10 +11,9 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.9.0" />
+    <meta name="version" content="2.9.1" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
-        /* ===== 现有样式保持不变，仅增加少量会话列表相关样式 ===== */
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
         body.light-theme{--bg-primary:#f0f2f5;--bg-secondary:#fff;--bg-sidebar:#f7f8fa;--bg-card:#fff;--bg-input:#eef0f2;--bg-hover:#e8eaed;--bg-overlay:rgba(255,255,255,0.7);--text-primary:#1e293b;--text-secondary:#64748b;--text-muted:#94a3b8;--border-color:#d0d5dd;--shadow:0 8px 30px rgba(0,0,0,0.08);--bubble-me:#dfe3e8;--bubble-me-border:#c8cdd4;--quote-bg:rgba(59,130,246,0.06);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.06);--code-border:rgba(0,0,0,0.1);--link-color:#2563eb}
         *{margin:0;padding:0;box-sizing:border-box}
@@ -345,7 +344,6 @@
             .nickname-row input { font-size: 13px; padding: 8px 10px; }
             .btn-save, .btn-danger, .btn-accent { padding: 8px 12px; font-size: 12px; }
         }
-        /* 搜索栏 */
         .search-bar{display:none;padding:10px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);align-items:center;gap:8px;animation:searchBarIn .18s ease-out}
         .search-bar.open{display:flex}
         @keyframes searchBarIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
@@ -561,39 +559,40 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '2.9.0';
+var APP_VERSION = '2.9.1';
 
-// ===================== DOM 引用 =====================
-var $ = function(id) { return document.getElementById(id); };
-var loginOverlay = $('loginOverlay'), mainInterface = $('mainInterface');
-var authEmail = $('authEmail'), authPassword = $('authPassword'), authMessage = $('authMessage');
-var authTitle = $('authTitle'), authSub = $('authSub'), btnLogin = $('btnLogin');
-var messageList = $('messageList'), chatInput = $('chatInput');
-var sidebarUserEmail = $('sidebarUserEmail'), btnSend = $('btnSend');
-var fileInput = $('fileInput'), attachBtn = $('attachBtn');
-var settingsOverlay = $('settingsOverlay'), themeToggle = $('themeToggle');
-var settingsLogout = $('settingsLogout'), closeSettingsEl = $('closeSettings');
-var settingsNav = $('settingsNav'), displayNameInput = $('displayNameInput');
-var saveDisplayNameBtn = $('saveDisplayName'), displayNameMessage = $('displayNameMessage');
-var onlineStatus = $('onlineStatus'), onlineBadge = $('onlineBadge');
-var onlineModal = $('onlineModal'), onlineUserList = $('onlineUserList');
-var modalOnlineCount = $('modalOnlineCount'), onlineUsersBtn = $('onlineUsersBtn');
-var closeOnlineModal = $('closeOnlineModal'), avatarPreview = $('avatarPreview');
-var avatarUploadBtn = $('avatarUploadBtn'), avatarFileInput = $('avatarFileInput');
-var avatarUploadStatus = $('avatarUploadStatus'), profileModal = $('userProfileModal');
-var profileAvatar = $('profileAvatar'), profileDisplayName = $('profileDisplayName');
-var profileEmail = $('profileEmail'), profileStatus = $('profileStatus');
-var closeProfileModal = $('closeProfileModal'), emojiBtn = $('emojiBtn');
-var emojiPanel = $('emojiPanel'), emojiTabs = $('emojiTabs'), emojiGrid = $('emojiGrid');
-var attachmentArea = $('attachmentArea'), mentionDropdown = $('mentionDropdown');
-var uploadOverlay = $('uploadOverlay'), closeUploadBtn = $('closeUploadBtn');
-var quoteJumpModal = $('quoteJumpModal'), closeQuoteJumpBtn = $('closeQuoteJumpBtn');
-var qjAuthor = $('qjAuthor'), qjTime = $('qjTime'), qjContent = $('qjContent');
-var qjCancel = $('qjCancel'), qjJump = $('qjJump'), qjStatus = $('qjStatus');
-var contextMenu = $('contextMenu'), ctxMention = $('ctxMention'), ctxDirect = $('ctxDirect');
-var searchBar = $('searchBar'), searchInput = $('searchInput'), searchStatus = $('searchStatus');
-var searchBtn = $('searchBtn'), searchPrev = $('searchPrev'), searchNext = $('searchNext'), searchClose = $('searchClose');
-var chatTitle = $('chatTitle');
+// ===================== DOM 引用（安全获取） =====================
+function $safe(id) { var el = document.getElementById(id); if (!el) console.warn('Element not found:', id); return el; }
+
+var loginOverlay = $safe('loginOverlay'), mainInterface = $safe('mainInterface');
+var authEmail = $safe('authEmail'), authPassword = $safe('authPassword'), authMessage = $safe('authMessage');
+var authTitle = $safe('authTitle'), authSub = $safe('authSub'), btnLogin = $safe('btnLogin');
+var messageList = $safe('messageList'), chatInput = $safe('chatInput');
+var sidebarUserEmail = $safe('sidebarUserEmail'), btnSend = $safe('btnSend');
+var fileInput = $safe('fileInput'), attachBtn = $safe('attachBtn');
+var settingsOverlay = $safe('settingsOverlay'), themeToggle = $safe('themeToggle');
+var settingsLogout = $safe('settingsLogout'), closeSettingsEl = $safe('closeSettings');
+var settingsNav = $safe('settingsNav'), displayNameInput = $safe('displayNameInput');
+var saveDisplayNameBtn = $safe('saveDisplayName'), displayNameMessage = $safe('displayNameMessage');
+var onlineStatus = $safe('onlineStatus'), onlineBadge = $safe('onlineBadge');
+var onlineModal = $safe('onlineModal'), onlineUserList = $safe('onlineUserList');
+var modalOnlineCount = $safe('modalOnlineCount'), onlineUsersBtn = $safe('onlineUsersBtn');
+var closeOnlineModal = $safe('closeOnlineModal'), avatarPreview = $safe('avatarPreview');
+var avatarUploadBtn = $safe('avatarUploadBtn'), avatarFileInput = $safe('avatarFileInput');
+var avatarUploadStatus = $safe('avatarUploadStatus'), profileModal = $safe('userProfileModal');
+var profileAvatar = $safe('profileAvatar'), profileDisplayName = $safe('profileDisplayName');
+var profileEmail = $safe('profileEmail'), profileStatus = $safe('profileStatus');
+var closeProfileModal = $safe('closeProfileModal'), emojiBtn = $safe('emojiBtn');
+var emojiPanel = $safe('emojiPanel'), emojiTabs = $safe('emojiTabs'), emojiGrid = $safe('emojiGrid');
+var attachmentArea = $safe('attachmentArea'), mentionDropdown = $safe('mentionDropdown');
+var uploadOverlay = $safe('uploadOverlay'), closeUploadBtn = $safe('closeUploadBtn');
+var quoteJumpModal = $safe('quoteJumpModal'), closeQuoteJumpBtn = $safe('closeQuoteJumpBtn');
+var qjAuthor = $safe('qjAuthor'), qjTime = $safe('qjTime'), qjContent = $safe('qjContent');
+var qjCancel = $safe('qjCancel'), qjJump = $safe('qjJump'), qjStatus = $safe('qjStatus');
+var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention'), ctxDirect = $safe('ctxDirect');
+var searchBar = $safe('searchBar'), searchInput = $safe('searchInput'), searchStatus = $safe('searchStatus');
+var searchBtn = $safe('searchBtn'), searchPrev = $safe('searchPrev'), searchNext = $safe('searchNext'), searchClose = $safe('searchClose');
+var chatTitle = $safe('chatTitle');
 
 // ===================== 全局状态 =====================
 var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '';
@@ -618,28 +617,31 @@ function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 function formatTime(iso) { return new Date(iso).toLocaleString('zh-CN',{hour12:false}); }
 function formatTimeShort(iso) { return new Date(iso).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
 function setAuthMessage(msg, type) {
+    if (!authMessage) return;
     authMessage.textContent = msg;
     authMessage.className = 'auth-message';
     if (type === 'success') authMessage.classList.add('success');
     if (type === 'error') authMessage.classList.add('error');
 }
-function autoResizeTextarea() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; }
-function insertAtCursor(text) { chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input',{bubbles:true})); autoResizeTextarea(); }
+function autoResizeTextarea() { if (!chatInput) return; chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; }
+function insertAtCursor(text) { if (!chatInput) return; chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input',{bubbles:true})); autoResizeTextarea(); }
 
 // ===================== 版本检测 =====================
 function checkForUpdate() {
     var currentVersion = APP_VERSION;
-    document.getElementById('currentVerDisplay').textContent = currentVersion;
+    var el = document.getElementById('currentVerDisplay');
+    if (el) el.textContent = currentVersion;
     fetch('./data/vision.json?v=' + Date.now())
         .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
         .then(function(data) {
             var remoteVersion = data.version || '';
             if (remoteVersion && remoteVersion !== currentVersion) {
                 document.getElementById('newVerDisplay').textContent = remoteVersion;
-                document.getElementById('versionUpdateModal').classList.add('active');
+                var modal = document.getElementById('versionUpdateModal');
+                if (modal) modal.classList.add('active');
             } else {
                 var statusEl = document.getElementById('updateCheckStatus');
-                if (statusEl) { statusEl.textContent = '当前已是最新版本'; statusEl.style.color = '#4ade80'; statusEl.parentElement.style.display = 'flex'; setTimeout(function(){ statusEl.textContent = ''; statusEl.parentElement.style.display = 'none'; }, 3000); }
+                if (statusEl) { statusEl.textContent = '当前已是最新版本'; statusEl.style.color = '#4ade80'; var parent = statusEl.parentElement; if (parent) parent.style.display = 'flex'; setTimeout(function(){ statusEl.textContent = ''; if (parent) parent.style.display = 'none'; }, 3000); }
             }
         })
         .catch(function(err) { console.warn('版本检测失败:', err.message); });
@@ -653,11 +655,13 @@ checkForUpdate();
         location.reload(true);
     } else if (!storedVer) localStorage.setItem('minichat_version', APP_VERSION);
 })();
-document.getElementById('versionRefresh').addEventListener('click', function() {
+var refreshBtn = document.getElementById('versionRefresh');
+if (refreshBtn) refreshBtn.addEventListener('click', function() {
     if ('caches' in window) caches.keys().then(function(names) { return Promise.all(names.map(function(n) { return caches.delete(n); })); }).then(function(){ location.reload(true); });
     else location.reload(true);
 });
-document.getElementById('versionLater').addEventListener('click', function() { document.getElementById('versionUpdateModal').classList.remove('active'); });
+var laterBtn = document.getElementById('versionLater');
+if (laterBtn) laterBtn.addEventListener('click', function() { var modal = document.getElementById('versionUpdateModal'); if (modal) modal.classList.remove('active'); });
 
 // ===================== Supabase 初始化 =====================
 var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
@@ -667,38 +671,39 @@ if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABAS
 // ===================== 认证 =====================
 function switchMode(mode) {
     isLoginMode = (mode === 'login');
-    authTitle.textContent = isLoginMode ? '欢迎回来' : '创建账户';
-    authSub.textContent = isLoginMode ? '登录你的账户' : '使用邮箱和密码注册';
-    btnLogin.textContent = isLoginMode ? '登录' : '注册';
+    if (authTitle) authTitle.textContent = isLoginMode ? '欢迎回来' : '创建账户';
+    if (authSub) authSub.textContent = isLoginMode ? '登录你的账户' : '使用邮箱和密码注册';
+    if (btnLogin) btnLogin.textContent = isLoginMode ? '登录' : '注册';
     var t = document.querySelector('.auth-toggle span');
-    t.innerHTML = isLoginMode ? '还没有账户？<a id="switchToSignup">注册</a>' : '已有账户？<a id="switchToSignup">登录</a>';
-    document.getElementById('switchToSignup').addEventListener('click', function(){ switchMode(isLoginMode ? 'signup' : 'login'); });
+    if (t) t.innerHTML = isLoginMode ? '还没有账户？<a id="switchToSignup">注册</a>' : '已有账户？<a id="switchToSignup">登录</a>';
+    var switcher = document.getElementById('switchToSignup');
+    if (switcher) switcher.addEventListener('click', function(){ switchMode(isLoginMode ? 'signup' : 'login'); });
     setAuthMessage('');
 }
 async function handleAuth() {
-    var email = authEmail.value.trim(), pwd = authPassword.value.trim();
+    var email = authEmail ? authEmail.value.trim() : '';
+    var pwd = authPassword ? authPassword.value.trim() : '';
     if (!email || !pwd) { setAuthMessage('请填写邮箱和密码','error'); return; }
     if (pwd.length < 6) { setAuthMessage('密码至少6位','error'); return; }
-    btnLogin.disabled = true; btnLogin.style.opacity = '0.6';
+    if (btnLogin) { btnLogin.disabled = true; btnLogin.style.opacity = '0.6'; }
     setAuthMessage('处理中…','');
     try {
         var r;
         if (isLoginMode) r = await supabase.auth.signInWithPassword({email,password:pwd});
         else r = await supabase.auth.signUp({email,password:pwd});
-        if (r.error) { setAuthMessage(r.error.message.includes('Email not confirmed') ? '请先验证邮箱后再登录' : r.error.message,'error'); btnLogin.disabled = false; btnLogin.style.opacity = '1'; return; }
+        if (r.error) { setAuthMessage(r.error.message.includes('Email not confirmed') ? '请先验证邮箱后再登录' : r.error.message,'error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } return; }
         var u = r.data.user;
-        if (!u) { setAuthMessage('未获取到用户信息','error'); btnLogin.disabled = false; btnLogin.style.opacity = '1'; return; }
+        if (!u) { setAuthMessage('未获取到用户信息','error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } return; }
         currentEmail = u.email; currentUserId = u.id;
         await ensureProfile(u.id, u.email);
-        if (isLoginMode) { setAuthMessage('登录成功','success'); btnLogin.disabled = false; btnLogin.style.opacity = '1'; enterChat(); }
-        else { setAuthMessage('注册成功！请查收邮件确认后登录。','success'); btnLogin.disabled = false; btnLogin.style.opacity = '1'; }
-    } catch(e) { console.error(e); setAuthMessage('网络错误，请重试','error'); btnLogin.disabled = false; btnLogin.style.opacity = '1'; }
+        if (isLoginMode) { setAuthMessage('登录成功','success'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } enterChat(); }
+        else { setAuthMessage('注册成功！请查收邮件确认后登录。','success'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
+    } catch(e) { console.error(e); setAuthMessage('网络错误，请重试','error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
 }
 async function ensureProfile(uid, email) {
     var data = (await supabase.from('profiles').select('id').eq('id', uid).maybeSingle()).data;
     if (!data) {
         await supabase.from('profiles').insert({ id: uid, email, last_login: new Date().toISOString(), display_name: email.split('@')[0], avatar_url: getDefaultAvatar(email) });
-        // 加入全局会话
         await supabase.from('conversation_participants').insert({ conversation_id: '00000000-0000-0000-0000-000000000000', user_id: uid });
     } else {
         await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', uid);
@@ -737,15 +742,15 @@ function loadTheme() {
     var saved = localStorage.getItem('minichat_theme');
     if (saved === 'light') {
         document.body.classList.add('light-theme');
-        themeToggle.classList.remove('active');
+        if (themeToggle) themeToggle.classList.remove('active');
     } else {
         document.body.classList.remove('light-theme');
-        themeToggle.classList.add('active');
+        if (themeToggle) themeToggle.classList.add('active');
     }
 }
 function toggleTheme() {
     var isLight = document.body.classList.toggle('light-theme');
-    themeToggle.classList.toggle('active');
+    if (themeToggle) themeToggle.classList.toggle('active');
     localStorage.setItem('minichat_theme', isLight ? 'light' : 'dark');
 }
 
@@ -767,12 +772,16 @@ function decodeHtmlEntities(str) {
     return textarea.value;
 }
 var allEmojiData = {};
+var emojiLoadFailed = false;
 async function loadEmojiData() {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
         const [emojiRes, kaoRes] = await Promise.all([
-            fetch('./data/emojihtb-all.json').then(r => r.json()),
-            fetch('./data/kaomoji.json').then(r => r.json())
+            fetch('./data/emojihtb-all.json', { signal: controller.signal }).then(r => r.json()),
+            fetch('./data/kaomoji.json', { signal: controller.signal }).then(r => r.json())
         ]);
+        clearTimeout(timeout);
         const emojiGroups = {};
         if (Array.isArray(emojiRes)) {
             emojiRes.forEach(item => {
@@ -798,13 +807,20 @@ async function loadEmojiData() {
         allEmojiData = { ...emojiGroups, ...kaoGroups };
         renderTabs();
     } catch(e) {
-        console.error('表情加载失败', e);
-        emojiGrid.innerHTML = '<div class="emoji-loading">加载失败</div>';
+        if (e.name === 'AbortError') {
+            console.warn('表情加载超时，已忽略');
+        } else {
+            console.error('表情加载失败', e);
+        }
+        emojiLoadFailed = true;
+        if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败，请刷新重试</div>';
     }
 }
 function renderTabs() {
+    if (!emojiTabs || !emojiGrid) return;
     emojiTabs.innerHTML = '';
     const cats = Object.keys(allEmojiData);
+    if (cats.length === 0) { emojiGrid.innerHTML = '<div class="emoji-loading">暂无表情数据</div>'; return; }
     cats.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'emoji-tab';
@@ -815,11 +831,8 @@ function renderTabs() {
         } else if (firstItem && firstItem.__html) {
             exampleChar = firstItem.__html.replace(/<[^>]*>/g, '');
         }
-        if (exampleChar) {
-            btn.textContent = exampleChar;
-        } else {
-            btn.textContent = cat;
-        }
+        if (exampleChar) btn.textContent = exampleChar;
+        else btn.textContent = cat;
         btn.title = cat;
         btn.addEventListener('click', () => switchCategory(cat));
         emojiTabs.appendChild(btn);
@@ -827,12 +840,14 @@ function renderTabs() {
     if (cats.length) switchCategory(cats[0]);
 }
 function switchCategory(cat) {
+    if (!emojiTabs || !emojiGrid) return;
     document.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
     const tab = [...emojiTabs.children].find(t => t.title === cat);
     if (tab) tab.classList.add('active');
     renderGrid(allEmojiData[cat] || []);
 }
 function renderGrid(items) {
+    if (!emojiGrid) return;
     emojiGrid.innerHTML = '';
     if (!items.length) { emojiGrid.innerHTML = '<div class="emoji-loading">暂无表情</div>'; return; }
     items.forEach(emoji => {
@@ -848,21 +863,23 @@ function renderGrid(items) {
         span.addEventListener('click', () => {
             const text = span.textContent || span.innerText;
             insertAtCursor(text);
-            emojiPanel.classList.remove('active');
+            if (emojiPanel) emojiPanel.classList.remove('active');
             emojiVisible = false;
         });
         emojiGrid.appendChild(span);
     });
 }
 var emojiVisible = false;
-emojiBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    emojiVisible = !emojiVisible;
-    emojiPanel.classList.toggle('active', emojiVisible);
-});
+if (emojiBtn) {
+    emojiBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        emojiVisible = !emojiVisible;
+        if (emojiPanel) emojiPanel.classList.toggle('active', emojiVisible);
+    });
+}
 document.addEventListener('click', function(e) {
-    if (emojiVisible && !emojiPanel.contains(e.target) && e.target !== emojiBtn) {
-        emojiPanel.classList.remove('active');
+    if (emojiVisible && emojiPanel && !emojiPanel.contains(e.target) && e.target !== emojiBtn) {
+        if (emojiPanel) emojiPanel.classList.remove('active');
         emojiVisible = false;
     }
 });
@@ -870,13 +887,13 @@ loadEmojiData();
 
 // ===================== 聊天核心 =====================
 function enterChat() {
+    if (!loginOverlay || !mainInterface) return;
     loginOverlay.classList.add('hidden');
     mainInterface.classList.remove('hidden');
     hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
     document.title = 'MiniChat';
     loadDisplayName().then(() => {
         loadConversations().then(() => {
-            // 默认选中第一个会话（通常是全局）
             if (conversationList.length) {
                 const first = conversationList[0];
                 switchConversation(first.id);
@@ -887,30 +904,39 @@ function enterChat() {
     loadTheme();
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
     setupGlobalEventListeners();
-    btnSend.disabled = false;
-    chatInput.addEventListener('input', autoResizeTextarea);
-    autoResizeTextarea();
-    chatInput.addEventListener('focus', function() {
-        setTimeout(function() {
-            messageList.scrollTop = messageList.scrollHeight;
-            isUserAtBottom = true;
-            updateNewMsgButton();
-        }, 100);
-    });
+    if (btnSend) btnSend.disabled = false;
+    if (chatInput) {
+        chatInput.addEventListener('input', autoResizeTextarea);
+        autoResizeTextarea();
+        chatInput.addEventListener('focus', function() {
+            setTimeout(function() {
+                if (messageList) {
+                    messageList.scrollTop = messageList.scrollHeight;
+                    isUserAtBottom = true;
+                    updateNewMsgButton();
+                }
+            }, 100);
+        });
+    }
 }
 
 async function handleLogout() {
     if (window.chatChannel) { try { await window.chatChannel.untrack(); } catch(e){} window.chatChannel.unsubscribe(); window.chatChannel = null; }
     await supabase.auth.signOut();
     currentEmail = ''; currentUserId = ''; currentDisplayName = '';
-    mainInterface.classList.add('hidden'); loginOverlay.classList.remove('hidden');
-    authMessage.textContent = ''; messageList.innerHTML = ''; sidebarUserEmail.textContent = '未登录';
+    if (mainInterface) mainInterface.classList.add('hidden');
+    if (loginOverlay) loginOverlay.classList.remove('hidden');
+    if (authMessage) authMessage.textContent = '';
+    if (messageList) messageList.innerHTML = '';
+    if (sidebarUserEmail) sidebarUserEmail.textContent = '未登录';
     localStorage.removeItem('minichat_user');
     closeSettingsFunc();
     onlineUsers = {}; onlineCount = 0; updateOnlineUI();
-    chatInput.value = ''; btnSend.disabled = true; attachments = []; renderAttachments();
+    if (chatInput) chatInput.value = '';
+    if (btnSend) btnSend.disabled = true;
+    attachments = []; renderAttachments();
 }
-function closeSettingsFunc() { settingsOverlay.classList.remove('active'); }
+function closeSettingsFunc() { if (settingsOverlay) settingsOverlay.classList.remove('active'); }
 
 // ===================== 会话管理 =====================
 async function loadConversations() {
@@ -929,7 +955,8 @@ async function loadConversations() {
 }
 
 function renderConversationList() {
-    const container = document.getElementById('conversationListContainer');
+    var container = document.getElementById('conversationListContainer');
+    if (!container) return;
     container.innerHTML = '';
     conversationList.forEach(conv => {
         const div = document.createElement('div');
@@ -970,7 +997,6 @@ function showNewDirectDialog() {
 
 async function createDirectConversation(targetEmail) {
     if (targetEmail === currentEmail) { alert('不能与自己私聊'); return; }
-    // 查询目标用户
     const { data: user, error } = await supabase
         .from('profiles')
         .select('id')
@@ -979,8 +1005,7 @@ async function createDirectConversation(targetEmail) {
     if (error || !user) { alert('用户不存在'); return; }
     const targetUserId = user.id;
 
-    // 检查是否已有私聊
-    const { data: existing, error: existErr } = await supabase
+    const { data: existing } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
         .eq('user_id', currentUserId)
@@ -992,7 +1017,6 @@ async function createDirectConversation(targetEmail) {
         return;
     }
 
-    // 创建新会话
     const { data: conv, error: convErr } = await supabase
         .from('conversations')
         .insert({ type: 'direct' })
@@ -1000,7 +1024,6 @@ async function createDirectConversation(targetEmail) {
         .single();
     if (convErr) { alert('创建会话失败'); return; }
 
-    // 添加参与者
     await supabase.from('conversation_participants').insert([
         { conversation_id: conv.id, user_id: currentUserId },
         { conversation_id: conv.id, user_id: targetUserId }
@@ -1013,14 +1036,12 @@ async function createDirectConversation(targetEmail) {
 async function switchConversation(convId) {
     if (convId === currentConversationId) return;
     currentConversationId = convId;
-    messageList.innerHTML = '';
-    // 更新界面高亮
+    if (messageList) messageList.innerHTML = '';
     document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.dataset.conversationId === convId);
     });
-    // 更新标题
     const conv = conversationList.find(c => c.id === convId);
-    if (conv) {
+    if (conv && chatTitle) {
         let title = conv.name || '聊天';
         let sub = '';
         if (conv.type === 'global') { title = '全局聊天'; sub = '# 所有成员'; }
@@ -1034,19 +1055,16 @@ async function switchConversation(convId) {
         } else { sub = '# 群组'; }
         chatTitle.innerHTML = `${esc(title)} <small>${sub}</small>`;
     }
-    // 重置分页
     hasMoreMessages = true;
     oldestTimestamp = null;
     isLoadingMore = false;
     await loadHistory(false);
-    // 标记已读（后续可扩展）
-    // 重新订阅
     subscribeMessages(convId);
 }
 
 // ===================== 消息加载 =====================
 async function loadHistory(append) {
-    if (isLoadingMore || !hasMoreMessages) return;
+    if (isLoadingMore || !hasMoreMessages || !messageList) return;
     isLoadingMore = true;
     try {
         let q = supabase
@@ -1075,9 +1093,9 @@ async function loadHistory(append) {
         isLoadingMore = false;
     } catch(e) { console.error(e); isLoadingMore = false; }
 }
-async function refreshMessages() { messageList.innerHTML = ''; hasMoreMessages = true; oldestTimestamp = null; await loadHistory(false); }
+async function refreshMessages() { if (messageList) messageList.innerHTML = ''; hasMoreMessages = true; oldestTimestamp = null; await loadHistory(false); }
 
-// ===================== 消息渲染 =====================
+// ===================== 消息渲染（省略重复内容，与之前一致，但确保安全） =====================
 var lastTimeDivider = 0;
 function createMessageElement(msg) {
     var content = msg.content, sender_name = msg.sender_name, sender_email = msg.sender_email, isMe = msg.isMe, time = msg.time, id = msg.id, created_at = msg.created_at;
@@ -1104,10 +1122,12 @@ function createMessageElement(msg) {
         e.preventDefault();
         var rect = aw.getBoundingClientRect();
         var x = e.clientX || rect.left + rect.width/2, y = e.clientY || rect.top + rect.height/2;
-        contextMenu.dataset.targetEmail = sender_email;
-        contextMenu.dataset.targetName = sender_name || sender_email.split('@')[0];
-        contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
-        contextMenu.classList.add('active');
+        if (contextMenu) {
+            contextMenu.dataset.targetEmail = sender_email;
+            contextMenu.dataset.targetName = sender_name || sender_email.split('@')[0];
+            contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
+            contextMenu.classList.add('active');
+        }
     });
     var bubble = document.createElement('div'); bubble.className = 'bubble';
     var sd = document.createElement('div'); sd.className = 'sender';
@@ -1175,9 +1195,9 @@ function renderMessageContent(raw) {
 }
 function addMessageToBottom(msg) { 
     var fragment = createMessageElement(msg);
-    messageList.appendChild(fragment);
+    if (messageList) messageList.appendChild(fragment);
     if (isUserAtBottom) {
-        messageList.scrollTop = messageList.scrollHeight;
+        if (messageList) messageList.scrollTop = messageList.scrollHeight;
     } else {
         unreadCount++;
         document.title = '(' + unreadCount + ') MiniChat';
@@ -1191,8 +1211,10 @@ function prependMessages(msgs) {
         var fragment = createMessageElement(m);
         f.appendChild(fragment);
     }); 
-    if (messageList.firstChild) messageList.insertBefore(f, messageList.firstChild); 
-    else messageList.appendChild(f); 
+    if (messageList) {
+        if (messageList.firstChild) messageList.insertBefore(f, messageList.firstChild); 
+        else messageList.appendChild(f);
+    }
 }
 
 // ===================== 新消息按钮 =====================
@@ -1209,15 +1231,17 @@ function updateNewMsgButton() {
     if (isUserAtBottom) {
         unreadCount = 0;
         document.title = 'MiniChat';
-        newMessagesBtn.classList.remove('show');
-        newMsgBadge.style.display = 'none';
+        if (newMessagesBtn) newMessagesBtn.classList.remove('show');
+        if (newMsgBadge) newMsgBadge.style.display = 'none';
     } else {
-        newMessagesBtn.classList.add('show');
-        if (unreadCount > 0) {
-            newMsgBadge.textContent = unreadCount;
-            newMsgBadge.style.display = 'block';
-        } else {
-            newMsgBadge.style.display = 'none';
+        if (newMessagesBtn) newMessagesBtn.classList.add('show');
+        if (newMsgBadge) {
+            if (unreadCount > 0) {
+                newMsgBadge.textContent = unreadCount;
+                newMsgBadge.style.display = 'block';
+            } else {
+                newMsgBadge.style.display = 'none';
+            }
         }
     }
     updateSidebarBadge();
@@ -1232,18 +1256,22 @@ function updateSidebarBadge() {
         badge.classList.remove('show');
     }
 }
-newMessagesBtn.addEventListener('click', function() {
-    messageList.scrollTop = messageList.scrollHeight;
-    isUserAtBottom = true;
-    unreadCount = 0;
-    updateNewMsgButton();
-});
-messageList.addEventListener('scroll', function() {
-    isUserAtBottom = checkIfAtBottom();
-    updateNewMsgButton();
-});
+if (newMessagesBtn) {
+    newMessagesBtn.addEventListener('click', function() {
+        if (messageList) messageList.scrollTop = messageList.scrollHeight;
+        isUserAtBottom = true;
+        unreadCount = 0;
+        updateNewMsgButton();
+    });
+}
+if (messageList) {
+    messageList.addEventListener('scroll', function() {
+        isUserAtBottom = checkIfAtBottom();
+        updateNewMsgButton();
+    });
+}
 
-// ===================== 消息搜索（保留原有逻辑，仅调整兼容） =====================
+// ===================== 消息搜索（精简，保留核心，所有元素判空） =====================
 var Search = {
     open: false,
     term: '',
@@ -1259,18 +1287,18 @@ var Search = {
     serverSearching: false,
     loadingHistory: false,
     init: function() {
-        this.elBar     = searchBar;
-        this.elInput   = searchInput;
-        this.elStatus  = searchStatus;
-        this.elBtn     = searchBtn;
-        this.elPrev    = searchPrev;
-        this.elNext    = searchNext;
-        this.elClose   = searchClose;
-        this.elClear   = document.getElementById('searchClearInput');
-        if (this.elBtn)   this.elBtn.addEventListener('click',   this.toggle.bind(this));
+        this.elBar = searchBar;
+        this.elInput = searchInput;
+        this.elStatus = searchStatus;
+        this.elBtn = searchBtn;
+        this.elPrev = searchPrev;
+        this.elNext = searchNext;
+        this.elClose = searchClose;
+        this.elClear = document.getElementById('searchClearInput');
+        if (this.elBtn) this.elBtn.addEventListener('click', this.toggle.bind(this));
         if (this.elClose) this.elClose.addEventListener('click', this.close.bind(this));
-        if (this.elPrev)  this.elPrev.addEventListener('click',  this.prev.bind(this));
-        if (this.elNext)  this.elNext.addEventListener('click',  this.next.bind(this));
+        if (this.elPrev) this.elPrev.addEventListener('click', this.prev.bind(this));
+        if (this.elNext) this.elNext.addEventListener('click', this.next.bind(this));
         if (this.elClear) this.elClear.addEventListener('click', this.clearInput.bind(this));
         if (this.elInput) {
             this.elInput.addEventListener('input', this.onInput.bind(this));
@@ -1314,17 +1342,17 @@ var Search = {
     openPanel: function() {
         if (this.open) return;
         this.open = true;
-        this.elBar.classList.add('open');
+        if (this.elBar) this.elBar.classList.add('open');
         var self = this;
-        setTimeout(function() { self.elInput.focus(); if (self.term) self.elInput.select(); }, 30);
+        setTimeout(function() { if (self.elInput) { self.elInput.focus(); if (self.term) self.elInput.select(); } }, 30);
     },
     close: function() {
         if (!this.open) return;
         var self = this;
         this.withObserverPaused(function() {
             self.open = false;
-            self.elBar.classList.remove('open');
-            self.elInput.value = '';
+            if (self.elBar) self.elBar.classList.remove('open');
+            if (self.elInput) self.elInput.value = '';
             self.setClearVisible(false);
             self.term = '';
             self.results = [];
@@ -1335,13 +1363,13 @@ var Search = {
         });
     },
     clearInput: function() {
-        this.elInput.value = '';
+        if (this.elInput) this.elInput.value = '';
         this.setClearVisible(false);
         this.runSearchImmediately('');
-        this.elInput.focus();
+        if (this.elInput) this.elInput.focus();
     },
     onInput: function() {
-        var v = this.elInput.value;
+        var v = this.elInput ? this.elInput.value : '';
         this.setClearVisible(!!v);
         clearTimeout(this.debounceId);
         var self = this;
@@ -1409,7 +1437,7 @@ var Search = {
     },
     localSearchAndHighlight: function(term) {
         var regex = new RegExp(escRegex(term), 'gi');
-        var messages = messageList.querySelectorAll('.message');
+        var messages = messageList ? messageList.querySelectorAll('.message') : [];
         var matched = [];
         for (var i = 0; i < messages.length; i++) {
             if (highlightInElement(messages[i], regex)) matched.push(messages[i]);
@@ -1578,13 +1606,12 @@ function highlightInElement(root, regex) {
 }
 Search.init();
 
-// ===================== 远程搜索（跨会话） =====================
+// ===================== 远程搜索 =====================
 async function searchMessagesRemote(term) {
     if (!term || !term.trim()) return [];
     if (typeof supabase === 'undefined' || !supabase) return [];
     try {
         var safe = term.replace(/[%_\\]/g, '\\$&');
-        // 仅搜索当前会话的消息
         var res = await supabase
             .from('messages')
             .select('id, content, sender_email, sender_name, created_at')
@@ -1602,6 +1629,7 @@ async function searchMessagesRemote(term) {
 async function loadHistoryForSearch(oldestNeeded, onProgress) {
     var MAX_PAGES = 100;
     var pagesLoaded = 0;
+    if (!messageList) return 0;
     var distToBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
     var wasNearBottom = distToBottom < 120;
     while (hasMoreMessages && oldestTimestamp && oldestNeeded && oldestTimestamp > oldestNeeded && pagesLoaded < MAX_PAGES) {
@@ -1622,76 +1650,87 @@ async function loadHistoryForSearch(oldestNeeded, onProgress) {
 // ===================== 引用跳转 =====================
 var pendingQuoteData = null;
 function openQuoteJumpModal(author, time, email, content, messageId) {
-    qjAuthor.textContent = author || '匿名';
-    qjTime.textContent = time ? formatTimeShort(time) : '';
-    qjContent.textContent = content || '[空消息]';
-    qjStatus.textContent = '';
+    if (qjAuthor) qjAuthor.textContent = author || '匿名';
+    if (qjTime) qjTime.textContent = time ? formatTimeShort(time) : '';
+    if (qjContent) qjContent.textContent = content || '[空消息]';
+    if (qjStatus) qjStatus.textContent = '';
     pendingQuoteData = { author, time, email: email || '', messageId: messageId || '' };
-    quoteJumpModal.classList.add('active');
+    if (quoteJumpModal) quoteJumpModal.classList.add('active');
 }
-function closeQuoteJumpModal() { quoteJumpModal.classList.remove('active'); pendingQuoteData = null; }
-closeQuoteJumpBtn.addEventListener('click', closeQuoteJumpModal);
-qjCancel.addEventListener('click', closeQuoteJumpModal);
-quoteJumpModal.addEventListener('click', e => { if (e.target === quoteJumpModal) closeQuoteJumpModal(); });
-qjJump.addEventListener('click', async function() {
-    if (!pendingQuoteData) return;
-    var data = pendingQuoteData, messageId = data.messageId;
-    qjStatus.textContent = '正在查找...'; qjStatus.style.color = 'var(--text-secondary)';
-    var elements = messageList.querySelectorAll('.message');
-    var bestMatch = null, targetTime = new Date(data.time).getTime();
-    for (var el of elements) {
-        if (messageId && el.dataset.messageId === messageId) { bestMatch = el; break; }
-        var msgTime = el.dataset.createdAt ? new Date(el.dataset.createdAt).getTime() : NaN;
-        if (isNaN(msgTime)) continue;
-        var senderEmail = el.dataset.senderEmail || '';
-        var senderName = (el.querySelector('.sender .name')?.textContent || '').trim();
-        if (data.email && senderEmail === data.email && Math.abs(msgTime - targetTime) < 60000) { bestMatch = el; }
-        else if (!data.email && senderName === data.author && Math.abs(msgTime - targetTime) < 60000) { bestMatch = el; }
-    }
-    if (bestMatch) {
-        qjStatus.textContent = '已定位到原文'; qjStatus.style.color = '#4ade80';
-        bestMatch.scrollIntoView({behavior:'smooth',block:'center'});
-        bestMatch.classList.add('message-highlight');
-        setTimeout(() => bestMatch.classList.remove('message-highlight'), 2400);
-        setTimeout(closeQuoteJumpModal, 1200);
-        return;
-    }
-    if (messageId) {
-        qjStatus.textContent = '正在数据库中查找…';
-        try {
-            var { data: msgData } = await supabase.from('messages').select('*').eq('id', messageId).single();
-            if (!msgData) { qjStatus.textContent = '原消息已被删除'; qjStatus.style.color = '#f87171'; return; }
-            var isMe = msgData.sender_email === currentEmail;
-            var info = currentUserMap[msgData.sender_email] || {};
-            var displayName = msgData.sender_name || info.display_name || msgData.sender_email.split('@')[0];
-            var msgObj = { id: msgData.id, content: msgData.content, sender_name: displayName, sender_email: msgData.sender_email, isMe, time: formatTimeShort(msgData.created_at), created_at: msgData.created_at };
-            if (!currentUserMap[msgData.sender_email]) currentUserMap[msgData.sender_email] = { display_name: displayName };
-            var newEl = createMessageElement(msgObj);
-            if (messageList.firstChild) messageList.insertBefore(newEl, messageList.firstChild); else messageList.appendChild(newEl);
-            qjStatus.textContent = '已找到并加载原文'; qjStatus.style.color = '#4ade80';
-            newEl.scrollIntoView({behavior:'smooth',block:'center'});
-            newEl.classList.add('message-highlight');
-            setTimeout(() => newEl.classList.remove('message-highlight'), 2400);
-            setTimeout(closeQuoteJumpModal, 1500);
-        } catch(err) { qjStatus.textContent = '网络错误'; qjStatus.style.color = '#f87171'; }
-        return;
-    }
-    qjStatus.textContent = '未找到原始消息'; qjStatus.style.color = '#f87171';
-});
+function closeQuoteJumpModal() { if (quoteJumpModal) quoteJumpModal.classList.remove('active'); pendingQuoteData = null; }
+if (closeQuoteJumpBtn) closeQuoteJumpBtn.addEventListener('click', closeQuoteJumpModal);
+if (qjCancel) qjCancel.addEventListener('click', closeQuoteJumpModal);
+if (quoteJumpModal) {
+    quoteJumpModal.addEventListener('click', e => { if (e.target === quoteJumpModal) closeQuoteJumpModal(); });
+}
+if (qjJump) {
+    qjJump.addEventListener('click', async function() {
+        if (!pendingQuoteData) return;
+        var data = pendingQuoteData, messageId = data.messageId;
+        if (qjStatus) { qjStatus.textContent = '正在查找...'; qjStatus.style.color = 'var(--text-secondary)'; }
+        var elements = messageList ? messageList.querySelectorAll('.message') : [];
+        var bestMatch = null, targetTime = new Date(data.time).getTime();
+        for (var el of elements) {
+            if (messageId && el.dataset.messageId === messageId) { bestMatch = el; break; }
+            var msgTime = el.dataset.createdAt ? new Date(el.dataset.createdAt).getTime() : NaN;
+            if (isNaN(msgTime)) continue;
+            var senderEmail = el.dataset.senderEmail || '';
+            var senderName = (el.querySelector('.sender .name')?.textContent || '').trim();
+            if (data.email && senderEmail === data.email && Math.abs(msgTime - targetTime) < 60000) { bestMatch = el; }
+            else if (!data.email && senderName === data.author && Math.abs(msgTime - targetTime) < 60000) { bestMatch = el; }
+        }
+        if (bestMatch) {
+            if (qjStatus) { qjStatus.textContent = '已定位到原文'; qjStatus.style.color = '#4ade80'; }
+            bestMatch.scrollIntoView({behavior:'smooth',block:'center'});
+            bestMatch.classList.add('message-highlight');
+            setTimeout(() => bestMatch.classList.remove('message-highlight'), 2400);
+            setTimeout(closeQuoteJumpModal, 1200);
+            return;
+        }
+        if (messageId) {
+            if (qjStatus) { qjStatus.textContent = '正在数据库中查找…'; }
+            try {
+                var { data: msgData } = await supabase.from('messages').select('*').eq('id', messageId).single();
+                if (!msgData) { if (qjStatus) { qjStatus.textContent = '原消息已被删除'; qjStatus.style.color = '#f87171'; } return; }
+                var isMe = msgData.sender_email === currentEmail;
+                var info = currentUserMap[msgData.sender_email] || {};
+                var displayName = msgData.sender_name || info.display_name || msgData.sender_email.split('@')[0];
+                var msgObj = { id: msgData.id, content: msgData.content, sender_name: displayName, sender_email: msgData.sender_email, isMe, time: formatTimeShort(msgData.created_at), created_at: msgData.created_at };
+                if (!currentUserMap[msgData.sender_email]) currentUserMap[msgData.sender_email] = { display_name: displayName };
+                var newEl = createMessageElement(msgObj);
+                if (messageList) {
+                    if (messageList.firstChild) messageList.insertBefore(newEl, messageList.firstChild);
+                    else messageList.appendChild(newEl);
+                }
+                if (qjStatus) { qjStatus.textContent = '已找到并加载原文'; qjStatus.style.color = '#4ade80'; }
+                newEl.scrollIntoView({behavior:'smooth',block:'center'});
+                newEl.classList.add('message-highlight');
+                setTimeout(() => newEl.classList.remove('message-highlight'), 2400);
+                setTimeout(closeQuoteJumpModal, 1500);
+            } catch(err) { if (qjStatus) { qjStatus.textContent = '网络错误'; qjStatus.style.color = '#f87171'; } }
+            return;
+        }
+        if (qjStatus) { qjStatus.textContent = '未找到原始消息'; qjStatus.style.color = '#f87171'; }
+    });
+}
 
 // ===================== 右键菜单 =====================
-ctxMention.addEventListener('click', () => {
-    var targetName = contextMenu.dataset.targetName || '';
-    if (targetName) insertAtCursor('@' + targetName + ' ');
-    contextMenu.classList.remove('active');
-});
-ctxDirect.addEventListener('click', () => {
-    var targetEmail = contextMenu.dataset.targetEmail || '';
-    if (targetEmail) createDirectConversation(targetEmail);
-    contextMenu.classList.remove('active');
-});
-document.addEventListener('click', e => { if (!contextMenu.contains(e.target)) contextMenu.classList.remove('active'); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') contextMenu.classList.remove('active'); });
+if (ctxMention) {
+    ctxMention.addEventListener('click', () => {
+        var targetName = contextMenu ? contextMenu.dataset.targetName : '';
+        if (targetName) insertAtCursor('@' + targetName + ' ');
+        if (contextMenu) contextMenu.classList.remove('active');
+    });
+}
+if (ctxDirect) {
+    ctxDirect.addEventListener('click', () => {
+        var targetEmail = contextMenu ? contextMenu.dataset.targetEmail : '';
+        if (targetEmail) createDirectConversation(targetEmail);
+        if (contextMenu) contextMenu.classList.remove('active');
+    });
+}
+document.addEventListener('click', e => { if (contextMenu && !contextMenu.contains(e.target)) contextMenu.classList.remove('active'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && contextMenu) contextMenu.classList.remove('active'); });
 
 // ===================== 用户资料 =====================
 async function fetchUserProfiles(emails) {
@@ -1707,12 +1746,14 @@ function showUserProfile(email) {
     if (email === currentEmail) info = { display_name: currentDisplayName, avatar_url: currentAvatarUrl };
     var ou = Object.values(onlineUsers).find(u => u.email === email);
     if (ou) { info.display_name = ou.display_name || info.display_name; info.avatar_url = ou.avatar_url || info.avatar_url; }
-    profileAvatar.src = bustCache(info.avatar_url || getDefaultAvatar(email));
-    profileDisplayName.textContent = info.display_name || email.split('@')[0];
-    profileEmail.textContent = email;
-    profileStatus.textContent = !!ou ? '在线' : '离线';
-    profileStatus.className = 'status-badge' + (!!ou ? '' : ' offline');
-    profileModal.classList.add('active');
+    if (profileAvatar) profileAvatar.src = bustCache(info.avatar_url || getDefaultAvatar(email));
+    if (profileDisplayName) profileDisplayName.textContent = info.display_name || email.split('@')[0];
+    if (profileEmail) profileEmail.textContent = email;
+    if (profileStatus) {
+        profileStatus.textContent = !!ou ? '在线' : '离线';
+        profileStatus.className = 'status-badge' + (!!ou ? '' : ' offline');
+    }
+    if (profileModal) profileModal.classList.add('active');
 }
 
 // ===================== 显示名称 =====================
@@ -1723,38 +1764,39 @@ async function loadDisplayName() {
         if (data) { currentDisplayName = data.display_name || currentEmail.split('@')[0]; currentAvatarUrl = data.avatar_url || getDefaultAvatar(currentEmail); }
         else { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
     } catch(e) { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
-    displayNameInput.value = currentDisplayName;
-    sidebarUserEmail.textContent = currentDisplayName;
-    avatarPreview.src = bustCache(currentAvatarUrl);
+    if (displayNameInput) displayNameInput.value = currentDisplayName;
+    if (sidebarUserEmail) sidebarUserEmail.textContent = currentDisplayName;
+    if (avatarPreview) avatarPreview.src = bustCache(currentAvatarUrl);
     currentUserMap[currentEmail] = { avatar_url: currentAvatarUrl, display_name: currentDisplayName };
 }
 async function saveDisplayName() {
+    if (!displayNameInput) return;
     var n = displayNameInput.value.trim();
-    if (!n) { displayNameMessage.textContent = '昵称不能为空'; displayNameMessage.style.color = '#f87171'; return; }
-    if (n.length > 20) { displayNameMessage.textContent = '昵称不能超过20个字符'; displayNameMessage.style.color = '#f87171'; return; }
-    displayNameMessage.textContent = '保存中…'; displayNameMessage.style.color = 'var(--text-secondary)';
+    if (!n) { if (displayNameMessage) { displayNameMessage.textContent = '昵称不能为空'; displayNameMessage.style.color = '#f87171'; } return; }
+    if (n.length > 20) { if (displayNameMessage) { displayNameMessage.textContent = '昵称不能超过20个字符'; displayNameMessage.style.color = '#f87171'; } return; }
+    if (displayNameMessage) { displayNameMessage.textContent = '保存中…'; displayNameMessage.style.color = 'var(--text-secondary)'; }
     try {
         var error = (await supabase.from('profiles').update({ display_name: n }).eq('id', currentUserId)).error;
-        if (error) { if (error.message.includes('duplicate')) displayNameMessage.textContent = '昵称已被占用'; else throw error; return; }
+        if (error) { if (error.message.includes('duplicate')) { if (displayNameMessage) { displayNameMessage.textContent = '昵称已被占用'; } } else throw error; return; }
         await supabase.from('messages').update({ sender_name: n }).eq('sender_email', currentEmail);
         currentDisplayName = n;
-        sidebarUserEmail.textContent = n;
-        displayNameMessage.textContent = '昵称已更新'; displayNameMessage.style.color = '#4ade80';
+        if (sidebarUserEmail) sidebarUserEmail.textContent = n;
+        if (displayNameMessage) { displayNameMessage.textContent = '昵称已更新'; displayNameMessage.style.color = '#4ade80'; }
         currentUserMap[currentEmail].display_name = n;
         if (window.chatChannel) await window.chatChannel.track({ user_id: currentUserId, email: currentEmail, display_name: n, avatar_url: currentAvatarUrl, online_at: new Date().toISOString() });
         refreshMessages();
-    } catch(e) { console.error(e); displayNameMessage.textContent = '保存失败'; displayNameMessage.style.color = '#f87171'; }
+    } catch(e) { console.error(e); if (displayNameMessage) { displayNameMessage.textContent = '保存失败'; displayNameMessage.style.color = '#f87171'; } }
 }
 
 // ===================== 头像上传 =====================
 function refreshAllAvatars(email, newUrl) { document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(img => img.src = bustCache(newUrl)); }
 async function uploadAvatar(file) {
     if (!currentUserId) { alert('请先登录'); return; }
-    if (!file || !file.type.startsWith('image/')) { avatarUploadStatus.textContent = '请选择图片'; avatarUploadStatus.style.color = '#f87171'; return; }
+    if (!file || !file.type.startsWith('image/')) { if (avatarUploadStatus) { avatarUploadStatus.textContent = '请选择图片'; avatarUploadStatus.style.color = '#f87171'; } return; }
     var pf = file;
     if (file.size > 200*1024) try { pf = await compressImage(file, 512, 0.7); } catch(e) {}
-    if (pf.size > 5*1024*1024) { avatarUploadStatus.textContent = '图片不能超过5MB'; avatarUploadStatus.style.color = '#f87171'; return; }
-    avatarUploadStatus.textContent = '上传中…';
+    if (pf.size > 5*1024*1024) { if (avatarUploadStatus) { avatarUploadStatus.textContent = '图片不能超过5MB'; avatarUploadStatus.style.color = '#f87171'; } return; }
+    if (avatarUploadStatus) { avatarUploadStatus.textContent = '上传中…'; }
     try {
         var ext = pf.name.split('.').pop(), fn = 'avatar_'+currentUserId+'_'+Date.now()+'.'+ext, fp = 'public/'+fn;
         var ue = (await supabase.storage.from('avatars').upload(fp, pf, { cacheControl:'0', upsert:true })).error;
@@ -1764,10 +1806,10 @@ async function uploadAvatar(file) {
         if (ue2) throw ue2;
         currentAvatarUrl = pub; currentUserMap[currentEmail].avatar_url = pub;
         refreshAllAvatars(currentEmail, pub);
-        avatarPreview.src = bustCache(pub);
-        avatarUploadStatus.textContent = '头像已更新'; avatarUploadStatus.style.color = '#4ade80';
+        if (avatarPreview) avatarPreview.src = bustCache(pub);
+        if (avatarUploadStatus) { avatarUploadStatus.textContent = '头像已更新'; avatarUploadStatus.style.color = '#4ade80'; }
         if (window.chatChannel) await window.chatChannel.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName, avatar_url: pub, online_at: new Date().toISOString() });
-    } catch(err) { console.error(err); avatarUploadStatus.textContent = '上传失败'; avatarUploadStatus.style.color = '#f87171'; }
+    } catch(err) { console.error(err); if (avatarUploadStatus) { avatarUploadStatus.textContent = '上传失败'; avatarUploadStatus.style.color = '#f87171'; } }
 }
 function compressImage(file, mw, q) {
     return new Promise((res,rej) => {
@@ -1796,9 +1838,10 @@ function addQuoteAttachment(senderName, senderEmail, content, isoTime, messageId
     plain = plain.split('\n')[0].substring(0, 100);
     attachments.push({ id: 'quote-'+Date.now(), type:'quote', quoteAuthor: senderName || '匿名', quoteEmail: senderEmail || '', quoteText: plain, quoteIsoTime: isoTime || new Date().toISOString(), quoteMessageId: messageId || '' });
     renderAttachments();
-    chatInput.focus();
+    if (chatInput) chatInput.focus();
 }
 function renderAttachments() {
+    if (!attachmentArea) return;
     attachmentArea.innerHTML = '';
     attachments.forEach((att, idx) => {
         var item = document.createElement('div');
@@ -1857,7 +1900,8 @@ async function sendMessageContent(content) {
     if (now - lastSendTime < MIN_SEND_INTERVAL) { setAuthMessage('发送太快','error'); setTimeout(() => setAuthMessage(''), 1500); return; }
     if (isSending) return;
     isSending = true; lastSendTime = now;
-    btnSend.disabled = true; chatInput.disabled = true;
+    if (btnSend) btnSend.disabled = true;
+    if (chatInput) chatInput.disabled = true;
     var senderName = currentDisplayName || currentEmail.split('@')[0];
     try {
         var fc = text;
@@ -1867,7 +1911,7 @@ async function sendMessageContent(content) {
         var na = attachments.filter(a => !a.existing && a.type !== 'quote');
         var nmd = await uploadNewAttachments(na);
         if (nmd.length) { if (fc) fc += '\n'; fc += nmd.join('\n'); }
-        if (!fc.trim()) { isSending = false; btnSend.disabled = false; chatInput.disabled = false; return; }
+        if (!fc.trim()) { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; return; }
         var mentions = text.match(/@(\S+)/g) || [];
         var mentionedIds = [];
         for (var id in onlineUsers) {
@@ -1878,7 +1922,7 @@ async function sendMessageContent(content) {
         if (mentionedIds.length && window.chatChannel) window.chatChannel.send({ type:'broadcast', event:'mention', payload:{ from: senderName, users: mentionedIds } });
         var tempId = 'temp-'+Date.now();
         addMessageToBottom({ id: tempId, content: fc, sender_name: senderName, sender_email: currentEmail, isMe: true, time: formatTimeShort(new Date().toISOString()), created_at: new Date().toISOString() });
-        chatInput.value = ''; attachments = []; renderAttachments(); autoResizeTextarea();
+        if (chatInput) { chatInput.value = ''; attachments = []; renderAttachments(); autoResizeTextarea(); }
         var res = await supabase.from('messages').insert({
             content: fc,
             sender_name: senderName,
@@ -1887,13 +1931,19 @@ async function sendMessageContent(content) {
         }).select().single();
         if (res.error) throw res.error;
         var data = res.data;
-        if (data) { var te = messageList.querySelector('[data-message-id="'+tempId+'"]'); if (te) te.replaceWith(createMessageElement({ id: data.id, content: data.content, sender_name: data.sender_name || senderName, sender_email: data.sender_email || currentEmail, isMe: true, time: formatTimeShort(data.created_at), created_at: data.created_at })); }
+        if (data && messageList) {
+            var te = messageList.querySelector('[data-message-id="'+tempId+'"]');
+            if (te) te.replaceWith(createMessageElement({ id: data.id, content: data.content, sender_name: data.sender_name || senderName, sender_email: data.sender_email || currentEmail, isMe: true, time: formatTimeShort(data.created_at), created_at: data.created_at }));
+        }
     } catch(err) {
         console.error(err);
-        if (text) { chatInput.value = text; autoResizeTextarea(); }
+        if (text && chatInput) { chatInput.value = text; autoResizeTextarea(); }
         setAuthMessage('发送失败','error');
-        var te = messageList.querySelector('[data-message-id^="temp-"]'); if (te) te.remove();
-    } finally { isSending = false; btnSend.disabled = false; chatInput.disabled = false; }
+        if (messageList) {
+            var te = messageList.querySelector('[data-message-id^="temp-"]');
+            if (te) te.remove();
+        }
+    } finally { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; }
 }
 window.recallMessage = async function(mid) {
     if (!mid || !confirm('确定撤回？')) return;
@@ -1904,8 +1954,14 @@ window.recallMessage = async function(mid) {
 };
 
 // ===================== 在线状态 =====================
-function updateOnlineUI() { onlineStatus.textContent = '● '+onlineCount+' 人在线'; onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); modalOnlineCount.textContent = onlineCount; renderOnlineUsers(); }
+function updateOnlineUI() {
+    if (onlineStatus) onlineStatus.textContent = '● '+onlineCount+' 人在线';
+    if (onlineBadge) { onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); }
+    if (modalOnlineCount) modalOnlineCount.textContent = onlineCount;
+    renderOnlineUsers();
+}
 function renderOnlineUsers() {
+    if (!onlineUserList) return;
     onlineUserList.innerHTML = '';
     if (!onlineCount) { onlineUserList.innerHTML = '<div class="online-empty">暂无其他在线用户</div>'; return; }
     for (var id in onlineUsers) { var u = onlineUsers[id]; var it = document.createElement('div'); it.className = 'online-user-item';
@@ -1922,13 +1978,16 @@ function renderOnlineUsers() {
 
 // ===================== @提及 =====================
 var mentionActive = false;
-chatInput.addEventListener('input', function() {
-    var v = this.value, cp = this.selectionStart, la = v.lastIndexOf('@', cp);
-    if (la !== -1 && !v.substring(la+1, cp).includes(' ')) { mentionActive = true; renderMentionDropdown(v.substring(la+1, cp)); mentionDropdown.classList.add('active'); }
-    else { mentionActive = false; mentionDropdown.classList.remove('active'); }
-    sendTypingEvent(); autoResizeTextarea();
-});
+if (chatInput) {
+    chatInput.addEventListener('input', function() {
+        var v = this.value, cp = this.selectionStart, la = v.lastIndexOf('@', cp);
+        if (la !== -1 && !v.substring(la+1, cp).includes(' ')) { mentionActive = true; renderMentionDropdown(v.substring(la+1, cp)); if (mentionDropdown) mentionDropdown.classList.add('active'); }
+        else { mentionActive = false; if (mentionDropdown) mentionDropdown.classList.remove('active'); }
+        sendTypingEvent(); autoResizeTextarea();
+    });
+}
 function renderMentionDropdown(filter) {
+    if (!mentionDropdown) return;
     var users = Object.values(onlineUsers).filter(u => u.user_id !== currentUserId);
     var f = users.filter(u => (u.display_name||'').toLowerCase().includes(filter.toLowerCase()) || (u.email||'').toLowerCase().includes(filter.toLowerCase()));
     mentionDropdown.innerHTML = '';
@@ -1937,14 +1996,14 @@ function renderMentionDropdown(filter) {
         var it = document.createElement('div'); it.className = 'mention-item';
         it.innerHTML = '<img src="'+bustCache(u.avatar_url||getDefaultAvatar(u.email))+'"/><span class="name">'+esc(u.display_name||u.email)+'</span><span class="email">'+esc(u.email)+'</span>';
         it.addEventListener('click', () => {
-            var v = chatInput.value, cp = chatInput.selectionStart, la = v.lastIndexOf('@', cp);
-            if (la !== -1) { var before = v.substring(0,la), after = v.substring(cp), mt = '@'+(u.display_name||u.email)+' '; chatInput.value = before+mt+after; chatInput.selectionStart = chatInput.selectionEnd = before.length+mt.length; chatInput.focus(); }
-            mentionDropdown.classList.remove('active'); mentionActive = false; autoResizeTextarea();
+            var v = chatInput ? chatInput.value : '', cp = chatInput ? chatInput.selectionStart : 0, la = v.lastIndexOf('@', cp);
+            if (la !== -1 && chatInput) { var before = v.substring(0,la), after = v.substring(cp), mt = '@'+(u.display_name||u.email)+' '; chatInput.value = before+mt+after; chatInput.selectionStart = chatInput.selectionEnd = before.length+mt.length; chatInput.focus(); }
+            if (mentionDropdown) mentionDropdown.classList.remove('active'); mentionActive = false; autoResizeTextarea();
         });
         mentionDropdown.appendChild(it);
     });
 }
-document.addEventListener('click', e => { if (mentionActive && !mentionDropdown.contains(e.target) && e.target !== chatInput) { mentionDropdown.classList.remove('active'); mentionActive = false; } });
+document.addEventListener('click', e => { if (mentionActive && mentionDropdown && !mentionDropdown.contains(e.target) && e.target !== chatInput) { mentionDropdown.classList.remove('active'); mentionActive = false; } });
 
 // ===================== 输入状态 =====================
 var typingStopId, lastTypingBT = 0;
@@ -1964,7 +2023,7 @@ function showTypingIndicator(dn) {
     typingStopId = setTimeout(() => i.classList.remove('active'), 2000);
 }
 
-// ===================== 实时频道（按会话） =====================
+// ===================== 实时频道 =====================
 function subscribeMessages(convId) {
     if (window.chatChannel) {
         window.chatChannel.unsubscribe();
@@ -1973,7 +2032,6 @@ function subscribeMessages(convId) {
     var ch = supabase.channel('chat-room-' + convId, {
         config: { presence: { key: currentUserId } }
     });
-    // 在线状态同步（全局）
     ch.on('presence', { event:'sync' }, () => {
         var s = ch.presenceState(), us = {}, c = 0;
         for (var k in s) { var p = s[k][0]; if (!p) continue; var em = p.email || '';
@@ -1990,7 +2048,6 @@ function subscribeMessages(convId) {
             else { setAuthMessage(data.payload.from + ' 提到了你','success'); setTimeout(() => setAuthMessage(''), 5000); }
         }
     });
-    // 消息变更
     ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
         var m = payload.new; if (!m || m.sender_email === currentEmail) return;
         if (m.conversation_id !== currentConversationId) return;
@@ -2001,7 +2058,8 @@ function subscribeMessages(convId) {
         document.querySelectorAll('.message[data-message-id="'+u.id+'"]').forEach(el => { el.replaceWith(createMessageElement({ id: u.id, content: u.content, sender_name: u.sender_name, sender_email: u.sender_email, isMe: u.sender_email === currentEmail, time: formatTimeShort(u.created_at), created_at: u.created_at })); });
     });
     ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
-        var el = messageList.querySelector('[data-message-id="'+payload.old.id+'"]'); if (el) el.remove();
+        var el = messageList ? messageList.querySelector('[data-message-id="'+payload.old.id+'"]') : null;
+        if (el) el.remove();
     });
     ch.subscribe(async status => { if (status === 'SUBSCRIBED') await ch.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName || currentEmail.split('@')[0], avatar_url: currentAvatarUrl, online_at: new Date().toISOString() }); });
     window.chatChannel = ch;
@@ -2025,41 +2083,60 @@ window.previewImage = function(url) {
     document.body.appendChild(o);
 };
 
-// ===================== 事件绑定 =====================
-attachBtn.addEventListener('click', e => { e.preventDefault(); showUploadOverlay(); setTimeout(() => fileInput.click(), 150); });
-function showUploadOverlay() { uploadOverlay.classList.add('active'); isUploadingFile = true; }
-function hideUploadOverlay() { uploadOverlay.classList.remove('active'); isUploadingFile = false; }
-closeUploadBtn.addEventListener('click', () => { hideUploadOverlay(); fileInput.value = ''; });
-fileInput.addEventListener('change', e => { hideUploadOverlay(); var f = e.target.files; for (var i=0; i<f.length; i++) addAttachment(f[i]); fileInput.value = ''; });
-uploadOverlay.addEventListener('click', e => { if (e.target === uploadOverlay) { hideUploadOverlay(); fileInput.value = ''; } });
-chatInput.addEventListener('dragover', e => { e.preventDefault(); chatInput.style.borderColor = 'var(--accent)'; });
-chatInput.addEventListener('dragleave', e => { e.preventDefault(); chatInput.style.borderColor = ''; });
-chatInput.addEventListener('drop', e => { e.preventDefault(); chatInput.style.borderColor = ''; var f = e.dataTransfer.files; for (var i=0; i<f.length; i++) if (f[i].type.startsWith('image/') || f[i].type.startsWith('audio/')) addAttachment(f[i]); });
-chatInput.addEventListener('paste', e => {
-    for (var i=0; i<e.clipboardData.items.length; i++) {
-        var item = e.clipboardData.items[i];
-        if (item.type.indexOf('image') !== -1) { e.preventDefault(); var f = item.getAsFile(); if (f) addAttachment(f); return; }
-        if (item.kind === 'file' && item.type.startsWith('audio/')) { e.preventDefault(); var f = item.getAsFile(); if (f) addAttachment(f); return; }
-    }
-});
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessageContent(chatInput.value); } });
-btnSend.addEventListener('click', () => sendMessageContent(chatInput.value));
+// ===================== 事件绑定（判空） =====================
+if (attachBtn) {
+    attachBtn.addEventListener('click', e => { e.preventDefault(); showUploadOverlay(); setTimeout(() => { if (fileInput) fileInput.click(); }, 150); });
+}
+function showUploadOverlay() { if (uploadOverlay) uploadOverlay.classList.add('active'); isUploadingFile = true; }
+function hideUploadOverlay() { if (uploadOverlay) uploadOverlay.classList.remove('active'); isUploadingFile = false; }
+if (closeUploadBtn) closeUploadBtn.addEventListener('click', () => { hideUploadOverlay(); if (fileInput) fileInput.value = ''; });
+if (fileInput) {
+    fileInput.addEventListener('change', e => { hideUploadOverlay(); var f = e.target.files; for (var i=0; i<f.length; i++) addAttachment(f[i]); fileInput.value = ''; });
+}
+if (uploadOverlay) {
+    uploadOverlay.addEventListener('click', e => { if (e.target === uploadOverlay) { hideUploadOverlay(); if (fileInput) fileInput.value = ''; } });
+}
+if (chatInput) {
+    chatInput.addEventListener('dragover', e => { e.preventDefault(); chatInput.style.borderColor = 'var(--accent)'; });
+    chatInput.addEventListener('dragleave', e => { e.preventDefault(); chatInput.style.borderColor = ''; });
+    chatInput.addEventListener('drop', e => { e.preventDefault(); chatInput.style.borderColor = ''; var f = e.dataTransfer.files; for (var i=0; i<f.length; i++) if (f[i].type.startsWith('image/') || f[i].type.startsWith('audio/')) addAttachment(f[i]); });
+    chatInput.addEventListener('paste', e => {
+        for (var i=0; i<e.clipboardData.items.length; i++) {
+            var item = e.clipboardData.items[i];
+            if (item.type.indexOf('image') !== -1) { e.preventDefault(); var f = item.getAsFile(); if (f) addAttachment(f); return; }
+            if (item.kind === 'file' && item.type.startsWith('audio/')) { e.preventDefault(); var f = item.getAsFile(); if (f) addAttachment(f); return; }
+        }
+    });
+    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessageContent(chatInput.value); } });
+}
+if (btnSend) btnSend.addEventListener('click', () => { if (chatInput) sendMessageContent(chatInput.value); });
 
-settingsNav.addEventListener('click', () => { settingsOverlay.classList.add('active'); });
-closeSettingsEl.addEventListener('click', closeSettingsFunc);
-settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) closeSettingsFunc(); });
-themeToggle.addEventListener('click', toggleTheme);
-settingsLogout.addEventListener('click', handleLogout);
-saveDisplayNameBtn.addEventListener('click', saveDisplayName);
-displayNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveDisplayName(); } });
-avatarUploadBtn.addEventListener('click', () => avatarFileInput.click());
-avatarFileInput.addEventListener('change', e => { if (e.target.files.length) uploadAvatar(e.target.files[0]); e.target.value = ''; });
-document.getElementById('checkUpdateBtn').addEventListener('click', checkForUpdate);
-onlineUsersBtn.addEventListener('click', e => { e.stopPropagation(); onlineModal.classList.toggle('active'); });
-closeOnlineModal.addEventListener('click', () => onlineModal.classList.remove('active'));
-document.addEventListener('click', e => { if (onlineModal.classList.contains('active') && !onlineModal.contains(e.target) && !onlineUsersBtn.contains(e.target)) onlineModal.classList.remove('active'); });
-closeProfileModal.addEventListener('click', () => profileModal.classList.remove('active'));
-profileModal.addEventListener('click', e => { if (e.target === profileModal) profileModal.classList.remove('active'); });
+if (settingsNav) settingsNav.addEventListener('click', () => { if (settingsOverlay) settingsOverlay.classList.add('active'); });
+if (closeSettingsEl) closeSettingsEl.addEventListener('click', closeSettingsFunc);
+if (settingsOverlay) {
+    settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) closeSettingsFunc(); });
+}
+if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+if (settingsLogout) settingsLogout.addEventListener('click', handleLogout);
+if (saveDisplayNameBtn) saveDisplayNameBtn.addEventListener('click', saveDisplayName);
+if (displayNameInput) {
+    displayNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveDisplayName(); } });
+}
+if (avatarUploadBtn) avatarUploadBtn.addEventListener('click', () => { if (avatarFileInput) avatarFileInput.click(); });
+if (avatarFileInput) {
+    avatarFileInput.addEventListener('change', e => { if (e.target.files.length) uploadAvatar(e.target.files[0]); e.target.value = ''; });
+}
+var checkBtn = document.getElementById('checkUpdateBtn');
+if (checkBtn) checkBtn.addEventListener('click', checkForUpdate);
+if (onlineUsersBtn) {
+    onlineUsersBtn.addEventListener('click', e => { e.stopPropagation(); if (onlineModal) onlineModal.classList.toggle('active'); });
+}
+if (closeOnlineModal) closeOnlineModal.addEventListener('click', () => { if (onlineModal) onlineModal.classList.remove('active'); });
+document.addEventListener('click', e => { if (onlineModal && onlineModal.classList.contains('active') && !onlineModal.contains(e.target) && !onlineUsersBtn.contains(e.target)) onlineModal.classList.remove('active'); });
+if (closeProfileModal) closeProfileModal.addEventListener('click', () => { if (profileModal) profileModal.classList.remove('active'); });
+if (profileModal) {
+    profileModal.addEventListener('click', e => { if (e.target === profileModal) profileModal.classList.remove('active'); });
+}
 
 // ===================== 全局事件 =====================
 function handleDocumentClick(e) {
@@ -2074,7 +2151,7 @@ function handleDocumentClick(e) {
     }
 }
 function handleDocumentScroll(e) {
-    if (e.target === messageList || e.target.closest('#messageList')) {
+    if (e.target === messageList || (messageList && e.target.closest('#messageList'))) {
         var target = e.target === messageList ? messageList : e.target.closest('#messageList');
         if (target && target.scrollTop <= 20 && !isLoadingMore && hasMoreMessages) loadHistory(true);
     }
@@ -2087,18 +2164,25 @@ function setupGlobalEventListeners() {
 }
 
 // ===================== 初始化 =====================
-document.getElementById('switchToSignup').addEventListener('click', () => switchMode('signup'));
-document.getElementById('togglePwd').addEventListener('click', function() {
-    var t = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-    authPassword.setAttribute('type', t);
-    this.textContent = t === 'password' ? '显示' : '隐藏';
-});
-btnLogin.addEventListener('click', handleAuth);
+var switcher = document.getElementById('switchToSignup');
+if (switcher) switcher.addEventListener('click', () => switchMode('signup'));
+var togglePwd = document.getElementById('togglePwd');
+if (togglePwd) {
+    togglePwd.addEventListener('click', function() {
+        if (!authPassword) return;
+        var t = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+        authPassword.setAttribute('type', t);
+        this.textContent = t === 'password' ? '显示' : '隐藏';
+    });
+}
+if (btnLogin) btnLogin.addEventListener('click', handleAuth);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { unreadCount = 0; document.title = 'MiniChat'; updateNewMsgButton(); } });
 window.addEventListener('beforeunload', async () => { if (window.chatChannel) try { await window.chatChannel.untrack(); } catch(e){} });
 loadTheme();
-document.getElementById('sidebarVersion').textContent = 'v'+APP_VERSION;
-document.getElementById('panelVersion').textContent = 'MiniChat v'+APP_VERSION;
+var sidebarVer = document.getElementById('sidebarVersion');
+if (sidebarVer) sidebarVer.textContent = 'v'+APP_VERSION;
+var panelVer = document.getElementById('panelVersion');
+if (panelVer) panelVer.textContent = 'MiniChat v'+APP_VERSION;
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js?v='+APP_VERSION);
 </script>
 </body>
