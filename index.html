@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.9.3" />
+    <meta name="version" content="2.9.4" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式保持与之前一致，未做更改 ===== */
@@ -566,7 +566,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '2.9.3';
+var APP_VERSION = '2.9.4';
 
 // ===================== 安全 DOM 获取（不输出警告） =====================
 function $safe(id) { return document.getElementById(id); }
@@ -611,25 +611,46 @@ var unreadCount = 0, isUploadingFile = false;
 var currentConversationId = '00000000-0000-0000-0000-000000000000';
 var conversationList = [];
 var presenceChannel = null;  // 独立 Presence 频道
+var failedAvatars = {};  // 头像加载失败缓存
 
 // ===================== 工具函数（优化缓存） =====================
 function bustCache(url) { 
     if (!url) return ''; 
     if (url.includes('ui-avatars.com')) return url;
-    // 只对有效的存储 URL 添加时间戳，若 URL 包含 supabase 但可能不存在，我们依旧添加，但会触发 400，但图片 onerror 会回退
-    var separator = url.includes('?') ? '&' : '?';
-    return url + separator + '_t=' + Date.now(); 
+    // 仅对包含 supabase 的 URL 添加缓存破坏参数
+    if (url.includes('supabase.co')) {
+        var separator = url.includes('?') ? '&' : '?';
+        return url + separator + '_t=' + Date.now();
+    }
+    return url;
 }
 function getAvatarUrl(email) {
     if (!email) return getDefaultAvatar('');
+    // 如果该邮箱的头像已被标记为失败，直接返回默认
+    if (failedAvatars[email]) {
+        return getDefaultAvatar(email);
+    }
     var info = currentUserMap[email] || {};
     var ou = Object.values(onlineUsers).find(u => u.email === email);
     var url = ou ? ou.avatar_url : info.avatar_url;
-    // 如果 URL 无效或为空，回退默认
     if (!url || url === 'null' || url === 'undefined') {
+        failedAvatars[email] = true;
         return getDefaultAvatar(email);
     }
     return bustCache(url);
+}
+function handleAvatarError(img, email) {
+    if (!email) {
+        img.src = getDefaultAvatar('用户');
+        return;
+    }
+    failedAvatars[email] = true;
+    // 同时更新 currentUserMap 中的头像为默认
+    if (currentUserMap[email]) {
+        currentUserMap[email].avatar_url = getDefaultAvatar(email);
+    }
+    img.src = getDefaultAvatar(email);
+    img.onerror = null; // 防止循环
 }
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -796,9 +817,18 @@ async function loadEmojiData() {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
+        const headers = { 'Cache-Control': 'no-cache, no-store' };
         const [emojiRes, kaoRes] = await Promise.all([
-            fetch('./data/emojihtb-all.json', { signal: controller.signal }).then(r => r.json()),
-            fetch('./data/kaomoji.json', { signal: controller.signal }).then(r => r.json())
+            fetch('./data/emojihtb-all.json?v=' + Date.now(), { 
+                signal: controller.signal, 
+                headers: headers,
+                cache: 'no-store'
+            }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
+            fetch('./data/kaomoji.json?v=' + Date.now(), { 
+                signal: controller.signal, 
+                headers: headers,
+                cache: 'no-store'
+            }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         ]);
         clearTimeout(timeout);
         const emojiGroups = {};
@@ -826,13 +856,9 @@ async function loadEmojiData() {
         allEmojiData = { ...emojiGroups, ...kaoGroups };
         renderTabs();
     } catch(e) {
-        if (e.name === 'AbortError') {
-            console.warn('表情加载超时，已忽略');
-        } else {
-            console.error('表情加载失败', e);
-        }
+        console.warn('表情加载失败:', e.message);
         emojiLoadFailed = true;
-        if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败，请刷新重试</div>';
+        if (emojiGrid) emojiGrid.innerHTML = '<div class="emoji-loading">表情加载失败</div>';
     }
 }
 function renderTabs() {
@@ -1190,7 +1216,7 @@ function createMessageElement(msg) {
     if (sender_email) div.dataset.senderEmail = sender_email;
     var isRecalled = (content === '（已撤回）');
     var aw = document.createElement('div'); aw.className = 'avatar-wrapper';
-    var ai = document.createElement('img'); ai.src = getAvatarUrl(sender_email); ai.alt = '头像'; ai.onerror = function(){ this.src = getDefaultAvatar(sender_email); };
+    var ai = document.createElement('img'); ai.src = getAvatarUrl(sender_email); ai.alt = '头像'; ai.onerror = function(){ handleAvatarError(this, sender_email); };
     aw.appendChild(ai);
     aw.addEventListener('click', e => { e.stopPropagation(); showUserProfile(sender_email); });
     aw.addEventListener('contextmenu', e => {
@@ -2040,7 +2066,7 @@ function renderOnlineUsers() {
     onlineUserList.innerHTML = '';
     if (!onlineCount) { onlineUserList.innerHTML = '<div class="online-empty">暂无其他在线用户</div>'; return; }
     for (var id in onlineUsers) { var u = onlineUsers[id]; var it = document.createElement('div'); it.className = 'online-user-item';
-        var avatar = document.createElement('img'); avatar.className = 'avatar-small'; avatar.src = bustCache(u.avatar_url || getDefaultAvatar(u.email)); avatar.onerror = function(){ this.src = getDefaultAvatar(u.email); };
+        var avatar = document.createElement('img'); avatar.className = 'avatar-small'; avatar.src = bustCache(u.avatar_url || getDefaultAvatar(u.email)); avatar.onerror = function(){ handleAvatarError(this, u.email); };
         avatar.addEventListener('click', e => { e.stopPropagation(); showUserProfile(u.email); });
         var dot = document.createElement('span'); dot.className = 'online-dot';
         var info = document.createElement('div'); info.className = 'online-user-info';
