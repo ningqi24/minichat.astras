@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.9.2" />
+    <meta name="version" content="2.9.3" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式保持与之前一致，未做更改 ===== */
@@ -371,6 +371,7 @@
         .sidebar .nav-item.active .sidebar-badge{right:10px}
         @media(max-width:768px){.sidebar .nav-item span{display:none}.sidebar-badge{right:6px}}
     </style>
+<base target="_blank">
 </head>
 <body>
 <div class="app" id="app">
@@ -565,14 +566,10 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '2.9.2';
+var APP_VERSION = '2.9.3';
 
 // ===================== 安全 DOM 获取（不输出警告） =====================
-function $safe(id) { 
-    var el = document.getElementById(id); 
-    // 仅在非生产环境（或调试模式）打印警告，这里静默处理
-    return el; 
-}
+function $safe(id) { return document.getElementById(id); }
 
 var loginOverlay = $safe('loginOverlay'), mainInterface = $safe('mainInterface');
 var authEmail = $safe('authEmail'), authPassword = $safe('authPassword'), authMessage = $safe('authMessage');
@@ -611,14 +608,15 @@ var onlineUsers = {}, onlineCount = 0, isSending = false, lastSendTime = 0;
 var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
 var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null;
 var unreadCount = 0, isUploadingFile = false;
-var currentConversationId = '00000000-0000-0000-0000-000000000000'; // 默认全局
+var currentConversationId = '00000000-0000-0000-0000-000000000000';
 var conversationList = [];
+var presenceChannel = null;  // 独立 Presence 频道
 
 // ===================== 工具函数（优化缓存） =====================
 function bustCache(url) { 
     if (!url) return ''; 
-    if (url.includes('ui-avatars.com')) return url; 
-    // 如果 URL 已有查询参数，用 & 连接，否则用 ?
+    if (url.includes('ui-avatars.com')) return url;
+    // 只对有效的存储 URL 添加时间戳，若 URL 包含 supabase 但可能不存在，我们依旧添加，但会触发 400，但图片 onerror 会回退
     var separator = url.includes('?') ? '&' : '?';
     return url + separator + '_t=' + Date.now(); 
 }
@@ -626,7 +624,12 @@ function getAvatarUrl(email) {
     if (!email) return getDefaultAvatar('');
     var info = currentUserMap[email] || {};
     var ou = Object.values(onlineUsers).find(u => u.email === email);
-    return bustCache(ou ? ou.avatar_url : info.avatar_url || getDefaultAvatar(email));
+    var url = ou ? ou.avatar_url : info.avatar_url;
+    // 如果 URL 无效或为空，回退默认
+    if (!url || url === 'null' || url === 'undefined') {
+        return getDefaultAvatar(email);
+    }
+    return bustCache(url);
 }
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -901,6 +904,54 @@ document.addEventListener('click', function(e) {
 });
 loadEmojiData();
 
+// ===================== 独立 Presence 频道 =====================
+function setupPresenceChannel() {
+    if (presenceChannel) {
+        presenceChannel.unsubscribe();
+        presenceChannel = null;
+    }
+    if (!currentUserId) return;
+    presenceChannel = supabase.channel('presence-global', {
+        config: { presence: { key: currentUserId } }
+    });
+    presenceChannel.on('presence', { event: 'sync' }, () => {
+        var state = presenceChannel.presenceState();
+        var us = {}, c = 0;
+        for (var k in state) {
+            var p = state[k][0];
+            if (!p) continue;
+            var em = p.email || '';
+            us[k] = {
+                user_id: k,
+                display_name: p.display_name || '匿名',
+                email: em,
+                avatar_url: p.avatar_url || getDefaultAvatar(em)
+            };
+            // 更新 currentUserMap 以便头像显示
+            if (p.avatar_url && (!currentUserMap[em] || currentUserMap[em].avatar_url !== p.avatar_url)) {
+                currentUserMap[em] = { ...currentUserMap[em], avatar_url: p.avatar_url };
+                refreshAllAvatars(em, p.avatar_url);
+            }
+            if (p.display_name) currentUserMap[em] = { ...currentUserMap[em], display_name: p.display_name };
+            c++;
+        }
+        onlineUsers = us;
+        onlineCount = c;
+        updateOnlineUI();
+    });
+    presenceChannel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+            await presenceChannel.track({
+                user_id: currentUserId,
+                email: currentEmail,
+                display_name: currentDisplayName || currentEmail.split('@')[0],
+                avatar_url: currentAvatarUrl,
+                online_at: new Date().toISOString()
+            }).catch(err => console.warn('Presence track 失败:', err));
+        }
+    });
+}
+
 // ===================== 聊天核心 =====================
 function enterChat() {
     if (!loginOverlay || !mainInterface) return;
@@ -909,6 +960,8 @@ function enterChat() {
     hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
     document.title = 'MiniChat';
     loadDisplayName().then(() => {
+        // 先建立 Presence 频道
+        setupPresenceChannel();
         loadConversations().then(() => {
             if (conversationList.length) {
                 const first = conversationList[0];
@@ -937,6 +990,12 @@ function enterChat() {
 }
 
 async function handleLogout() {
+    // 清理 Presence
+    if (presenceChannel) {
+        try { await presenceChannel.untrack(); } catch(e) {}
+        presenceChannel.unsubscribe();
+        presenceChannel = null;
+    }
     if (window.chatChannel) { try { await window.chatChannel.untrack(); } catch(e){} window.chatChannel.unsubscribe(); window.chatChannel = null; }
     await supabase.auth.signOut();
     currentEmail = ''; currentUserId = ''; currentDisplayName = '';
