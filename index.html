@@ -11,9 +11,10 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="2.8.4" />
+    <meta name="version" content="2.9.0" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
+        /* ===== 现有样式保持不变，仅增加少量会话列表相关样式 ===== */
         :root{--bg-primary:#0d0d0d;--bg-secondary:#1a1a1a;--bg-sidebar:#121212;--bg-card:#1e1e1e;--bg-input:#2a2a2a;--bg-hover:#2a2a2a;--bg-overlay:rgba(0,0,0,0.7);--text-primary:#e8e8e8;--text-secondary:#a0a0a0;--text-muted:#6b6b6b;--accent:#3b82f6;--accent-hover:#2563eb;--border-color:#2a2a2a;--shadow:0 8px 30px rgba(0,0,0,0.6);--radius:16px;--radius-sm:10px;--transition:0.2s ease;--avatar-size:28px;--mention-color:#fbbf24;--bubble-me:#0f0f0f;--bubble-me-border:#1a1a1a;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.1);--code-border:rgba(128,128,128,0.2);--link-color:#60a5fa}
         body.light-theme{--bg-primary:#f0f2f5;--bg-secondary:#fff;--bg-sidebar:#f7f8fa;--bg-card:#fff;--bg-input:#eef0f2;--bg-hover:#e8eaed;--bg-overlay:rgba(255,255,255,0.7);--text-primary:#1e293b;--text-secondary:#64748b;--text-muted:#94a3b8;--border-color:#d0d5dd;--shadow:0 8px 30px rgba(0,0,0,0.08);--bubble-me:#dfe3e8;--bubble-me-border:#c8cdd4;--quote-bg:rgba(59,130,246,0.06);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.06);--code-border:rgba(0,0,0,0.1);--link-color:#2563eb}
         *{margin:0;padding:0;box-sizing:border-box}
@@ -68,7 +69,7 @@
         .sidebar{width:280px;flex-shrink:0;background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;padding:20px 16px}
         .sidebar .logo-area{display:flex;align-items:center;padding-bottom:20px;border-bottom:1px solid var(--border-color);margin-bottom:20px}
         .sidebar .logo-area img{height:36px;max-width:100%;object-fit:contain}
-        .sidebar .nav{flex:1}
+        .sidebar .nav{flex:1;overflow-y:auto}
         .sidebar .nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;transition:all .2s ease;margin-bottom:4px;font-weight:500}
         .sidebar .nav-item:hover{background:var(--bg-hover);color:var(--text-primary);transform:translateX(2px)}
         .sidebar .nav-item:active{transform:scale(.97)}
@@ -327,7 +328,6 @@
         .typing-dots span:nth-child(3){animation-delay:0.4s}
         @keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:0.3}30%{transform:translateY(-4px);opacity:1}}
         @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px}.chat-main .input-area{padding:10px 16px 16px;gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.attachment-area{padding:4px 12px}.mention-dropdown{bottom:calc(100% + 2px)}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}.quote-jump-modal .modal-box{padding:20px}.version-update-modal .modal-box{padding:24px}
-            /* 设置面板移动端优化 */
             .settings-panel { padding: 20px 16px; }
             .settings-group { padding: 16px; }
             .setting-item { flex-wrap: wrap; gap: 8px; }
@@ -345,7 +345,7 @@
             .nickname-row input { font-size: 13px; padding: 8px 10px; }
             .btn-save, .btn-danger, .btn-accent { padding: 8px 12px; font-size: 12px; }
         }
-        /* === 搜索栏 & 高亮 === */
+        /* 搜索栏 */
         .search-bar{display:none;padding:10px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);align-items:center;gap:8px;animation:searchBarIn .18s ease-out}
         .search-bar.open{display:flex}
         @keyframes searchBarIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
@@ -391,22 +391,20 @@
     <div class="main-interface hidden" id="mainInterface">
         <aside class="sidebar">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><span class="logo-text">MiniChat</span><span class="version-tag" id="sidebarVersion"></span></div>
-            <nav class="nav">
-                <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>聊天</span><span class="sidebar-badge" id="sidebarUnreadBadge">0</span></div>
-                <div class="nav-item" id="settingsNav"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>设置</span></div>
+            <nav class="nav" id="conversationListContainer">
+                <!-- 会话列表动态生成 -->
             </nav>
-            <div class="user-section"><div class="user-email" id="sidebarUserEmail">未登录</div></div>
+            <div class="user-section">
+                <div class="user-email" id="sidebarUserEmail">未登录</div>
+            </div>
         </aside>
         <main class="chat-main">
             <div class="chat-header">
-                <div class="chat-title">全局聊天<small># 所有成员</small></div>
+                <div class="chat-title" id="chatTitle">全局聊天<small># 所有成员</small></div>
                 <div class="chat-header-right">
                     <span id="onlineStatus">● 在线</span>
                     <button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"/>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                        </svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </button>
                     <button class="online-users-btn" id="onlineUsersBtn" title="在线用户">
                         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -557,54 +555,78 @@
     </div>
     <div class="context-menu" id="contextMenu">
         <div class="menu-item" id="ctxMention"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>@他</div>
+        <div class="menu-item" id="ctxDirect"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>发起私聊</div>
     </div>
 </div>
 
 <script>
-var APP_VERSION = '2.8.4';
-// === 新消息浮动按钮逻辑 ===
-var newMessagesBtn = document.getElementById('newMessagesBtn');
-var newMsgBadge = document.getElementById('newMsgBadge');
-var isUserAtBottom = true;
+// ===================== 版本号 =====================
+var APP_VERSION = '2.9.0';
 
-function checkIfAtBottom() {
-    if (!messageList) return true;
-    var threshold = 50;
-    return (messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight) < threshold;
+// ===================== DOM 引用 =====================
+var $ = function(id) { return document.getElementById(id); };
+var loginOverlay = $('loginOverlay'), mainInterface = $('mainInterface');
+var authEmail = $('authEmail'), authPassword = $('authPassword'), authMessage = $('authMessage');
+var authTitle = $('authTitle'), authSub = $('authSub'), btnLogin = $('btnLogin');
+var messageList = $('messageList'), chatInput = $('chatInput');
+var sidebarUserEmail = $('sidebarUserEmail'), btnSend = $('btnSend');
+var fileInput = $('fileInput'), attachBtn = $('attachBtn');
+var settingsOverlay = $('settingsOverlay'), themeToggle = $('themeToggle');
+var settingsLogout = $('settingsLogout'), closeSettingsEl = $('closeSettings');
+var settingsNav = $('settingsNav'), displayNameInput = $('displayNameInput');
+var saveDisplayNameBtn = $('saveDisplayName'), displayNameMessage = $('displayNameMessage');
+var onlineStatus = $('onlineStatus'), onlineBadge = $('onlineBadge');
+var onlineModal = $('onlineModal'), onlineUserList = $('onlineUserList');
+var modalOnlineCount = $('modalOnlineCount'), onlineUsersBtn = $('onlineUsersBtn');
+var closeOnlineModal = $('closeOnlineModal'), avatarPreview = $('avatarPreview');
+var avatarUploadBtn = $('avatarUploadBtn'), avatarFileInput = $('avatarFileInput');
+var avatarUploadStatus = $('avatarUploadStatus'), profileModal = $('userProfileModal');
+var profileAvatar = $('profileAvatar'), profileDisplayName = $('profileDisplayName');
+var profileEmail = $('profileEmail'), profileStatus = $('profileStatus');
+var closeProfileModal = $('closeProfileModal'), emojiBtn = $('emojiBtn');
+var emojiPanel = $('emojiPanel'), emojiTabs = $('emojiTabs'), emojiGrid = $('emojiGrid');
+var attachmentArea = $('attachmentArea'), mentionDropdown = $('mentionDropdown');
+var uploadOverlay = $('uploadOverlay'), closeUploadBtn = $('closeUploadBtn');
+var quoteJumpModal = $('quoteJumpModal'), closeQuoteJumpBtn = $('closeQuoteJumpBtn');
+var qjAuthor = $('qjAuthor'), qjTime = $('qjTime'), qjContent = $('qjContent');
+var qjCancel = $('qjCancel'), qjJump = $('qjJump'), qjStatus = $('qjStatus');
+var contextMenu = $('contextMenu'), ctxMention = $('ctxMention'), ctxDirect = $('ctxDirect');
+var searchBar = $('searchBar'), searchInput = $('searchInput'), searchStatus = $('searchStatus');
+var searchBtn = $('searchBtn'), searchPrev = $('searchPrev'), searchNext = $('searchNext'), searchClose = $('searchClose');
+var chatTitle = $('chatTitle');
+
+// ===================== 全局状态 =====================
+var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '';
+var isLoginMode = true, currentUserMap = {}, attachments = [];
+var onlineUsers = {}, onlineCount = 0, isSending = false, lastSendTime = 0;
+var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
+var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null;
+var unreadCount = 0, isUploadingFile = false;
+var currentConversationId = '00000000-0000-0000-0000-000000000000'; // 默认全局
+var conversationList = [];
+
+// ===================== 工具函数 =====================
+function bustCache(url) { if (!url) return ''; if (url.includes('ui-avatars.com')) return url; return url + (url.includes('?')?'&':'?') + '_t=' + Date.now(); }
+function getAvatarUrl(email) {
+    if (!email) return getDefaultAvatar('');
+    var info = currentUserMap[email] || {};
+    var ou = Object.values(onlineUsers).find(u => u.email === email);
+    return bustCache(ou ? ou.avatar_url : info.avatar_url || getDefaultAvatar(email));
 }
-
-function updateNewMsgButton() {
-    if (isUserAtBottom) {
-        unreadCount = 0;
-        document.title = 'MiniChat';
-        newMessagesBtn.classList.remove('show');
-        newMsgBadge.style.display = 'none';
-    } else {
-        newMessagesBtn.classList.add('show');
-        if (unreadCount > 0) {
-            newMsgBadge.textContent = unreadCount;
-            newMsgBadge.style.display = 'block';
-        } else {
-            newMsgBadge.style.display = 'none';
-        }
-    }
-    updateSidebarBadge();
+function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
+function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+function formatTime(iso) { return new Date(iso).toLocaleString('zh-CN',{hour12:false}); }
+function formatTimeShort(iso) { return new Date(iso).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
+function setAuthMessage(msg, type) {
+    authMessage.textContent = msg;
+    authMessage.className = 'auth-message';
+    if (type === 'success') authMessage.classList.add('success');
+    if (type === 'error') authMessage.classList.add('error');
 }
+function autoResizeTextarea() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; }
+function insertAtCursor(text) { chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input',{bubbles:true})); autoResizeTextarea(); }
 
-function updateSidebarBadge() {
-    var badge = document.getElementById('sidebarUnreadBadge');
-    if (!badge) return;
-    if (unreadCount > 0) {
-        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        badge.classList.add('show');
-    } else {
-        badge.classList.remove('show');
-    }
-}
-
-// 事件绑定移到 DOM 引用声明之后,避免 messageList 未定义报错
-
-// === 版本检测 ===
+// ===================== 版本检测 =====================
 function checkForUpdate() {
     var currentVersion = APP_VERSION;
     document.getElementById('currentVerDisplay').textContent = currentVersion;
@@ -636,627 +658,13 @@ document.getElementById('versionRefresh').addEventListener('click', function() {
     else location.reload(true);
 });
 document.getElementById('versionLater').addEventListener('click', function() { document.getElementById('versionUpdateModal').classList.remove('active'); });
-// === Supabase ===
+
+// ===================== Supabase 初始化 =====================
 var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
 if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// === DOM 引用 ===
-var $ = function(id) { return document.getElementById(id); };
-var loginOverlay = $('loginOverlay'), mainInterface = $('mainInterface'), authEmail = $('authEmail'), authPassword = $('authPassword'), authMessage = $('authMessage'), authTitle = $('authTitle'), authSub = $('authSub'), btnLogin = $('btnLogin'), messageList = $('messageList'), chatInput = $('chatInput'), sidebarUserEmail = $('sidebarUserEmail'), btnSend = $('btnSend'), fileInput = $('fileInput'), attachBtn = $('attachBtn'), settingsOverlay = $('settingsOverlay'), themeToggle = $('themeToggle'), settingsLogout = $('settingsLogout'), closeSettingsEl = $('closeSettings'), settingsNav = $('settingsNav'), displayNameInput = $('displayNameInput'), saveDisplayNameBtn = $('saveDisplayName'), displayNameMessage = $('displayNameMessage'), onlineStatus = $('onlineStatus'), onlineBadge = $('onlineBadge'), onlineModal = $('onlineModal'), onlineUserList = $('onlineUserList'), modalOnlineCount = $('modalOnlineCount'), onlineUsersBtn = $('onlineUsersBtn'), closeOnlineModal = $('closeOnlineModal'), avatarPreview = $('avatarPreview'), avatarUploadBtn = $('avatarUploadBtn'), avatarFileInput = $('avatarFileInput'), avatarUploadStatus = $('avatarUploadStatus'), profileModal = $('userProfileModal'), profileAvatar = $('profileAvatar'), profileDisplayName = $('profileDisplayName'), profileEmail = $('profileEmail'), profileStatus = $('profileStatus'), closeProfileModal = $('closeProfileModal'), emojiBtn = $('emojiBtn'), emojiPanel = $('emojiPanel'), emojiTabs = $('emojiTabs'), emojiGrid = $('emojiGrid'), attachmentArea = $('attachmentArea'), mentionDropdown = $('mentionDropdown'), uploadOverlay = $('uploadOverlay'), closeUploadBtn = $('closeUploadBtn'), quoteJumpModal = $('quoteJumpModal'), closeQuoteJumpBtn = $('closeQuoteJumpBtn'), qjAuthor = $('qjAuthor'), qjTime = $('qjTime'), qjContent = $('qjContent'), qjCancel = $('qjCancel'), qjJump = $('qjJump'), qjStatus = $('qjStatus'), contextMenu = $('contextMenu'), ctxMention = $('ctxMention');
-var searchBar = $('searchBar'), searchInput = $('searchInput'), searchStatus = $('searchStatus'), searchBtn = $('searchBtn'), searchPrev = $('searchPrev'), searchNext = $('searchNext'), searchClose = $('searchClose');
-var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '', isLoginMode = true, currentUserMap = {}, attachments = [], onlineUsers = {}, onlineCount = 0, isSending = false, lastSendTime = 0;
-var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
-var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null, unreadCount = 0, isUploadingFile = false;
 
-// === 消息列表与新消息按钮事件 ===
-newMessagesBtn.addEventListener('click', function() {
-    messageList.scrollTop = messageList.scrollHeight;
-    isUserAtBottom = true;
-    unreadCount = 0;
-    updateNewMsgButton();
-});
-
-messageList.addEventListener('scroll', function() {
-    isUserAtBottom = checkIfAtBottom();
-    updateNewMsgButton();
-});
-
-// === 消息搜索 ===
-var Search = {
-    open: false,
-    term: '',
-    results: [],          // 本地高亮的消息元素(顺序)
-    remoteMatches: [],    // 远程返回的全部匹配 [id, content, created_at, ...]
-    serverTotal: 0,       // 远程返回的匹配数
-    index: -1,            // 当前选中项在 results 中的下标
-    debounceId: null,
-    refreshTimer: null,
-    observer: null,
-    observerPaused: false,
-    serverSearchToken: 0, // 用于取消过期请求
-    serverSearching: false,
-    loadingHistory: false,
-
-    init: function() {
-        this.elBar     = searchBar;
-        this.elInput   = searchInput;
-        this.elStatus  = searchStatus;
-        this.elBtn     = searchBtn;
-        this.elPrev    = searchPrev;
-        this.elNext    = searchNext;
-        this.elClose   = searchClose;
-        this.elClear   = document.getElementById('searchClearInput');
-
-        if (this.elBtn)   this.elBtn.addEventListener('click',   this.toggle.bind(this));
-        if (this.elClose) this.elClose.addEventListener('click', this.close.bind(this));
-        if (this.elPrev)  this.elPrev.addEventListener('click',  this.prev.bind(this));
-        if (this.elNext)  this.elNext.addEventListener('click',  this.next.bind(this));
-        if (this.elClear) this.elClear.addEventListener('click', this.clearInput.bind(this));
-
-        if (this.elInput) {
-            this.elInput.addEventListener('input', this.onInput.bind(this));
-            this.elInput.addEventListener('keydown', this.onKeyDown.bind(this));
-        }
-
-        // 全局快捷键 Ctrl/Cmd+F (主界面可见时拦截)
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
-                if (mainInterface && mainInterface.style.display !== 'none') {
-                    e.preventDefault();
-                    Search.toggle();
-                }
-            }
-        });
-
-        this.setupObserver();
-    },
-
-    setupObserver: function() {
-        if (typeof MutationObserver === 'undefined' || !messageList) return;
-        var self = this;
-        this.observer = new MutationObserver(function() {
-            if (self.observerPaused || !self.term || !self.open) return;
-            clearTimeout(self.refreshTimer);
-            self.refreshTimer = setTimeout(function() {
-                // DOM 变化只重跑本地高亮,不重新查服务器
-                if (self.term && self.open) self.runSearch(self.term, true, true);
-            }, 300);
-        });
-        this.observer.observe(messageList, { childList: true, subtree: true });
-    },
-
-    // 用 disconnect/reconnect 避免观察自己造成的死循环
-    withObserverPaused: function(fn) {
-        if (this.observer) this.observer.disconnect();
-        this.observerPaused = true;
-        try { fn(); } finally {
-            this.observerPaused = false;
-            if (this.observer && this.open && messageList) {
-                this.observer.observe(messageList, { childList: true, subtree: true });
-            }
-        }
-    },
-
-    toggle: function() {
-        if (this.open) this.close(); else this.openPanel();
-    },
-
-    openPanel: function() {
-        if (this.open) return;
-        this.open = true;
-        this.elBar.classList.add('open');
-        var self = this;
-        setTimeout(function() { self.elInput.focus(); if (self.term) self.elInput.select(); }, 30);
-    },
-
-    close: function() {
-        if (!this.open) return;
-        var self = this;
-        this.withObserverPaused(function() {
-            self.open = false;
-            self.elBar.classList.remove('open');
-            self.elInput.value = '';
-            self.setClearVisible(false);
-            self.term = '';
-            self.results = [];
-            self.index = -1;
-            self.setStatus('');
-            self.clearHighlights();
-            self.updateNavButtons();
-        });
-    },
-
-    clearInput: function() {
-        this.elInput.value = '';
-        this.setClearVisible(false);
-        this.runSearchImmediately('');
-        this.elInput.focus();
-    },
-
-    onInput: function() {
-        var v = this.elInput.value;
-        this.setClearVisible(!!v);
-        clearTimeout(this.debounceId);
-        var self = this;
-        this.debounceId = setTimeout(function() {
-            self.runSearch(v, false);
-        }, 180);
-    },
-
-    runSearchImmediately: function(term) {
-        clearTimeout(this.debounceId);
-        this.runSearch(term, false);
-    },
-
-    onKeyDown: function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            // 有结果才跳转,否则不响应
-            if (this.results.length > 0) {
-                if (e.shiftKey) this.prev(); else this.next();
-            }
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            this.close();
-        } else if (e.key === 'Backspace' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            this.clearInput();
-        }
-    },
-
-    runSearch: function(term, isRefresh, skipServerSearch) {
-        if (!this.open) return;
-        var self = this;
-
-        // 记住刷新前的当前消息,保持焦点
-        var prevMsg = (this.index >= 0 && this.index < this.results.length) ? this.results[this.index] : null;
-
-        this.withObserverPaused(function() {
-            self.clearHighlights();
-            self.term = term;
-
-            if (!term || !term.trim()) {
-                self.results = [];
-                self.index = -1;
-                self.remoteMatches = [];
-                self.serverTotal = 0;
-                self.setStatus('');
-                self.updateNavButtons();
-                return;
-            }
-
-            var matched = self.localSearchAndHighlight(term);
-            self.results = matched;
-
-            // 选择下标
-            if (!isRefresh) {
-                self.index = matched.length > 0 ? 0 : -1;
-            } else if (prevMsg && matched.indexOf(prevMsg) >= 0) {
-                self.index = matched.indexOf(prevMsg);
-            } else if (matched.length > 0) {
-                self.index = 0;
-            } else {
-                self.index = -1;
-            }
-
-            if (matched.length > 0) {
-                self.setStatus(self.formatStatus(), false);
-                self.scrollToCurrent();
-            } else {
-                self.index = -1;
-                // 本地没有但可能服务器有;如果服务器还在查,显示进度
-                self.setStatus(self.serverSearching ? '搜索中…' : '无结果', !self.serverSearching);
-            }
-            self.updateNavButtons();
-        });
-
-        if (skipServerSearch) return;
-        if (!term || !term.trim()) return;
-        this.runServerSearch(term);
-    },
-
-    // 只在 DOM 中查找并高亮,不入远端
-    localSearchAndHighlight: function(term) {
-        var regex = new RegExp(escRegex(term), 'gi');
-        var messages = messageList.querySelectorAll('.message');
-        var matched = [];
-        for (var i = 0; i < messages.length; i++) {
-            if (highlightInElement(messages[i], regex)) matched.push(messages[i]);
-        }
-        return matched;
-    },
-
-    formatStatus: function() {
-        var n = this.results.length;
-        if (n === 0) return this.serverSearching ? '搜索中…' : '';
-        var total = this.serverTotal;
-        var label = (this.index + 1) + ' / ' + n;
-        if (total && total > n) label += '  (共 ' + total + ')';
-        return label;
-    },
-
-    // 远端搜索 + 按需加载老历史
-    runServerSearch: async function(term) {
-        this.serverSearchToken += 1;
-        var token = this.serverSearchToken;
-        this.serverSearching = true;
-        var self = this;
-
-        var remote = [];
-        try {
-            remote = await searchMessagesRemote(term);
-        } catch (e) {
-            remote = [];
-        }
-        // 期间用户改了词 / 关闭了面板 / 启动了新搜索
-        if (token !== this.serverSearchToken || !this.open || this.term !== term) {
-            if (token === this.serverSearchToken) this.serverSearching = false;
-            return;
-        }
-        this.serverSearching = false;
-        this.remoteMatches = remote;
-        this.serverTotal = remote.length;
-
-        if (remote.length === 0) {
-            // 最终状态:本地为空、远程也为空 → 无结果
-            this.runSearch(term, true, true);
-            return;
-        }
-
-        // 找出不在 DOM 中的远端结果
-        var missing = [];
-        for (var i = 0; i < remote.length; i++) {
-            var r = remote[i];
-            if (!document.querySelector('[data-message-id="' + r.id + '"]')) {
-                missing.push(r);
-            }
-        }
-
-        if (missing.length === 0) {
-            // 都在 DOM 里,重跑本地高亮
-            this.runSearch(term, true, true);
-            return;
-        }
-
-        // 需要加载老历史:找到 missing 中最老的 created_at
-        var oldestNeeded = missing[0].created_at;
-        for (var j = 1; j < missing.length; j++) {
-            if (missing[j].created_at < oldestNeeded) oldestNeeded = missing[j].created_at;
-        }
-
-        // 如果 oldestNeeded 比当前已加载的最新还新(不应该,除非并发变动),跳过加载
-        if (oldestTimestamp && oldestNeeded >= oldestTimestamp) {
-            this.runSearch(term, true, true);
-            return;
-        }
-
-        // 显示进度并加载
-        this.loadingHistory = true;
-        this.setStatus('加载历史…', false);
-        var lastStatusUpdate = 0;
-        try {
-            await loadHistoryForSearch(oldestNeeded, function(pages) {
-                // 节流:每 3 页才更新一次状态
-                if (pages - lastStatusUpdate >= 3 || pages === 1) {
-                    lastStatusUpdate = pages;
-                    self.setStatus('加载历史… (' + (pages * PAGE_SIZE) + '+)', false);
-                }
-            });
-        } catch (e) {
-            console.warn('[Search] 加载历史失败:', e);
-        }
-
-        // 加载完后再检查一次
-        if (token !== this.serverSearchToken || !this.open || this.term !== term) return;
-        this.loadingHistory = false;
-        this.runSearch(term, true, true);
-    },
-
-    next: function() {
-        if (this.results.length === 0) return;
-        this.index = (this.index + 1) % this.results.length;
-        this.setStatus((this.index + 1) + ' / ' + this.results.length, false);
-        this.scrollToCurrent();
-    },
-
-    prev: function() {
-        if (this.results.length === 0) return;
-        this.index = (this.index - 1 + this.results.length) % this.results.length;
-        this.setStatus((this.index + 1) + ' / ' + this.results.length, false);
-        this.scrollToCurrent();
-    },
-
-    scrollToCurrent: function() {
-        if (this.index < 0 || this.index >= this.results.length) return;
-        var prevs = document.querySelectorAll('.search-highlight.current');
-        for (var i = 0; i < prevs.length; i++) prevs[i].classList.remove('current');
-        var el = this.results[this.index];
-        if (!el) return;
-        var hl = el.querySelector('.search-highlight');
-        if (hl) {
-            hl.classList.add('current');
-            // 重新触发动画
-            hl.style.animation = 'none';
-            // eslint-disable-next-line no-unused-expressions
-            hl.offsetHeight;
-            hl.style.animation = '';
-            try { hl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-            catch (e) { hl.scrollIntoView(); }
-        }
-    },
-
-    updateNavButtons: function() {
-        var has = this.results.length > 0;
-        if (this.elPrev) this.elPrev.disabled = !has;
-        if (this.elNext) this.elNext.disabled = !has;
-    },
-
-    clearHighlights: function() {
-        var msgs = document.querySelectorAll('.message[data-search-orig]');
-        for (var i = 0; i < msgs.length; i++) {
-            msgs[i].innerHTML = msgs[i].getAttribute('data-search-orig');
-            msgs[i].removeAttribute('data-search-orig');
-        }
-        var currents = document.querySelectorAll('.search-highlight.current');
-        for (var j = 0; j < currents.length; j++) currents[j].classList.remove('current');
-    },
-
-    setStatus: function(text, isError) {
-        if (!this.elStatus) return;
-        this.elStatus.textContent = text;
-        if (isError) this.elStatus.classList.add('no-result');
-        else this.elStatus.classList.remove('no-result');
-    },
-
-    setClearVisible: function(show) {
-        if (!this.elClear) return;
-        if (show) this.elClear.classList.add('visible');
-        else this.elClear.classList.remove('visible');
-    }
-};
-
-function escRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// 只在文本节点上高亮,不动结构元素(头像/按钮/@提及)
-function highlightInElement(root, regex) {
-    if (!root.hasAttribute('data-search-orig')) {
-        root.setAttribute('data-search-orig', root.innerHTML);
-    }
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: function(n) {
-            if (!n.parentElement) return NodeFilter.FILTER_REJECT;
-            if (n.parentElement.closest('script,style,.search-highlight')) return NodeFilter.FILTER_REJECT;
-            return NodeFilter.FILTER_ACCEPT;
-        }
-    });
-    var textNodes = [];
-    var n;
-    while ((n = walker.nextNode())) textNodes.push(n);
-
-    var matched = false;
-    for (var i = 0; i < textNodes.length; i++) {
-        var tn = textNodes[i];
-        regex.lastIndex = 0;
-        var text = tn.nodeValue;
-        if (!regex.test(text)) continue;
-        matched = true;
-        regex.lastIndex = 0;
-
-        var frag = document.createDocumentFragment();
-        var lastIdx = 0;
-        var m;
-        while ((m = regex.exec(text)) !== null) {
-            if (m.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
-            var span = document.createElement('span');
-            span.className = 'search-highlight';
-            span.textContent = m[0];
-            frag.appendChild(span);
-            lastIdx = m.index + m[0].length;
-            if (m[0].length === 0) regex.lastIndex++;
-        }
-        if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
-        tn.parentNode.replaceChild(frag, tn);
-    }
-    return matched;
-}
-
-Search.init();
-
-// === 启动画面 ===
-(function() {
-    var DURATION = 2000;
-    var splash = document.getElementById('splash');
-    function hide() {
-        if (!splash) return;
-        splash.classList.add('hidden');
-        setTimeout(function(){ splash.remove(); }, 600);
-        if (loginOverlay) loginOverlay.classList.remove('hidden');
-        try {
-            var raw = localStorage.getItem('minichat_user');
-            if (raw) {
-                var user = JSON.parse(raw);
-                if (user && user.email) {
-                    window.currentEmail = user.email;
-                    window.currentUserId = user.id || '';
-                    window.supabase.auth.getSession().then(function(data) {
-                        if (data.data.session && typeof window.enterChat === 'function') window.enterChat();
-                    });
-                }
-            }
-        } catch(e) {}
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(hide, DURATION); });
-    else setTimeout(hide, DURATION);
-})();
-
-// === 主题 ===
-function loadTheme() {
-    var saved = localStorage.getItem('minichat_theme');
-    if (saved === 'light') {
-        document.body.classList.add('light-theme');
-        themeToggle.classList.remove('active');
-    } else {
-        document.body.classList.remove('light-theme');
-        themeToggle.classList.add('active');
-    }
-}
-function toggleTheme() {
-    var isLight = document.body.classList.toggle('light-theme');
-    themeToggle.classList.toggle('active');
-    localStorage.setItem('minichat_theme', isLight ? 'light' : 'dark');
-}
-
-// === 表情面板 (修复 unicode 显示 + 颜文字实体解码) ===
-function toEmojiChar(code) {
-    if (typeof code !== 'string') return code;
-    if (code.startsWith('U+')) {
-        return String.fromCodePoint(parseInt(code.slice(2), 16));
-    }
-    if (/^[0-9A-Fa-f]+$/.test(code)) {
-        return String.fromCodePoint(parseInt(code, 16));
-    }
-    return code;
-}
-
-function decodeHtmlEntities(str) {
-    if (typeof str !== 'string') return str;
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = str;
-    return textarea.value;
-}
-
-var allEmojiData = {};
-async function loadEmojiData() {
-    try {
-        const [emojiRes, kaoRes] = await Promise.all([
-            fetch('./data/emojihtb-all.json').then(r => r.json()),
-            fetch('./data/kaomoji.json').then(r => r.json())
-        ]);
-        const emojiGroups = {};
-        if (Array.isArray(emojiRes)) {
-            emojiRes.forEach(item => {
-                const cat = item.category || '其他';
-                if (!emojiGroups[cat]) emojiGroups[cat] = [];
-                let unicodeStr = item.unicode;
-                if (Array.isArray(unicodeStr)) unicodeStr = unicodeStr[0];
-                if (unicodeStr) {
-                    emojiGroups[cat].push(toEmojiChar(unicodeStr));
-                } else if (item.htmlCode && item.htmlCode.length) {
-                    let htmlStr = Array.isArray(item.htmlCode) ? item.htmlCode[0] : item.htmlCode;
-                    emojiGroups[cat].push({ __html: htmlStr });
-                }
-            });
-        } else {
-            Object.entries(emojiRes).forEach(([cat, list]) => { emojiGroups[cat] = list; });
-        }
-        // 处理颜文字 - 解码实体
-        const kaoGroups = {};
-        for (const [cat, list] of Object.entries(kaoRes)) {
-            const decodedList = list.map(item => decodeHtmlEntities(item));
-            kaoGroups['颜文字_' + cat] = decodedList;
-        }
-        allEmojiData = { ...emojiGroups, ...kaoGroups };
-        renderTabs();
-    } catch(e) {
-        console.error('表情加载失败', e);
-        emojiGrid.innerHTML = '<div class="emoji-loading">加载失败</div>';
-    }
-}
-
-function renderTabs() {
-    emojiTabs.innerHTML = '';
-    const cats = Object.keys(allEmojiData);
-    cats.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.className = 'emoji-tab';
-        // 显示示例表情
-        const firstItem = allEmojiData[cat][0];
-        let exampleChar = '';
-        if (typeof firstItem === 'string') {
-            exampleChar = firstItem;
-        } else if (firstItem && firstItem.__html) {
-            exampleChar = firstItem.__html.replace(/<[^>]*>/g, ''); // 去除HTML标签，取文本
-        }
-        if (exampleChar) {
-            btn.textContent = exampleChar;
-        } else {
-            btn.textContent = cat;
-        }
-        btn.title = cat; // 悬停显示分类名
-        btn.addEventListener('click', () => switchCategory(cat));
-        emojiTabs.appendChild(btn);
-    });
-    if (cats.length) switchCategory(cats[0]);
-}
-
-function switchCategory(cat) {
-    document.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
-    const tab = [...emojiTabs.children].find(t => t.title === cat);
-    if (tab) tab.classList.add('active');
-    renderGrid(allEmojiData[cat] || []);
-}
-
-function renderGrid(items) {
-    emojiGrid.innerHTML = '';
-    if (!items.length) { emojiGrid.innerHTML = '<div class="emoji-loading">暂无表情</div>'; return; }
-    items.forEach(emoji => {
-        const span = document.createElement('span');
-        span.className = 'emoji-item' + (typeof emoji === 'string' && emoji.length > 2 ? ' kaomoji-item' : '');
-        if (typeof emoji === 'string') {
-            span.textContent = emoji;
-        } else if (emoji && emoji.__html) {
-            span.innerHTML = emoji.__html;
-        } else {
-            span.textContent = String(emoji);
-        }
-        span.addEventListener('click', () => {
-            const text = span.textContent || span.innerText;
-            insertAtCursor(text);
-            emojiPanel.classList.remove('active');
-            emojiVisible = false;
-        });
-        emojiGrid.appendChild(span);
-    });
-}
-
-var emojiVisible = false;
-emojiBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    emojiVisible = !emojiVisible;
-    emojiPanel.classList.toggle('active', emojiVisible);
-});
-document.addEventListener('click', function(e) {
-    if (emojiVisible && !emojiPanel.contains(e.target) && e.target !== emojiBtn) {
-        emojiPanel.classList.remove('active');
-        emojiVisible = false;
-    }
-});
-loadEmojiData();
-
-// === 工具函数 ===
-function bustCache(url) { if (!url) return ''; if (url.includes('ui-avatars.com')) return url; return url + (url.includes('?')?'&':'?') + '_t=' + Date.now(); }
-function getAvatarUrl(email) {
-    if (!email) return getDefaultAvatar('');
-    var info = currentUserMap[email] || {};
-    var ou = Object.values(onlineUsers).find(u => u.email === email);
-    return bustCache(ou ? ou.avatar_url : info.avatar_url || getDefaultAvatar(email));
-}
-function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
-function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
-function formatTime(iso) { return new Date(iso).toLocaleString('zh-CN',{hour12:false}); }
-function formatTimeShort(iso) { return new Date(iso).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
-function setAuthMessage(msg, type) {
-    authMessage.textContent = msg;
-    authMessage.className = 'auth-message';
-    if (type === 'success') authMessage.classList.add('success');
-    if (type === 'error') authMessage.classList.add('error');
-}
-function autoResizeTextarea() { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; }
-function insertAtCursor(text) { chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input',{bubbles:true})); autoResizeTextarea(); }
-
-// === 认证 ===
+// ===================== 认证 =====================
 function switchMode(mode) {
     isLoginMode = (mode === 'login');
     authTitle.textContent = isLoginMode ? '欢迎回来' : '创建账户';
@@ -1288,26 +696,200 @@ async function handleAuth() {
 }
 async function ensureProfile(uid, email) {
     var data = (await supabase.from('profiles').select('id').eq('id', uid).maybeSingle()).data;
-    if (!data) await supabase.from('profiles').insert({ id: uid, email, last_login: new Date().toISOString(), display_name: email.split('@')[0], avatar_url: getDefaultAvatar(email) });
-    else await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', uid);
+    if (!data) {
+        await supabase.from('profiles').insert({ id: uid, email, last_login: new Date().toISOString(), display_name: email.split('@')[0], avatar_url: getDefaultAvatar(email) });
+        // 加入全局会话
+        await supabase.from('conversation_participants').insert({ conversation_id: '00000000-0000-0000-0000-000000000000', user_id: uid });
+    } else {
+        await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', uid);
+    }
 }
 
-// === 聊天核心 ===
+// ===================== 启动画面 =====================
+(function() {
+    var DURATION = 2000;
+    var splash = document.getElementById('splash');
+    function hide() {
+        if (!splash) return;
+        splash.classList.add('hidden');
+        setTimeout(function(){ splash.remove(); }, 600);
+        if (loginOverlay) loginOverlay.classList.remove('hidden');
+        try {
+            var raw = localStorage.getItem('minichat_user');
+            if (raw) {
+                var user = JSON.parse(raw);
+                if (user && user.email) {
+                    window.currentEmail = user.email;
+                    window.currentUserId = user.id || '';
+                    window.supabase.auth.getSession().then(function(data) {
+                        if (data.data.session && typeof window.enterChat === 'function') window.enterChat();
+                    });
+                }
+            }
+        } catch(e) {}
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(hide, DURATION); });
+    else setTimeout(hide, DURATION);
+})();
+
+// ===================== 主题 =====================
+function loadTheme() {
+    var saved = localStorage.getItem('minichat_theme');
+    if (saved === 'light') {
+        document.body.classList.add('light-theme');
+        themeToggle.classList.remove('active');
+    } else {
+        document.body.classList.remove('light-theme');
+        themeToggle.classList.add('active');
+    }
+}
+function toggleTheme() {
+    var isLight = document.body.classList.toggle('light-theme');
+    themeToggle.classList.toggle('active');
+    localStorage.setItem('minichat_theme', isLight ? 'light' : 'dark');
+}
+
+// ===================== 表情面板 =====================
+function toEmojiChar(code) {
+    if (typeof code !== 'string') return code;
+    if (code.startsWith('U+')) {
+        return String.fromCodePoint(parseInt(code.slice(2), 16));
+    }
+    if (/^[0-9A-Fa-f]+$/.test(code)) {
+        return String.fromCodePoint(parseInt(code, 16));
+    }
+    return code;
+}
+function decodeHtmlEntities(str) {
+    if (typeof str !== 'string') return str;
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = str;
+    return textarea.value;
+}
+var allEmojiData = {};
+async function loadEmojiData() {
+    try {
+        const [emojiRes, kaoRes] = await Promise.all([
+            fetch('./data/emojihtb-all.json').then(r => r.json()),
+            fetch('./data/kaomoji.json').then(r => r.json())
+        ]);
+        const emojiGroups = {};
+        if (Array.isArray(emojiRes)) {
+            emojiRes.forEach(item => {
+                const cat = item.category || '其他';
+                if (!emojiGroups[cat]) emojiGroups[cat] = [];
+                let unicodeStr = item.unicode;
+                if (Array.isArray(unicodeStr)) unicodeStr = unicodeStr[0];
+                if (unicodeStr) {
+                    emojiGroups[cat].push(toEmojiChar(unicodeStr));
+                } else if (item.htmlCode && item.htmlCode.length) {
+                    let htmlStr = Array.isArray(item.htmlCode) ? item.htmlCode[0] : item.htmlCode;
+                    emojiGroups[cat].push({ __html: htmlStr });
+                }
+            });
+        } else {
+            Object.entries(emojiRes).forEach(([cat, list]) => { emojiGroups[cat] = list; });
+        }
+        const kaoGroups = {};
+        for (const [cat, list] of Object.entries(kaoRes)) {
+            const decodedList = list.map(item => decodeHtmlEntities(item));
+            kaoGroups['颜文字_' + cat] = decodedList;
+        }
+        allEmojiData = { ...emojiGroups, ...kaoGroups };
+        renderTabs();
+    } catch(e) {
+        console.error('表情加载失败', e);
+        emojiGrid.innerHTML = '<div class="emoji-loading">加载失败</div>';
+    }
+}
+function renderTabs() {
+    emojiTabs.innerHTML = '';
+    const cats = Object.keys(allEmojiData);
+    cats.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'emoji-tab';
+        const firstItem = allEmojiData[cat][0];
+        let exampleChar = '';
+        if (typeof firstItem === 'string') {
+            exampleChar = firstItem;
+        } else if (firstItem && firstItem.__html) {
+            exampleChar = firstItem.__html.replace(/<[^>]*>/g, '');
+        }
+        if (exampleChar) {
+            btn.textContent = exampleChar;
+        } else {
+            btn.textContent = cat;
+        }
+        btn.title = cat;
+        btn.addEventListener('click', () => switchCategory(cat));
+        emojiTabs.appendChild(btn);
+    });
+    if (cats.length) switchCategory(cats[0]);
+}
+function switchCategory(cat) {
+    document.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
+    const tab = [...emojiTabs.children].find(t => t.title === cat);
+    if (tab) tab.classList.add('active');
+    renderGrid(allEmojiData[cat] || []);
+}
+function renderGrid(items) {
+    emojiGrid.innerHTML = '';
+    if (!items.length) { emojiGrid.innerHTML = '<div class="emoji-loading">暂无表情</div>'; return; }
+    items.forEach(emoji => {
+        const span = document.createElement('span');
+        span.className = 'emoji-item' + (typeof emoji === 'string' && emoji.length > 2 ? ' kaomoji-item' : '');
+        if (typeof emoji === 'string') {
+            span.textContent = emoji;
+        } else if (emoji && emoji.__html) {
+            span.innerHTML = emoji.__html;
+        } else {
+            span.textContent = String(emoji);
+        }
+        span.addEventListener('click', () => {
+            const text = span.textContent || span.innerText;
+            insertAtCursor(text);
+            emojiPanel.classList.remove('active');
+            emojiVisible = false;
+        });
+        emojiGrid.appendChild(span);
+    });
+}
+var emojiVisible = false;
+emojiBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    emojiVisible = !emojiVisible;
+    emojiPanel.classList.toggle('active', emojiVisible);
+});
+document.addEventListener('click', function(e) {
+    if (emojiVisible && !emojiPanel.contains(e.target) && e.target !== emojiBtn) {
+        emojiPanel.classList.remove('active');
+        emojiVisible = false;
+    }
+});
+loadEmojiData();
+
+// ===================== 聊天核心 =====================
 function enterChat() {
     loginOverlay.classList.add('hidden');
     mainInterface.classList.remove('hidden');
     hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
     document.title = 'MiniChat';
-    loadDisplayName().then(() => refreshMessages());
+    loadDisplayName().then(() => {
+        loadConversations().then(() => {
+            // 默认选中第一个会话（通常是全局）
+            if (conversationList.length) {
+                const first = conversationList[0];
+                switchConversation(first.id);
+            }
+        });
+    });
     localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
     loadTheme();
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-    subscribeMessages();
     setupGlobalEventListeners();
     btnSend.disabled = false;
     chatInput.addEventListener('input', autoResizeTextarea);
     autoResizeTextarea();
-    // 监听输入框聚焦，自动滚到底部
     chatInput.addEventListener('focus', function() {
         setTimeout(function() {
             messageList.scrollTop = messageList.scrollHeight;
@@ -1316,6 +898,7 @@ function enterChat() {
         }, 100);
     });
 }
+
 async function handleLogout() {
     if (window.chatChannel) { try { await window.chatChannel.untrack(); } catch(e){} window.chatChannel.unsubscribe(); window.chatChannel = null; }
     await supabase.auth.signOut();
@@ -1329,14 +912,151 @@ async function handleLogout() {
 }
 function closeSettingsFunc() { settingsOverlay.classList.remove('active'); }
 
-// === 消息加载 ===
+// ===================== 会话管理 =====================
+async function loadConversations() {
+    const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+            id, type, name, last_message_at,
+            participants:conversation_participants(user_id, last_read_at),
+            last_message:messages(content, sender_name, created_at)
+        `)
+        .eq('participants.user_id', currentUserId)
+        .order('last_message_at', { ascending: false, nullsLast: true });
+    if (error) { console.error('加载会话失败:', error); return; }
+    conversationList = data || [];
+    renderConversationList();
+}
+
+function renderConversationList() {
+    const container = document.getElementById('conversationListContainer');
+    container.innerHTML = '';
+    conversationList.forEach(conv => {
+        const div = document.createElement('div');
+        div.className = 'nav-item' + (conv.id === currentConversationId ? ' active' : '');
+        div.dataset.conversationId = conv.id;
+        let displayName = conv.name || '未命名';
+        if (conv.type === 'direct') {
+            const other = conv.participants.find(p => p.user_id !== currentUserId);
+            if (other) {
+                const profile = currentUserMap[other.user_id] || {};
+                displayName = profile.display_name || '未知用户';
+            }
+        } else if (conv.type === 'global') {
+            displayName = '全局聊天';
+        }
+        const icon = conv.type === 'global' ? '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' :
+                     conv.type === 'direct' ? '<circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>' :
+                     '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>';
+        div.innerHTML = `<svg viewBox="0 0 24 24">${icon}</svg><span>${esc(displayName)}</span>`;
+        div.addEventListener('click', () => {
+            switchConversation(conv.id);
+        });
+        container.appendChild(div);
+    });
+    // 新建私聊按钮
+    const addBtn = document.createElement('div');
+    addBtn.className = 'nav-item';
+    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>新建私聊</span>`;
+    addBtn.addEventListener('click', showNewDirectDialog);
+    container.appendChild(addBtn);
+}
+
+function showNewDirectDialog() {
+    const email = prompt('请输入对方的邮箱地址：');
+    if (!email) return;
+    createDirectConversation(email);
+}
+
+async function createDirectConversation(targetEmail) {
+    if (targetEmail === currentEmail) { alert('不能与自己私聊'); return; }
+    // 查询目标用户
+    const { data: user, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', targetEmail)
+        .single();
+    if (error || !user) { alert('用户不存在'); return; }
+    const targetUserId = user.id;
+
+    // 检查是否已有私聊
+    const { data: existing, error: existErr } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', currentUserId)
+        .filter('conversation_id', 'in', 
+            supabase.from('conversation_participants').select('conversation_id').eq('user_id', targetUserId)
+        );
+    if (existing && existing.length > 0) {
+        switchConversation(existing[0].conversation_id);
+        return;
+    }
+
+    // 创建新会话
+    const { data: conv, error: convErr } = await supabase
+        .from('conversations')
+        .insert({ type: 'direct' })
+        .select()
+        .single();
+    if (convErr) { alert('创建会话失败'); return; }
+
+    // 添加参与者
+    await supabase.from('conversation_participants').insert([
+        { conversation_id: conv.id, user_id: currentUserId },
+        { conversation_id: conv.id, user_id: targetUserId }
+    ]);
+
+    await loadConversations();
+    switchConversation(conv.id);
+}
+
+async function switchConversation(convId) {
+    if (convId === currentConversationId) return;
+    currentConversationId = convId;
+    messageList.innerHTML = '';
+    // 更新界面高亮
+    document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.conversationId === convId);
+    });
+    // 更新标题
+    const conv = conversationList.find(c => c.id === convId);
+    if (conv) {
+        let title = conv.name || '聊天';
+        let sub = '';
+        if (conv.type === 'global') { title = '全局聊天'; sub = '# 所有成员'; }
+        else if (conv.type === 'direct') {
+            const other = conv.participants.find(p => p.user_id !== currentUserId);
+            if (other) {
+                const profile = currentUserMap[other.user_id] || {};
+                title = profile.display_name || '未知用户';
+                sub = '# 私聊';
+            }
+        } else { sub = '# 群组'; }
+        chatTitle.innerHTML = `${esc(title)} <small>${sub}</small>`;
+    }
+    // 重置分页
+    hasMoreMessages = true;
+    oldestTimestamp = null;
+    isLoadingMore = false;
+    await loadHistory(false);
+    // 标记已读（后续可扩展）
+    // 重新订阅
+    subscribeMessages(convId);
+}
+
+// ===================== 消息加载 =====================
 async function loadHistory(append) {
     if (isLoadingMore || !hasMoreMessages) return;
     isLoadingMore = true;
     try {
-        var q = supabase.from('messages').select('*').order('created_at',{ascending:false}).limit(PAGE_SIZE);
+        let q = supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', currentConversationId)
+            .order('created_at', { ascending: false })
+            .limit(PAGE_SIZE);
         if (oldestTimestamp) q = q.lt('created_at', oldestTimestamp);
-        var res = await q;
+        const res = await q;
         if (res.error) throw res.error;
         var data = res.data;
         if (!data || !data.length) { hasMoreMessages = false; isLoadingMore = false; return; }
@@ -1357,69 +1077,16 @@ async function loadHistory(append) {
 }
 async function refreshMessages() { messageList.innerHTML = ''; hasMoreMessages = true; oldestTimestamp = null; await loadHistory(false); }
 
-// === 远程搜索（查询全部历史）===
-async function searchMessagesRemote(term) {
-    if (!term || !term.trim()) return [];
-    if (typeof supabase === 'undefined' || !supabase) return [];
-    try {
-        // 转义 LIKE 通配符
-        var safe = term.replace(/[%_\\]/g, '\\$&');
-        var res = await supabase
-            .from('messages')
-            .select('id, content, sender_email, sender_name, created_at')
-            .ilike('content', '%' + safe + '%')
-            .order('created_at', { ascending: false })
-            .limit(200);
-        if (res.error) throw res.error;
-        return res.data || [];
-    } catch (e) {
-        console.error('[Search] 远程搜索失败:', e);
-        return [];
-    }
-}
-
-// 为搜索结果加载更老的历史 (一次拉一页 loadHistory(true),直到 oldestTimestamp <= oldestNeeded)
-async function loadHistoryForSearch(oldestNeeded, onProgress) {
-    var MAX_PAGES = 100; // 上限 2000 条
-    var pagesLoaded = 0;
-    // 记住是否靠底部,防止预加载老消息导致视口跳动
-    var distToBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
-    var wasNearBottom = distToBottom < 120;
-    while (
-        hasMoreMessages &&
-        oldestTimestamp &&
-        oldestNeeded &&
-        oldestTimestamp > oldestNeeded &&
-        pagesLoaded < MAX_PAGES
-    ) {
-        var oldHeight = messageList.scrollHeight;
-        await loadHistory(true);
-        pagesLoaded++;
-        var newHeight = messageList.scrollHeight;
-        if (wasNearBottom) {
-            // 原本贴底 → 保持贴底
-            messageList.scrollTop = messageList.scrollHeight;
-        } else {
-            // 中间位置 → 保持视觉位置稳定(向下推与新高度同等的距离)
-            messageList.scrollTop += (newHeight - oldHeight);
-        }
-        if (typeof onProgress === 'function') onProgress(pagesLoaded);
-    }
-    return pagesLoaded;
-}
-
-// === 消息渲染（增加时间分割线） ===
+// ===================== 消息渲染 =====================
 var lastTimeDivider = 0;
 function createMessageElement(msg) {
     var content = msg.content, sender_name = msg.sender_name, sender_email = msg.sender_email, isMe = msg.isMe, time = msg.time, id = msg.id, created_at = msg.created_at;
     var msgTime = new Date(created_at).getTime();
-    // 检查是否需要插入时间分割线 (5分钟)
     var fragment = document.createDocumentFragment();
     if (!lastTimeDivider || (msgTime - lastTimeDivider > 5 * 60 * 1000)) {
         var divider = document.createElement('div');
         divider.className = 'time-divider';
-        var timeText = formatTime(created_at);
-        divider.innerHTML = '<span>' + timeText + '</span>';
+        divider.innerHTML = '<span>' + formatTime(created_at) + '</span>';
         fragment.appendChild(divider);
         lastTimeDivider = msgTime;
     }
@@ -1518,7 +1185,7 @@ function addMessageToBottom(msg) {
     }
 }
 function prependMessages(msgs) { 
-    lastTimeDivider = 0; // 重置分割线
+    lastTimeDivider = 0;
     var f = document.createDocumentFragment(); 
     msgs.forEach(m => { 
         var fragment = createMessageElement(m);
@@ -1528,7 +1195,431 @@ function prependMessages(msgs) {
     else messageList.appendChild(f); 
 }
 
-// === 引用跳转 ===
+// ===================== 新消息按钮 =====================
+var newMessagesBtn = document.getElementById('newMessagesBtn');
+var newMsgBadge = document.getElementById('newMsgBadge');
+var isUserAtBottom = true;
+
+function checkIfAtBottom() {
+    if (!messageList) return true;
+    var threshold = 50;
+    return (messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight) < threshold;
+}
+function updateNewMsgButton() {
+    if (isUserAtBottom) {
+        unreadCount = 0;
+        document.title = 'MiniChat';
+        newMessagesBtn.classList.remove('show');
+        newMsgBadge.style.display = 'none';
+    } else {
+        newMessagesBtn.classList.add('show');
+        if (unreadCount > 0) {
+            newMsgBadge.textContent = unreadCount;
+            newMsgBadge.style.display = 'block';
+        } else {
+            newMsgBadge.style.display = 'none';
+        }
+    }
+    updateSidebarBadge();
+}
+function updateSidebarBadge() {
+    var badge = document.getElementById('sidebarUnreadBadge');
+    if (!badge) return;
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.classList.add('show');
+    } else {
+        badge.classList.remove('show');
+    }
+}
+newMessagesBtn.addEventListener('click', function() {
+    messageList.scrollTop = messageList.scrollHeight;
+    isUserAtBottom = true;
+    unreadCount = 0;
+    updateNewMsgButton();
+});
+messageList.addEventListener('scroll', function() {
+    isUserAtBottom = checkIfAtBottom();
+    updateNewMsgButton();
+});
+
+// ===================== 消息搜索（保留原有逻辑，仅调整兼容） =====================
+var Search = {
+    open: false,
+    term: '',
+    results: [],
+    remoteMatches: [],
+    serverTotal: 0,
+    index: -1,
+    debounceId: null,
+    refreshTimer: null,
+    observer: null,
+    observerPaused: false,
+    serverSearchToken: 0,
+    serverSearching: false,
+    loadingHistory: false,
+    init: function() {
+        this.elBar     = searchBar;
+        this.elInput   = searchInput;
+        this.elStatus  = searchStatus;
+        this.elBtn     = searchBtn;
+        this.elPrev    = searchPrev;
+        this.elNext    = searchNext;
+        this.elClose   = searchClose;
+        this.elClear   = document.getElementById('searchClearInput');
+        if (this.elBtn)   this.elBtn.addEventListener('click',   this.toggle.bind(this));
+        if (this.elClose) this.elClose.addEventListener('click', this.close.bind(this));
+        if (this.elPrev)  this.elPrev.addEventListener('click',  this.prev.bind(this));
+        if (this.elNext)  this.elNext.addEventListener('click',  this.next.bind(this));
+        if (this.elClear) this.elClear.addEventListener('click', this.clearInput.bind(this));
+        if (this.elInput) {
+            this.elInput.addEventListener('input', this.onInput.bind(this));
+            this.elInput.addEventListener('keydown', this.onKeyDown.bind(this));
+        }
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+                if (mainInterface && mainInterface.style.display !== 'none') {
+                    e.preventDefault();
+                    Search.toggle();
+                }
+            }
+        });
+        this.setupObserver();
+    },
+    setupObserver: function() {
+        if (typeof MutationObserver === 'undefined' || !messageList) return;
+        var self = this;
+        this.observer = new MutationObserver(function() {
+            if (self.observerPaused || !self.term || !self.open) return;
+            clearTimeout(self.refreshTimer);
+            self.refreshTimer = setTimeout(function() {
+                if (self.term && self.open) self.runSearch(self.term, true, true);
+            }, 300);
+        });
+        this.observer.observe(messageList, { childList: true, subtree: true });
+    },
+    withObserverPaused: function(fn) {
+        if (this.observer) this.observer.disconnect();
+        this.observerPaused = true;
+        try { fn(); } finally {
+            this.observerPaused = false;
+            if (this.observer && this.open && messageList) {
+                this.observer.observe(messageList, { childList: true, subtree: true });
+            }
+        }
+    },
+    toggle: function() {
+        if (this.open) this.close(); else this.openPanel();
+    },
+    openPanel: function() {
+        if (this.open) return;
+        this.open = true;
+        this.elBar.classList.add('open');
+        var self = this;
+        setTimeout(function() { self.elInput.focus(); if (self.term) self.elInput.select(); }, 30);
+    },
+    close: function() {
+        if (!this.open) return;
+        var self = this;
+        this.withObserverPaused(function() {
+            self.open = false;
+            self.elBar.classList.remove('open');
+            self.elInput.value = '';
+            self.setClearVisible(false);
+            self.term = '';
+            self.results = [];
+            self.index = -1;
+            self.setStatus('');
+            self.clearHighlights();
+            self.updateNavButtons();
+        });
+    },
+    clearInput: function() {
+        this.elInput.value = '';
+        this.setClearVisible(false);
+        this.runSearchImmediately('');
+        this.elInput.focus();
+    },
+    onInput: function() {
+        var v = this.elInput.value;
+        this.setClearVisible(!!v);
+        clearTimeout(this.debounceId);
+        var self = this;
+        this.debounceId = setTimeout(function() {
+            self.runSearch(v, false);
+        }, 180);
+    },
+    runSearchImmediately: function(term) {
+        clearTimeout(this.debounceId);
+        this.runSearch(term, false);
+    },
+    onKeyDown: function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.results.length > 0) {
+                if (e.shiftKey) this.prev(); else this.next();
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this.close();
+        } else if (e.key === 'Backspace' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            this.clearInput();
+        }
+    },
+    runSearch: function(term, isRefresh, skipServerSearch) {
+        if (!this.open) return;
+        var self = this;
+        var prevMsg = (this.index >= 0 && this.index < this.results.length) ? this.results[this.index] : null;
+        this.withObserverPaused(function() {
+            self.clearHighlights();
+            self.term = term;
+            if (!term || !term.trim()) {
+                self.results = [];
+                self.index = -1;
+                self.remoteMatches = [];
+                self.serverTotal = 0;
+                self.setStatus('');
+                self.updateNavButtons();
+                return;
+            }
+            var matched = self.localSearchAndHighlight(term);
+            self.results = matched;
+            if (!isRefresh) {
+                self.index = matched.length > 0 ? 0 : -1;
+            } else if (prevMsg && matched.indexOf(prevMsg) >= 0) {
+                self.index = matched.indexOf(prevMsg);
+            } else if (matched.length > 0) {
+                self.index = 0;
+            } else {
+                self.index = -1;
+            }
+            if (matched.length > 0) {
+                self.setStatus(self.formatStatus(), false);
+                self.scrollToCurrent();
+            } else {
+                self.index = -1;
+                self.setStatus(self.serverSearching ? '搜索中…' : '无结果', !self.serverSearching);
+            }
+            self.updateNavButtons();
+        });
+        if (skipServerSearch) return;
+        if (!term || !term.trim()) return;
+        this.runServerSearch(term);
+    },
+    localSearchAndHighlight: function(term) {
+        var regex = new RegExp(escRegex(term), 'gi');
+        var messages = messageList.querySelectorAll('.message');
+        var matched = [];
+        for (var i = 0; i < messages.length; i++) {
+            if (highlightInElement(messages[i], regex)) matched.push(messages[i]);
+        }
+        return matched;
+    },
+    formatStatus: function() {
+        var n = this.results.length;
+        if (n === 0) return this.serverSearching ? '搜索中…' : '';
+        var total = this.serverTotal;
+        var label = (this.index + 1) + ' / ' + n;
+        if (total && total > n) label += '  (共 ' + total + ')';
+        return label;
+    },
+    runServerSearch: async function(term) {
+        this.serverSearchToken += 1;
+        var token = this.serverSearchToken;
+        this.serverSearching = true;
+        var self = this;
+        var remote = [];
+        try {
+            remote = await searchMessagesRemote(term);
+        } catch (e) {
+            remote = [];
+        }
+        if (token !== this.serverSearchToken || !this.open || this.term !== term) {
+            if (token === this.serverSearchToken) this.serverSearching = false;
+            return;
+        }
+        this.serverSearching = false;
+        this.remoteMatches = remote;
+        this.serverTotal = remote.length;
+        if (remote.length === 0) {
+            this.runSearch(term, true, true);
+            return;
+        }
+        var missing = [];
+        for (var i = 0; i < remote.length; i++) {
+            var r = remote[i];
+            if (!document.querySelector('[data-message-id="' + r.id + '"]')) {
+                missing.push(r);
+            }
+        }
+        if (missing.length === 0) {
+            this.runSearch(term, true, true);
+            return;
+        }
+        var oldestNeeded = missing[0].created_at;
+        for (var j = 1; j < missing.length; j++) {
+            if (missing[j].created_at < oldestNeeded) oldestNeeded = missing[j].created_at;
+        }
+        if (oldestTimestamp && oldestNeeded >= oldestTimestamp) {
+            this.runSearch(term, true, true);
+            return;
+        }
+        this.loadingHistory = true;
+        this.setStatus('加载历史…', false);
+        var lastStatusUpdate = 0;
+        try {
+            await loadHistoryForSearch(oldestNeeded, function(pages) {
+                if (pages - lastStatusUpdate >= 3 || pages === 1) {
+                    lastStatusUpdate = pages;
+                    self.setStatus('加载历史… (' + (pages * PAGE_SIZE) + '+)', false);
+                }
+            });
+        } catch (e) {
+            console.warn('[Search] 加载历史失败:', e);
+        }
+        if (token !== this.serverSearchToken || !this.open || this.term !== term) return;
+        this.loadingHistory = false;
+        this.runSearch(term, true, true);
+    },
+    next: function() {
+        if (this.results.length === 0) return;
+        this.index = (this.index + 1) % this.results.length;
+        this.setStatus((this.index + 1) + ' / ' + this.results.length, false);
+        this.scrollToCurrent();
+    },
+    prev: function() {
+        if (this.results.length === 0) return;
+        this.index = (this.index - 1 + this.results.length) % this.results.length;
+        this.setStatus((this.index + 1) + ' / ' + this.results.length, false);
+        this.scrollToCurrent();
+    },
+    scrollToCurrent: function() {
+        if (this.index < 0 || this.index >= this.results.length) return;
+        var prevs = document.querySelectorAll('.search-highlight.current');
+        for (var i = 0; i < prevs.length; i++) prevs[i].classList.remove('current');
+        var el = this.results[this.index];
+        if (!el) return;
+        var hl = el.querySelector('.search-highlight');
+        if (hl) {
+            hl.classList.add('current');
+            hl.style.animation = 'none';
+            hl.offsetHeight;
+            hl.style.animation = '';
+            try { hl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            catch (e) { hl.scrollIntoView(); }
+        }
+    },
+    updateNavButtons: function() {
+        var has = this.results.length > 0;
+        if (this.elPrev) this.elPrev.disabled = !has;
+        if (this.elNext) this.elNext.disabled = !has;
+    },
+    clearHighlights: function() {
+        var msgs = document.querySelectorAll('.message[data-search-orig]');
+        for (var i = 0; i < msgs.length; i++) {
+            msgs[i].innerHTML = msgs[i].getAttribute('data-search-orig');
+            msgs[i].removeAttribute('data-search-orig');
+        }
+        var currents = document.querySelectorAll('.search-highlight.current');
+        for (var j = 0; j < currents.length; j++) currents[j].classList.remove('current');
+    },
+    setStatus: function(text, isError) {
+        if (!this.elStatus) return;
+        this.elStatus.textContent = text;
+        if (isError) this.elStatus.classList.add('no-result');
+        else this.elStatus.classList.remove('no-result');
+    },
+    setClearVisible: function(show) {
+        if (!this.elClear) return;
+        if (show) this.elClear.classList.add('visible');
+        else this.elClear.classList.remove('visible');
+    }
+};
+function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function highlightInElement(root, regex) {
+    if (!root.hasAttribute('data-search-orig')) {
+        root.setAttribute('data-search-orig', root.innerHTML);
+    }
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(n) {
+            if (!n.parentElement) return NodeFilter.FILTER_REJECT;
+            if (n.parentElement.closest('script,style,.search-highlight')) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+    var textNodes = [];
+    var n;
+    while ((n = walker.nextNode())) textNodes.push(n);
+    var matched = false;
+    for (var i = 0; i < textNodes.length; i++) {
+        var tn = textNodes[i];
+        regex.lastIndex = 0;
+        var text = tn.nodeValue;
+        if (!regex.test(text)) continue;
+        matched = true;
+        regex.lastIndex = 0;
+        var frag = document.createDocumentFragment();
+        var lastIdx = 0;
+        var m;
+        while ((m = regex.exec(text)) !== null) {
+            if (m.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
+            var span = document.createElement('span');
+            span.className = 'search-highlight';
+            span.textContent = m[0];
+            frag.appendChild(span);
+            lastIdx = m.index + m[0].length;
+            if (m[0].length === 0) regex.lastIndex++;
+        }
+        if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+        tn.parentNode.replaceChild(frag, tn);
+    }
+    return matched;
+}
+Search.init();
+
+// ===================== 远程搜索（跨会话） =====================
+async function searchMessagesRemote(term) {
+    if (!term || !term.trim()) return [];
+    if (typeof supabase === 'undefined' || !supabase) return [];
+    try {
+        var safe = term.replace(/[%_\\]/g, '\\$&');
+        // 仅搜索当前会话的消息
+        var res = await supabase
+            .from('messages')
+            .select('id, content, sender_email, sender_name, created_at')
+            .eq('conversation_id', currentConversationId)
+            .ilike('content', '%' + safe + '%')
+            .order('created_at', { ascending: false })
+            .limit(200);
+        if (res.error) throw res.error;
+        return res.data || [];
+    } catch (e) {
+        console.error('[Search] 远程搜索失败:', e);
+        return [];
+    }
+}
+async function loadHistoryForSearch(oldestNeeded, onProgress) {
+    var MAX_PAGES = 100;
+    var pagesLoaded = 0;
+    var distToBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
+    var wasNearBottom = distToBottom < 120;
+    while (hasMoreMessages && oldestTimestamp && oldestNeeded && oldestTimestamp > oldestNeeded && pagesLoaded < MAX_PAGES) {
+        var oldHeight = messageList.scrollHeight;
+        await loadHistory(true);
+        pagesLoaded++;
+        var newHeight = messageList.scrollHeight;
+        if (wasNearBottom) {
+            messageList.scrollTop = messageList.scrollHeight;
+        } else {
+            messageList.scrollTop += (newHeight - oldHeight);
+        }
+        if (typeof onProgress === 'function') onProgress(pagesLoaded);
+    }
+    return pagesLoaded;
+}
+
+// ===================== 引用跳转 =====================
 var pendingQuoteData = null;
 function openQuoteJumpModal(author, time, email, content, messageId) {
     qjAuthor.textContent = author || '匿名';
@@ -1588,16 +1679,21 @@ qjJump.addEventListener('click', async function() {
     qjStatus.textContent = '未找到原始消息'; qjStatus.style.color = '#f87171';
 });
 
-// === 右键菜单 ===
+// ===================== 右键菜单 =====================
 ctxMention.addEventListener('click', () => {
     var targetName = contextMenu.dataset.targetName || '';
     if (targetName) insertAtCursor('@' + targetName + ' ');
     contextMenu.classList.remove('active');
 });
+ctxDirect.addEventListener('click', () => {
+    var targetEmail = contextMenu.dataset.targetEmail || '';
+    if (targetEmail) createDirectConversation(targetEmail);
+    contextMenu.classList.remove('active');
+});
 document.addEventListener('click', e => { if (!contextMenu.contains(e.target)) contextMenu.classList.remove('active'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') contextMenu.classList.remove('active'); });
 
-// === 用户资料 ===
+// ===================== 用户资料 =====================
 async function fetchUserProfiles(emails) {
     if (!emails.length) return {};
     var data = (await supabase.from('profiles').select('email,display_name,avatar_url').in('email', emails)).data || [];
@@ -1619,7 +1715,7 @@ function showUserProfile(email) {
     profileModal.classList.add('active');
 }
 
-// === 显示名称 ===
+// ===================== 显示名称 =====================
 async function loadDisplayName() {
     if (!currentUserId) return;
     try {
@@ -1650,7 +1746,7 @@ async function saveDisplayName() {
     } catch(e) { console.error(e); displayNameMessage.textContent = '保存失败'; displayNameMessage.style.color = '#f87171'; }
 }
 
-// === 头像上传 ===
+// ===================== 头像上传 =====================
 function refreshAllAvatars(email, newUrl) { document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(img => img.src = bustCache(newUrl)); }
 async function uploadAvatar(file) {
     if (!currentUserId) { alert('请先登录'); return; }
@@ -1673,8 +1769,6 @@ async function uploadAvatar(file) {
         if (window.chatChannel) await window.chatChannel.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName, avatar_url: pub, online_at: new Date().toISOString() });
     } catch(err) { console.error(err); avatarUploadStatus.textContent = '上传失败'; avatarUploadStatus.style.color = '#f87171'; }
 }
-
-// === 图片压缩 ===
 function compressImage(file, mw, q) {
     return new Promise((res,rej) => {
         var r = new FileReader();
@@ -1696,7 +1790,7 @@ function compressImage(file, mw, q) {
     });
 }
 
-// === 附件 ===
+// ===================== 附件 =====================
 function addQuoteAttachment(senderName, senderEmail, content, isoTime, messageId) {
     var plain = (content || '').replace(/!\[image\]\([^)]*\)/g,'[图片]').replace(/\[audio\]\([^)]*\)/g,'[音频]').replace(/\[quote:[^\]]*\]/g,'').trim() || '[空消息]';
     plain = plain.split('\n')[0].substring(0, 100);
@@ -1739,8 +1833,6 @@ function addAttachment(file) {
     attachments.push({ id: Date.now()+Math.random(), file, type: t, name: file.name });
     renderAttachments();
 }
-
-// === 上传 ===
 async function uploadNewAttachments(list) {
     if (!list.length) return [];
     return await Promise.all(list.map(async att => {
@@ -1755,7 +1847,7 @@ async function uploadNewAttachments(list) {
     }));
 }
 
-// === 发送消息 ===
+// ===================== 发送消息 =====================
 async function sendMessageContent(content) {
     if (!currentEmail) return;
     var text = (content || '').trim();
@@ -1787,7 +1879,12 @@ async function sendMessageContent(content) {
         var tempId = 'temp-'+Date.now();
         addMessageToBottom({ id: tempId, content: fc, sender_name: senderName, sender_email: currentEmail, isMe: true, time: formatTimeShort(new Date().toISOString()), created_at: new Date().toISOString() });
         chatInput.value = ''; attachments = []; renderAttachments(); autoResizeTextarea();
-        var res = await supabase.from('messages').insert({ content: fc, sender_name: senderName, sender_email: currentEmail }).select().single();
+        var res = await supabase.from('messages').insert({
+            content: fc,
+            sender_name: senderName,
+            sender_email: currentEmail,
+            conversation_id: currentConversationId
+        }).select().single();
         if (res.error) throw res.error;
         var data = res.data;
         if (data) { var te = messageList.querySelector('[data-message-id="'+tempId+'"]'); if (te) te.replaceWith(createMessageElement({ id: data.id, content: data.content, sender_name: data.sender_name || senderName, sender_email: data.sender_email || currentEmail, isMe: true, time: formatTimeShort(data.created_at), created_at: data.created_at })); }
@@ -1806,7 +1903,7 @@ window.recallMessage = async function(mid) {
     } catch(e) { console.error(e); }
 };
 
-// === 在线状态 ===
+// ===================== 在线状态 =====================
 function updateOnlineUI() { onlineStatus.textContent = '● '+onlineCount+' 人在线'; onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); modalOnlineCount.textContent = onlineCount; renderOnlineUsers(); }
 function renderOnlineUsers() {
     onlineUserList.innerHTML = '';
@@ -1823,7 +1920,7 @@ function renderOnlineUsers() {
         onlineUserList.appendChild(it); }
 }
 
-// === @提及 ===
+// ===================== @提及 =====================
 var mentionActive = false;
 chatInput.addEventListener('input', function() {
     var v = this.value, cp = this.selectionStart, la = v.lastIndexOf('@', cp);
@@ -1849,7 +1946,7 @@ function renderMentionDropdown(filter) {
 }
 document.addEventListener('click', e => { if (mentionActive && !mentionDropdown.contains(e.target) && e.target !== chatInput) { mentionDropdown.classList.remove('active'); mentionActive = false; } });
 
-// === 输入状态 ===
+// ===================== 输入状态 =====================
 var typingStopId, lastTypingBT = 0;
 function sendTypingEvent() {
     if (!window.chatChannel || !currentUserId) return;
@@ -1867,10 +1964,16 @@ function showTypingIndicator(dn) {
     typingStopId = setTimeout(() => i.classList.remove('active'), 2000);
 }
 
-// === 实时频道 ===
-function subscribeMessages() {
-    if (window.chatChannel) { window.chatChannel.unsubscribe(); window.chatChannel = null; }
-    var ch = supabase.channel('chat-room', { config: { presence: { key: currentUserId } } });
+// ===================== 实时频道（按会话） =====================
+function subscribeMessages(convId) {
+    if (window.chatChannel) {
+        window.chatChannel.unsubscribe();
+        window.chatChannel = null;
+    }
+    var ch = supabase.channel('chat-room-' + convId, {
+        config: { presence: { key: currentUserId } }
+    });
+    // 在线状态同步（全局）
     ch.on('presence', { event:'sync' }, () => {
         var s = ch.presenceState(), us = {}, c = 0;
         for (var k in s) { var p = s[k][0]; if (!p) continue; var em = p.email || '';
@@ -1887,22 +1990,24 @@ function subscribeMessages() {
             else { setAuthMessage(data.payload.from + ' 提到了你','success'); setTimeout(() => setAuthMessage(''), 5000); }
         }
     });
-    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => {
+    // 消息变更
+    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
         var m = payload.new; if (!m || m.sender_email === currentEmail) return;
+        if (m.conversation_id !== currentConversationId) return;
         addMessageToBottom({ id: m.id, content: m.content, sender_name: m.sender_name || '匿名', sender_email: m.sender_email, isMe: false, time: formatTimeShort(m.created_at), created_at: m.created_at });
     });
-    ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' }, payload => {
+    ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
         var u = payload.new;
         document.querySelectorAll('.message[data-message-id="'+u.id+'"]').forEach(el => { el.replaceWith(createMessageElement({ id: u.id, content: u.content, sender_name: u.sender_name, sender_email: u.sender_email, isMe: u.sender_email === currentEmail, time: formatTimeShort(u.created_at), created_at: u.created_at })); });
     });
-    ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages' }, payload => {
+    ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
         var el = messageList.querySelector('[data-message-id="'+payload.old.id+'"]'); if (el) el.remove();
     });
     ch.subscribe(async status => { if (status === 'SUBSCRIBED') await ch.track({ user_id: currentUserId, email: currentEmail, display_name: currentDisplayName || currentEmail.split('@')[0], avatar_url: currentAvatarUrl, online_at: new Date().toISOString() }); });
     window.chatChannel = ch;
 }
 
-// === 图片预览 ===
+// ===================== 图片预览 =====================
 window.previewImage = function(url) {
     var o = document.createElement('div'); o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
     var img = document.createElement('img'); img.src = url; img.style.cssText = 'max-width:90%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;';
@@ -1920,7 +2025,7 @@ window.previewImage = function(url) {
     document.body.appendChild(o);
 };
 
-// === 事件监听 ===
+// ===================== 事件绑定 =====================
 attachBtn.addEventListener('click', e => { e.preventDefault(); showUploadOverlay(); setTimeout(() => fileInput.click(), 150); });
 function showUploadOverlay() { uploadOverlay.classList.add('active'); isUploadingFile = true; }
 function hideUploadOverlay() { uploadOverlay.classList.remove('active'); isUploadingFile = false; }
@@ -1956,6 +2061,7 @@ document.addEventListener('click', e => { if (onlineModal.classList.contains('ac
 closeProfileModal.addEventListener('click', () => profileModal.classList.remove('active'));
 profileModal.addEventListener('click', e => { if (e.target === profileModal) profileModal.classList.remove('active'); });
 
+// ===================== 全局事件 =====================
 function handleDocumentClick(e) {
     var recallBtn = e.target.closest('.recall-btn');
     if (recallBtn) { e.preventDefault(); window.recallMessage(recallBtn.dataset.messageId); return; }
@@ -1980,7 +2086,7 @@ function setupGlobalEventListeners() {
     document.addEventListener('scroll', handleDocumentScroll, true);
 }
 
-// 初始化启动
+// ===================== 初始化 =====================
 document.getElementById('switchToSignup').addEventListener('click', () => switchMode('signup'));
 document.getElementById('togglePwd').addEventListener('click', function() {
     var t = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
