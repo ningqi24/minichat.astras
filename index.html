@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="3.0.3" />
+    <meta name="version" content="3.0.5" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -167,8 +167,10 @@
         .chat-main .message .message-content a.rt-link{color:var(--link-color);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;transition:color .2s}
         .chat-main .message .message-content a.rt-link:hover{color:var(--accent-hover)}
         .chat-main .message .message-content .mention{color:var(--mention-color);font-weight:600;background:rgba(251,191,36,.15);padding:0 4px;border-radius:3px}
-        .chat-main .message .message-content img.msg-img{max-width:240px;max-height:240px;border-radius:10px;display:block;margin:8px 0 4px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:transform .2s}
+        .chat-main .message .message-content img.msg-img{max-width:100%;max-height:300px;width:auto;height:auto;border-radius:10px;display:block;margin:8px 0 4px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:transform .2s}
         .chat-main .message .message-content img.msg-img:hover{transform:scale(1.02)}
+@media(max-width:768px){.chat-main .message .message-content img.msg-img{max-height:250px}}
+@media(max-width:480px){.chat-main .message .message-content img.msg-img{max-height:200px}}
         .chat-main .message .message-content audio{width:100%;max-width:280px;display:block;margin:8px 0 4px;border-radius:8px}
         .chat-main .message .message-footer{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:10px;opacity:0;transition:opacity .15s;flex-wrap:wrap;margin-top:2px}
         .chat-main .message:hover .message-footer{opacity:.8}
@@ -377,6 +379,7 @@
         @media(max-width:768px){.sidebar .nav-item span{display:none}.sidebar-badge{right:6px}}
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div class="app" id="app">
@@ -577,7 +580,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '3.0.3';
+var APP_VERSION = '3.0.5';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -623,6 +626,7 @@ var currentConversationId = '00000000-0000-0000-0000-000000000000';
 var conversationList = [];
 var presenceChannel = null;
 var failedAvatars = {};
+        var isCreatingDirect = false; // 防止重复创建私聊
         var avatarCache = {}; // 头像 URL 缓存，避免重复请求导致 NS_BINDING_ABORTED
 
 // ===================== 工具函数（增强） =====================
@@ -1175,25 +1179,29 @@ function renderConversationList() {
         div.className = 'nav-item' + (conv.id === currentConversationId ? ' active' : '');
         div.dataset.conversationId = conv.id;
         let displayName = conv.name || '未命名';
+        let avatarHtml = '';
         if (conv.type === 'direct') {
             const other = conv.participants.find(p => p.user_id !== currentUserId);
             if (other) {
                 const profile = currentUserMap[other.user_id] || {};
-                displayName = profile.display_name || '未知用户';
+                displayName = conv.name || profile.display_name || '未知用户';
+                const avatarUrl = getAvatarUrl(profile.email || other.user_id);
+                avatarHtml = `<img src="${avatarUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.src='${getDefaultAvatar(profile.email || '')}'"/>`;
+            } else {
+                avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>`;
             }
         } else if (conv.type === 'global') {
             displayName = '全局聊天';
+            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+        } else {
+            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
         }
-        const icon = conv.type === 'global' ? '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' :
-                     conv.type === 'direct' ? '<circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>' :
-                     '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>';
-        div.innerHTML = `<svg viewBox="0 0 24 24">${icon}</svg><span>${esc(displayName)}</span>`;
+        div.innerHTML = `<div style="display:flex;align-items:center;gap:10px;width:100%;">${avatarHtml}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(displayName)}</span></div>`;
         div.addEventListener('click', () => {
             switchConversation(conv.id);
         });
         container.appendChild(div);
     });
-    // 新建私聊按钮
     const addBtn = document.createElement('div');
     addBtn.className = 'nav-item';
     addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>新建私聊</span>`;
@@ -1208,61 +1216,77 @@ function showNewDirectDialog() {
 }
 
 async function createDirectConversation(targetEmail) {
+            if (isCreatingDirect) { alert('正在创建私聊，请稍候...'); return; }
             if (targetEmail === currentEmail) { alert('不能与自己私聊'); return; }
 
-            // 1. 查询目标用户的 ID 和 display_name
-            const { data: user, error } = await supabase
-                .from('profiles')
-                .select('id, display_name')
-                .eq('email', targetEmail)
-                .single();
-            if (error || !user) { alert('用户不存在'); return; }
-            const targetUserId = user.id;
-            const targetDisplayName = user.display_name || targetEmail.split('@')[0] || '未知用户';
+            isCreatingDirect = true;
 
-            // 2. 检查是否已有私聊（逻辑不变）
-            const { data: targetConvs } = await supabase
-                .from('conversation_participants')
-                .select('conversation_id')
-                .eq('user_id', targetUserId);
+            try {
+                // 1. 查询目标用户的 ID 和 display_name
+                const { data: user, error } = await supabase
+                    .from('profiles')
+                    .select('id, display_name')
+                    .eq('email', targetEmail)
+                    .single();
+                if (error || !user) { alert('用户不存在'); return; }
+                const targetUserId = user.id;
+                const targetDisplayName = user.display_name || targetEmail.split('@')[0] || '未知用户';
 
-            if (targetConvs && targetConvs.length > 0) {
-                const targetConvIds = targetConvs.map(c => c.conversation_id);
-                const { data: existing } = await supabase
-                    .from('conversation_participants')
-                    .select('conversation_id')
-                    .eq('user_id', currentUserId)
-                    .in('conversation_id', targetConvIds);
+                // 2. 检查是否已有私聊（只查 type='direct' 的会话）
+                const { data: directConvs } = await supabase
+                    .from('conversations')
+                    .select('id')
+                    .eq('type', 'direct');
 
-                if (existing && existing.length > 0) {
-                    switchConversation(existing[0].conversation_id);
-                    return;
+                if (directConvs && directConvs.length > 0) {
+                    const directConvIds = directConvs.map(c => c.id);
+                    const { data: targetParts } = await supabase
+                        .from('conversation_participants')
+                        .select('conversation_id')
+                        .eq('user_id', targetUserId)
+                        .in('conversation_id', directConvIds);
+
+                    if (targetParts && targetParts.length > 0) {
+                        const targetConvIds = targetParts.map(c => c.conversation_id);
+                        const { data: existing } = await supabase
+                            .from('conversation_participants')
+                            .select('conversation_id')
+                            .eq('user_id', currentUserId)
+                            .in('conversation_id', targetConvIds);
+
+                        if (existing && existing.length > 0) {
+                            switchConversation(existing[0].conversation_id);
+                            return;
+                        }
+                    }
                 }
+
+                // 3. 创建新会话，并设置 name = 对方显示名称
+                const { data: conv, error: convErr } = await supabase
+                    .from('conversations')
+                    .insert({ 
+                        type: 'direct',
+                        name: targetDisplayName
+                    })
+                    .select()
+                    .single();
+                if (convErr) { alert('创建会话失败'); return; }
+
+                // 4. 添加参与者
+                const { error: pErr } = await supabase
+                    .from('conversation_participants')
+                    .insert([
+                        { conversation_id: conv.id, user_id: currentUserId },
+                        { conversation_id: conv.id, user_id: targetUserId }
+                    ]);
+                if (pErr) { alert('添加参与者失败'); return; }
+
+                // 5. 刷新会话列表并跳转
+                await loadConversations();
+                switchConversation(conv.id);
+            } finally {
+                isCreatingDirect = false;
             }
-
-            // 3. 创建新会话，并设置 name = 对方显示名称
-            const { data: conv, error: convErr } = await supabase
-                .from('conversations')
-                .insert({ 
-                    type: 'direct',
-                    name: targetDisplayName  // ← 关键：直接使用对方显示名称
-                })
-                .select()
-                .single();
-            if (convErr) { alert('创建会话失败'); return; }
-
-            // 4. 添加参与者
-            const { error: pErr } = await supabase
-                .from('conversation_participants')
-                .insert([
-                    { conversation_id: conv.id, user_id: currentUserId },
-                    { conversation_id: conv.id, user_id: targetUserId }
-                ]);
-            if (pErr) { alert('添加参与者失败'); return; }
-
-            // 5. 刷新会话列表并跳转
-            await loadConversations();
-            switchConversation(conv.id);
         }
 
         
@@ -1276,7 +1300,7 @@ async function switchConversation(convId) {
     });
     const conv = conversationList.find(c => c.id === convId);
     if (conv && chatTitle) {
-        let title = conv.name || '聊天';
+        let title = '';
         let sub = '';
         if (conv.type === 'global') { title = '全局聊天'; sub = '# 所有成员'; }
         else if (conv.type === 'direct') {
@@ -1285,8 +1309,13 @@ async function switchConversation(convId) {
                 const profile = currentUserMap[other.user_id] || {};
                 title = profile.display_name || '未知用户';
                 sub = '# 私聊';
-            }
-        } else { sub = '# 群组'; }
+                const isOnline = Object.values(onlineUsers).some(u => u.user_id === other.user_id);
+                if (onlineStatus) {
+                    onlineStatus.textContent = isOnline ? '● 在线' : '● 离线';
+                    onlineStatus.style.color = isOnline ? '#4ade80' : 'var(--text-muted)';
+                }
+            } else { title = '私聊'; sub = '# 未知用户'; }
+        } else { title = conv.name || '群组'; sub = '# 群聊'; }
         chatTitle.innerHTML = `${esc(title)} <small>${sub}</small>`;
     }
     hasMoreMessages = true;
@@ -1461,7 +1490,7 @@ function renderMessageContent(raw) {
     text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
     text = text.replace(/\n/g, '<br>');
-    images.forEach((u,i) => { text = text.replace('\x00I'+(i+1)+'I\x00', '<img class="msg-img" src="'+esc(u)+'" onclick="window.previewImage(\''+esc(u)+'\')" alt="图片" loading="lazy"/>'); });
+    images.forEach((u,i) => { text = text.replace('\x00I'+(i+1)+'I\x00', '<img class="msg-img" src="'+esc(u)+'" onclick="window.previewImage(\''+esc(u)+'\')" alt="图片" loading="lazy" style="max-width:100%;height:auto;border-radius:10px;"/>'); });
     audios.forEach((u,i) => { text = text.replace('\x00A'+(i+1)+'A\x00', '<audio controls src="'+esc(u)+'" preload="metadata"></audio>'); });
     quotes.forEach((q,i) => {
         var timeAttr = q.time ? formatTimeShort(q.time) : '';
@@ -2286,10 +2315,23 @@ window.recallMessage = async function(mid) {
 
 // ===================== 在线状态 =====================
 function updateOnlineUI() {
-    if (onlineStatus) onlineStatus.textContent = '● '+onlineCount+' 人在线';
     if (onlineBadge) { onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); }
     if (modalOnlineCount) modalOnlineCount.textContent = onlineCount;
     renderOnlineUsers();
+    const conv = conversationList.find(c => c.id === currentConversationId);
+    if (conv && conv.type === 'direct') {
+        const other = conv.participants.find(p => p.user_id !== currentUserId);
+        if (other && onlineStatus) {
+            const isOnline = Object.values(onlineUsers).some(u => u.user_id === other.user_id);
+            onlineStatus.textContent = isOnline ? '● 在线' : '● 离线';
+            onlineStatus.style.color = isOnline ? '#4ade80' : 'var(--text-muted)';
+        }
+        return;
+    }
+    if (onlineStatus) {
+        onlineStatus.textContent = '● '+onlineCount+' 人在线';
+        onlineStatus.style.color = '';
+    }
 }
 function renderOnlineUsers() {
     if (!onlineUserList) return;
