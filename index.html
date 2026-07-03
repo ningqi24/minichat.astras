@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="3.0.1" />
+    <meta name="version" content="3.0.2" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -577,7 +577,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '3.0.1';
+var APP_VERSION = '3.0.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -643,21 +643,28 @@ function bustCache(url) {
 
 function getAvatarUrl(email) {
             if (!email) return getDefaultAvatar('');
-            // 如果该邮箱的头像已被标记失败，直接返回默认头像
+            // 如果标记了失败，但 currentUserMap 中有有效头像，可能是误标记，清除标记
             if (failedAvatars[email]) {
+                var info = currentUserMap[email];
+                if (info && info.avatar_url && !info.avatar_url.includes('ui-avatars.com')) {
+                    delete failedAvatars[email];
+                    return bustCache(info.avatar_url);
+                }
                 return getDefaultAvatar(email);
             }
             var info = currentUserMap[email] || {};
             var ou = Object.values(onlineUsers).find(u => u.email === email);
             var url = ou ? ou.avatar_url : info.avatar_url;
-            if (!url || url === 'null' || url === 'undefined') {
+            if (!url || url === 'null' || url === 'undefined' || url.includes('ui-avatars.com')) {
+                // 如果 URL 是默认头像，不标记失败，因为默认头像总是可用的
+                if (url && url.includes('ui-avatars.com')) return url;
+                // 否则标记失败并返回默认
                 failedAvatars[email] = true;
                 if (currentUserMap[email]) {
                     currentUserMap[email].avatar_url = getDefaultAvatar(email);
                 }
                 return getDefaultAvatar(email);
             }
-            // 对 Supabase URL 只做一次性缓存清除，避免频繁变更导致请求中断
             return bustCache(url);
         }
 
@@ -667,19 +674,71 @@ function handleAvatarError(img, email) {
                 img.onerror = null;
                 return;
             }
-            // 防止重复触发
-            if (img.dataset.avatarErrorHandled === 'true') return;
-            img.dataset.avatarErrorHandled = 'true';
-
-            failedAvatars[email] = true;
-            if (currentUserMap[email]) {
-                currentUserMap[email].avatar_url = getDefaultAvatar(email);
-            }
-            // 使用 setTimeout 避免同步替换导致的 NS_BINDING_ABORTED
-            setTimeout(function() {
+            // 如果已经标记，直接回退
+            if (failedAvatars[email]) {
                 img.src = getDefaultAvatar(email);
-            }, 0);
-            img.onerror = null; // 防止循环
+                img.onerror = null;
+                return;
+            }
+            // 检查当前图片 URL 是否已经是默认头像
+            var currentSrc = img.src || '';
+            if (currentSrc.includes('ui-avatars.com')) {
+                // 已经是默认，不需要处理
+                img.onerror = null;
+                return;
+            }
+            // 检查是否有有效头像
+            var info = currentUserMap[email];
+            if (info && info.avatar_url && !info.avatar_url.includes('ui-avatars.com')) {
+                // 尝试重新加载一次（使用当前 src 或存储中的 URL）
+                var originalUrl = info.avatar_url;
+                // 如果当前 src 不是 originalUrl，尝试用 originalUrl 重试
+                if (currentSrc !== originalUrl && !currentSrc.includes('_t=')) {
+                    // 可能是旧的时间戳，尝试清除缓存
+                    var cleanUrl = originalUrl.split('?')[0]; // 去掉查询参数
+                    img.src = bustCache(cleanUrl);
+                    img.onerror = function() {
+                        // 重试失败，标记
+                        failedAvatars[email] = true;
+                        if (currentUserMap[email]) {
+                            currentUserMap[email].avatar_url = getDefaultAvatar(email);
+                        }
+                        img.src = getDefaultAvatar(email);
+                        img.onerror = null;
+                    };
+                    return;
+                }
+                // 如果当前 src 就是 originalUrl 或带时间戳，尝试重新加载（移除时间戳）
+                if (currentSrc.includes('_t=')) {
+                    var baseUrl = currentSrc.split('_t=')[0];
+                    // 重新生成时间戳
+                    img.src = bustCache(baseUrl);
+                    img.onerror = function() {
+                        failedAvatars[email] = true;
+                        if (currentUserMap[email]) {
+                            currentUserMap[email].avatar_url = getDefaultAvatar(email);
+                        }
+                        img.src = getDefaultAvatar(email);
+                        img.onerror = null;
+                    };
+                    return;
+                }
+                // 其他情况，直接标记失败
+                failedAvatars[email] = true;
+                if (currentUserMap[email]) {
+                    currentUserMap[email].avatar_url = getDefaultAvatar(email);
+                }
+                img.src = getDefaultAvatar(email);
+                img.onerror = null;
+            } else {
+                // 没有有效头像，直接标记失败
+                failedAvatars[email] = true;
+                if (currentUserMap[email]) {
+                    currentUserMap[email].avatar_url = getDefaultAvatar(email);
+                }
+                img.src = getDefaultAvatar(email);
+                img.onerror = null;
+            }
         }
 
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -1322,6 +1381,8 @@ function createMessageElement(msg) {
     var ai = document.createElement('img');
     ai.src = getAvatarUrl(sender_email);
     ai.alt = '头像';
+    ai.loading = 'eager';
+    ai.dataset.senderEmail = sender_email;
     ai.onerror = function() { handleAvatarError(this, sender_email); };
     aw.appendChild(ai);
     aw.addEventListener('click', e => { e.stopPropagation(); showUserProfile(sender_email); });
@@ -2226,6 +2287,8 @@ function renderOnlineUsers() {
     for (var id in onlineUsers) { var u = onlineUsers[id]; var it = document.createElement('div'); it.className = 'online-user-item';
         var avatar = document.createElement('img'); avatar.className = 'avatar-small';
         avatar.src = getAvatarUrl(u.email);
+        avatar.loading = 'eager';
+        avatar.dataset.senderEmail = u.email;
         avatar.onerror = function() { handleAvatarError(this, u.email); };
         avatar.addEventListener('click', e => { e.stopPropagation(); showUserProfile(u.email); });
         var dot = document.createElement('span'); dot.className = 'online-dot';
@@ -2255,7 +2318,7 @@ function renderMentionDropdown(filter) {
     if (!f.length) { mentionDropdown.innerHTML = '<div class="mention-item" style="color:var(--text-muted)">没有找到用户</div>'; return; }
     f.forEach(u => {
         var it = document.createElement('div'); it.className = 'mention-item';
-        it.innerHTML = '<img src="'+bustCache(u.avatar_url||getDefaultAvatar(u.email))+'"/><span class="name">'+esc(u.display_name||u.email)+'</span><span class="email">'+esc(u.email)+'</span>';
+        it.innerHTML = '<img src="'+bustCache(u.avatar_url||getDefaultAvatar(u.email))+'" loading="eager" data-sender-email="'+esc(u.email)+'"/><span class="name">'+esc(u.display_name||u.email)+'</span><span class="email">'+esc(u.email)+'</span>';
         it.addEventListener('click', () => {
             var v = chatInput ? chatInput.value : '', cp = chatInput ? chatInput.selectionStart : 0, la = v.lastIndexOf('@', cp);
             if (la !== -1 && chatInput) { var before = v.substring(0,la), after = v.substring(cp), mt = '@'+(u.display_name||u.email)+' '; chatInput.value = before+mt+after; chatInput.selectionStart = chatInput.selectionEnd = before.length+mt.length; chatInput.focus(); }
