@@ -628,6 +628,7 @@ var presenceChannel = null;
 var failedAvatars = {};
         var isCreatingDirect = false; // 防止重复创建私聊
         var avatarCache = {}; // 头像 URL 缓存，避免重复请求导致 NS_BINDING_ABORTED
+        var currentOtherUserId = null; // 当前私聊的对方用户ID
 
 // ===================== 工具函数（增强） =====================
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
@@ -1181,15 +1182,14 @@ function renderConversationList() {
         let displayName = conv.name || '未命名';
         let avatarHtml = '';
         if (conv.type === 'direct') {
-            const other = conv.participants.find(p => p.user_id !== currentUserId);
+            const other = conv.participants?.find(p => p.user_id !== currentUserId);
             if (other) {
                 const profile = currentUserMap[other.user_id] || {};
-                displayName = conv.name || profile.display_name || '未知用户';
-                const avatarUrl = getAvatarUrl(profile.email || other.user_id);
-                avatarHtml = `<img src="${avatarUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.src='${getDefaultAvatar(profile.email || '')}'"/>`;
+                displayName = profile.display_name || other.email?.split('@')[0] || '未知用户';
             } else {
-                avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>`;
+                displayName = '私聊';
             }
+            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>`;
         } else if (conv.type === 'global') {
             displayName = '全局聊天';
             avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
@@ -1299,25 +1299,29 @@ async function switchConversation(convId) {
         el.classList.toggle('active', el.dataset.conversationId === convId);
     });
     const conv = conversationList.find(c => c.id === convId);
+    if (conv) {
+        if (conv.type === 'direct') {
+            const other = conv.participants?.find(p => p.user_id !== currentUserId);
+            currentOtherUserId = other ? other.user_id : null;
+        } else {
+            currentOtherUserId = null;
+        }
+    }
     if (conv && chatTitle) {
         let title = '';
         let sub = '';
         if (conv.type === 'global') { title = '全局聊天'; sub = '# 所有成员'; }
         else if (conv.type === 'direct') {
-            const other = conv.participants.find(p => p.user_id !== currentUserId);
+            const other = conv.participants?.find(p => p.user_id !== currentUserId);
             if (other) {
                 const profile = currentUserMap[other.user_id] || {};
-                title = profile.display_name || '未知用户';
+                title = profile.display_name || other.email?.split('@')[0] || '未知用户';
                 sub = '# 私聊';
-                const isOnline = Object.values(onlineUsers).some(u => u.user_id === other.user_id);
-                if (onlineStatus) {
-                    onlineStatus.textContent = isOnline ? '● 在线' : '● 离线';
-                    onlineStatus.style.color = isOnline ? '#4ade80' : 'var(--text-muted)';
-                }
             } else { title = '私聊'; sub = '# 未知用户'; }
         } else { title = conv.name || '群组'; sub = '# 群聊'; }
         chatTitle.innerHTML = `${esc(title)} <small>${sub}</small>`;
     }
+    updateOnlineUI();
     hasMoreMessages = true;
     oldestTimestamp = null;
     isLoadingMore = false;
@@ -2318,19 +2322,17 @@ function updateOnlineUI() {
     if (onlineBadge) { onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); }
     if (modalOnlineCount) modalOnlineCount.textContent = onlineCount;
     renderOnlineUsers();
-    const conv = conversationList.find(c => c.id === currentConversationId);
-    if (conv && conv.type === 'direct') {
-        const other = conv.participants.find(p => p.user_id !== currentUserId);
-        if (other && onlineStatus) {
-            const isOnline = Object.values(onlineUsers).some(u => u.user_id === other.user_id);
+    if (currentOtherUserId) {
+        const isOnline = Object.values(onlineUsers).some(u => u.user_id === currentOtherUserId);
+        if (onlineStatus) {
             onlineStatus.textContent = isOnline ? '● 在线' : '● 离线';
             onlineStatus.style.color = isOnline ? '#4ade80' : 'var(--text-muted)';
         }
-        return;
-    }
-    if (onlineStatus) {
-        onlineStatus.textContent = '● '+onlineCount+' 人在线';
-        onlineStatus.style.color = '';
+    } else {
+        if (onlineStatus) {
+            onlineStatus.textContent = '● '+onlineCount+' 人在线';
+            onlineStatus.style.color = '';
+        }
     }
 }
 function renderOnlineUsers() {
