@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="3.0.2" />
+    <meta name="version" content="3.0.3" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -577,7 +577,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '3.0.2';
+var APP_VERSION = '3.0.3';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -1209,15 +1209,18 @@ function showNewDirectDialog() {
 
 async function createDirectConversation(targetEmail) {
             if (targetEmail === currentEmail) { alert('不能与自己私聊'); return; }
+
+            // 1. 查询目标用户的 ID 和 display_name
             const { data: user, error } = await supabase
                 .from('profiles')
-                .select('id')
+                .select('id, display_name')
                 .eq('email', targetEmail)
                 .single();
             if (error || !user) { alert('用户不存在'); return; }
             const targetUserId = user.id;
+            const targetDisplayName = user.display_name || targetEmail.split('@')[0] || '未知用户';
 
-            // 第一步：查询目标用户参与的所有会话 ID
+            // 2. 检查是否已有私聊（逻辑不变）
             const { data: targetConvs } = await supabase
                 .from('conversation_participants')
                 .select('conversation_id')
@@ -1225,7 +1228,6 @@ async function createDirectConversation(targetEmail) {
 
             if (targetConvs && targetConvs.length > 0) {
                 const targetConvIds = targetConvs.map(c => c.conversation_id);
-                // 第二步：查询当前用户是否也在这些会话中
                 const { data: existing } = await supabase
                     .from('conversation_participants')
                     .select('conversation_id')
@@ -1238,18 +1240,27 @@ async function createDirectConversation(targetEmail) {
                 }
             }
 
+            // 3. 创建新会话，并设置 name = 对方显示名称
             const { data: conv, error: convErr } = await supabase
                 .from('conversations')
-                .insert({ type: 'direct' })
+                .insert({ 
+                    type: 'direct',
+                    name: targetDisplayName  // ← 关键：直接使用对方显示名称
+                })
                 .select()
                 .single();
             if (convErr) { alert('创建会话失败'); return; }
 
-            await supabase.from('conversation_participants').insert([
-                { conversation_id: conv.id, user_id: currentUserId },
-                { conversation_id: conv.id, user_id: targetUserId }
-            ]);
+            // 4. 添加参与者
+            const { error: pErr } = await supabase
+                .from('conversation_participants')
+                .insert([
+                    { conversation_id: conv.id, user_id: currentUserId },
+                    { conversation_id: conv.id, user_id: targetUserId }
+                ]);
+            if (pErr) { alert('添加参与者失败'); return; }
 
+            // 5. 刷新会话列表并跳转
             await loadConversations();
             switchConversation(conv.id);
         }
