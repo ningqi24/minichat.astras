@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="3.0.5" />
+    <meta name="version" content="3.0.6" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -379,7 +379,6 @@
         @media(max-width:768px){.sidebar .nav-item span{display:none}.sidebar-badge{right:6px}}
     </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
 <div class="app" id="app">
@@ -400,7 +399,11 @@
         <aside class="sidebar">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><span class="logo-text">MiniChat</span><span class="version-tag" id="sidebarVersion"></span></div>
             <nav class="nav" id="conversationListContainer">
-                <!-- 会话列表动态生成 -->
+                <div class="nav-item active" id="globalChatNav" data-conversation-id="00000000-0000-0000-0000-000000000000">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>聊天</span>
+                    <span class="sidebar-badge" id="sidebarUnreadBadge">0</span>
+                </div>
             </nav>
             <!-- 设置按钮固定在此处，位于用户信息上方 -->
             <div class="nav-item settings-fixed" id="settingsNav">
@@ -418,14 +421,6 @@
                     <span id="onlineStatus">● 在线</span>
                     <button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </button>
-                    <button class="btn-icon" id="deleteConvBtn" title="删除会话" style="display:none;">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            <line x1="10" y1="11" x2="10" y2="17"/>
-                            <line x1="14" y1="11" x2="14" y2="17"/>
-                        </svg>
                     </button>
                     <button class="online-users-btn" id="onlineUsersBtn" title="在线用户">
                         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -582,13 +577,12 @@
     </div>
     <div class="context-menu" id="contextMenu">
         <div class="menu-item" id="ctxMention"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>@他</div>
-        <div class="menu-item" id="ctxDirect"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>发起私聊</div>
     </div>
 </div>
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '3.0.5';
+var APP_VERSION = '3.0.6';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -618,11 +612,10 @@ var uploadOverlay = $safe('uploadOverlay'), closeUploadBtn = $safe('closeUploadB
 var quoteJumpModal = $safe('quoteJumpModal'), closeQuoteJumpBtn = $safe('closeQuoteJumpBtn');
 var qjAuthor = $safe('qjAuthor'), qjTime = $safe('qjTime'), qjContent = $safe('qjContent');
 var qjCancel = $safe('qjCancel'), qjJump = $safe('qjJump'), qjStatus = $safe('qjStatus');
-var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention'), ctxDirect = $safe('ctxDirect');
+var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention');
 var searchBar = $safe('searchBar'), searchInput = $safe('searchInput'), searchStatus = $safe('searchStatus');
 var searchBtn = $safe('searchBtn'), searchPrev = $safe('searchPrev'), searchNext = $safe('searchNext'), searchClose = $safe('searchClose');
 var chatTitle = $safe('chatTitle');
-var deleteConvBtn = $safe('deleteConvBtn');
 
 // ===================== 全局状态 =====================
 var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '';
@@ -632,12 +625,9 @@ var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
 var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null;
 var unreadCount = 0, isUploadingFile = false;
 var currentConversationId = '00000000-0000-0000-0000-000000000000';
-var conversationList = [];
 var presenceChannel = null;
 var failedAvatars = {};
-        var isCreatingDirect = false; // 防止重复创建私聊
-        var avatarCache = {}; // 头像 URL 缓存，避免重复请求导致 NS_BINDING_ABORTED
-        var currentOtherUserId = null; // 当前私聊的对方用户ID
+var avatarCache = {}; // 头像 URL 缓存，避免重复请求导致 NS_BINDING_ABORTED
 
 // ===================== 工具函数（增强） =====================
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
@@ -1085,31 +1075,19 @@ function enterChat() {
             if (!loginOverlay || !mainInterface) return;
             loginOverlay.classList.add('hidden');
             mainInterface.classList.remove('hidden');
+            // 锁定全局聊天 ID，不再动态切换会话
+            currentConversationId = '00000000-0000-0000-0000-000000000000';
             hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
             document.title = 'MiniChat';
             loadDisplayName().then(() => {
                 setupPresenceChannel();
-                loadConversations().then(() => {
-                    var globalExists = conversationList.some(c => c.id === '00000000-0000-0000-0000-000000000000');
-                    if (!globalExists) {
-                        conversationList.unshift({
-                            id: '00000000-0000-0000-0000-000000000000',
-                            type: 'global',
-                            name: '全局聊天',
-                            participants: []
-                        });
-                        renderConversationList();
-                    }
-                    if (currentConversationId !== '00000000-0000-0000-0000-000000000000') {
-                        currentConversationId = '00000000-0000-0000-0000-000000000000';
-                    }
+                // 不再加载会话列表，仅保证全局会话存在并订阅频道
+                ensureGlobalConversation().then(() => {
                     if (messageList) messageList.innerHTML = '';
                     loadHistory(false);
-                    subscribeMessages(currentConversationId);
+                    subscribeMessages();
                     if (chatTitle) chatTitle.innerHTML = '全局聊天 <small># 所有成员</small>';
-                    document.querySelectorAll('.nav-item').forEach(el => {
-                        el.classList.toggle('active', el.dataset.conversationId === currentConversationId);
-                    });
+                    highlightGlobalNav();
                 });
             });
             localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
@@ -1162,221 +1140,50 @@ function enterChat() {
     if (btnSend) btnSend.disabled = true;
     attachments = []; renderAttachments();
 }
-async function deleteConversation(convId) {
-    if (!confirm('确定要删除此私聊会话吗？所有消息将被永久删除。')) return;
+function closeSettingsFunc() { if (settingsOverlay) settingsOverlay.classList.remove('active'); }
+
+// ===================== 会话管理（仅全局聊天） =====================
+// 确保全局会话存在，并保证当前用户是其中的参与者
+async function ensureGlobalConversation() {
     try {
-        const { error: msgErr } = await supabase
-            .from('messages')
-            .delete()
-            .eq('conversation_id', convId);
-        if (msgErr) throw msgErr;
-        const { error: partErr } = await supabase
-            .from('conversation_participants')
-            .delete()
-            .eq('conversation_id', convId);
-        if (partErr) throw partErr;
-        const { error: convErr } = await supabase
+        // 1. 确保 conversations 表中存在全局会话记录
+        var existing = (await supabase
             .from('conversations')
-            .delete()
-            .eq('id', convId);
-        if (convErr) throw convErr;
-        await loadConversations();
-        if (currentConversationId === convId) {
-            const globalConv = conversationList.find(c => c.id === '00000000-0000-0000-0000-000000000000');
-            if (globalConv) {
-                switchConversation(globalConv.id);
-            } else {
-                await supabase.from('conversations').insert({
-                    id: '00000000-0000-0000-0000-000000000000',
-                    type: 'global',
-                    name: '全局聊天'
+            .select('id')
+            .eq('id', '00000000-0000-0000-0000-000000000000')
+            .maybeSingle()).data;
+        if (!existing) {
+            await supabase.from('conversations').insert({
+                id: '00000000-0000-0000-0000-000000000000',
+                type: 'global',
+                name: '全局聊天'
+            });
+        }
+        // 2. 确保当前用户是参与者（避免外键报错）
+        if (currentUserId) {
+            var part = (await supabase
+                .from('conversation_participants')
+                .select('conversation_id')
+                .eq('conversation_id', '00000000-0000-0000-0000-000000000000')
+                .eq('user_id', currentUserId)
+                .maybeSingle()).data;
+            if (!part) {
+                await supabase.from('conversation_participants').insert({
+                    conversation_id: '00000000-0000-0000-0000-000000000000',
+                    user_id: currentUserId
                 });
-                await loadConversations();
-                switchConversation('00000000-0000-0000-0000-000000000000');
             }
         }
     } catch (e) {
-        alert('删除失败: ' + e.message);
-        console.error(e);
+        console.warn('确保全局会话存在时出错:', e.message);
     }
 }
-function closeSettingsFunc() { if (settingsOverlay) settingsOverlay.classList.remove('active'); }
 
-// ===================== 会话管理 =====================
-async function loadConversations() {
-    const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-            id, type, name, last_message_at,
-            participants:conversation_participants(user_id, last_read_at),
-            last_message:messages(content, sender_name, created_at)
-        `)
-        .eq('participants.user_id', currentUserId)
-        .order('last_message_at', { ascending: false, nullsLast: true });
-    if (error) { console.error('加载会话失败:', error); return; }
-    conversationList = data || [];
-    renderConversationList();
-}
-
-function renderConversationList() {
-    var container = document.getElementById('conversationListContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    conversationList.forEach(conv => {
-        const div = document.createElement('div');
-        div.className = 'nav-item' + (conv.id === currentConversationId ? ' active' : '');
-        div.dataset.conversationId = conv.id;
-        let displayName = conv.name || '未命名';
-        let avatarHtml = '';
-        if (conv.type === 'direct') {
-            const other = conv.participants?.find(p => p.user_id !== currentUserId);
-            if (other) {
-                const profile = currentUserMap[other.user_id] || {};
-                displayName = profile.display_name || other.email?.split('@')[0] || '未知用户';
-            } else {
-                displayName = '私聊';
-            }
-            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-        } else if (conv.type === 'global') {
-            displayName = '全局聊天';
-            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
-        } else {
-            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
-        }
-        div.innerHTML = `<div style="display:flex;align-items:center;gap:10px;width:100%;">${avatarHtml}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(displayName)}</span></div>`;
-        div.addEventListener('click', () => {
-            switchConversation(conv.id);
-        });
-        container.appendChild(div);
-    });
-    const addBtn = document.createElement('div');
-    addBtn.className = 'nav-item';
-    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>新建私聊</span>`;
-    addBtn.addEventListener('click', showNewDirectDialog);
-    container.appendChild(addBtn);
-}
-
-function showNewDirectDialog() {
-    const email = prompt('请输入对方的邮箱地址：');
-    if (!email) return;
-    createDirectConversation(email);
-}
-
-async function createDirectConversation(targetEmail) {
-            if (isCreatingDirect) { alert('正在创建私聊，请稍候...'); return; }
-            if (targetEmail === currentEmail) { alert('不能与自己私聊'); return; }
-
-            isCreatingDirect = true;
-
-            try {
-                // 1. 查询目标用户的 ID 和 display_name
-                const { data: user, error } = await supabase
-                    .from('profiles')
-                    .select('id, display_name')
-                    .eq('email', targetEmail)
-                    .single();
-                if (error || !user) { alert('用户不存在'); return; }
-                const targetUserId = user.id;
-                const targetDisplayName = user.display_name || targetEmail.split('@')[0] || '未知用户';
-
-                // 2. 检查是否已有私聊（只查 type='direct' 的会话）
-                const { data: directConvs } = await supabase
-                    .from('conversations')
-                    .select('id')
-                    .eq('type', 'direct');
-
-                if (directConvs && directConvs.length > 0) {
-                    const directConvIds = directConvs.map(c => c.id);
-                    const { data: targetParts } = await supabase
-                        .from('conversation_participants')
-                        .select('conversation_id')
-                        .eq('user_id', targetUserId)
-                        .in('conversation_id', directConvIds);
-
-                    if (targetParts && targetParts.length > 0) {
-                        const targetConvIds = targetParts.map(c => c.conversation_id);
-                        const { data: existing } = await supabase
-                            .from('conversation_participants')
-                            .select('conversation_id')
-                            .eq('user_id', currentUserId)
-                            .in('conversation_id', targetConvIds);
-
-                        if (existing && existing.length > 0) {
-                            switchConversation(existing[0].conversation_id);
-                            return;
-                        }
-                    }
-                }
-
-                // 3. 创建新会话，并设置 name = 对方显示名称
-                const { data: conv, error: convErr } = await supabase
-                    .from('conversations')
-                    .insert({ 
-                        type: 'direct',
-                        name: targetDisplayName
-                    })
-                    .select()
-                    .single();
-                if (convErr) { alert('创建会话失败'); return; }
-
-                // 4. 添加参与者
-                const { error: pErr } = await supabase
-                    .from('conversation_participants')
-                    .insert([
-                        { conversation_id: conv.id, user_id: currentUserId },
-                        { conversation_id: conv.id, user_id: targetUserId }
-                    ]);
-                if (pErr) { alert('添加参与者失败'); return; }
-
-                // 5. 刷新会话列表并跳转
-                await loadConversations();
-                switchConversation(conv.id);
-            } finally {
-                isCreatingDirect = false;
-            }
-        }
-
-        
-
-async function switchConversation(convId) {
-    if (convId === currentConversationId) return;
-    currentConversationId = convId;
-    if (messageList) messageList.innerHTML = '';
+// 侧边栏聊天项的激活态切换
+function highlightGlobalNav() {
     document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.toggle('active', el.dataset.conversationId === convId);
+        el.classList.toggle('active', el.id === 'globalChatNav');
     });
-    const conv = conversationList.find(c => c.id === convId);
-    if (conv) {
-        if (conv.type === 'direct') {
-            const other = conv.participants?.find(p => p.user_id !== currentUserId);
-            currentOtherUserId = other ? other.user_id : null;
-        } else {
-            currentOtherUserId = null;
-        }
-    }
-    if (conv && chatTitle) {
-        let title = '';
-        let sub = '';
-        if (conv.type === 'global') { title = '全局聊天'; sub = '# 所有成员'; }
-        else if (conv.type === 'direct') {
-            const other = conv.participants?.find(p => p.user_id !== currentUserId);
-            if (other) {
-                const profile = currentUserMap[other.user_id] || {};
-                title = profile.display_name || other.email?.split('@')[0] || '未知用户';
-                sub = '# 私聊';
-            } else { title = '私聊'; sub = '# 未知用户'; }
-        } else { title = conv.name || '群组'; sub = '# 群聊'; }
-        chatTitle.innerHTML = `${esc(title)} <small>${sub}</small>`;
-    }
-    if (deleteConvBtn) {
-        deleteConvBtn.style.display = (conv && conv.type === 'direct') ? 'flex' : 'none';
-    }
-    updateOnlineUI();
-    hasMoreMessages = true;
-    oldestTimestamp = null;
-    isLoadingMore = false;
-    await loadHistory(false);
-    subscribeMessages(convId);
 }
 
 // ===================== 消息加载 =====================
@@ -1386,16 +1193,13 @@ async function loadHistory(append) {
             if (!hasMoreMessages && append) return;
             isLoadingMore = true;
             try {
+                // 全局聊天：只查全局消息（conversation_id 为 null 或等于全局ID）
                 let query = supabase
                     .from('messages')
                     .select('*')
+                    .or('conversation_id.is.null,conversation_id.eq.00000000-0000-0000-0000-000000000000')
                     .order('created_at', { ascending: false })
                     .limit(PAGE_SIZE);
-                if (currentConversationId === '00000000-0000-0000-0000-000000000000') {
-                    query = query.or('conversation_id.is.null,conversation_id.eq.00000000-0000-0000-0000-000000000000');
-                } else {
-                    query = query.eq('conversation_id', currentConversationId);
-                }
                 if (oldestTimestamp) {
                     query = query.lt('created_at', oldestTimestamp);
                 }
@@ -1974,10 +1778,11 @@ async function searchMessagesRemote(term) {
     if (typeof supabase === 'undefined' || !supabase) return [];
     try {
         var safe = term.replace(/[%_\\]/g, '\\$&');
+        // 全局搜索模式：只查全局消息（conversation_id 为 null）
         var res = await supabase
             .from('messages')
             .select('id, content, sender_email, sender_name, created_at')
-            .eq('conversation_id', currentConversationId)
+            .or('conversation_id.is.null,conversation_id.eq.00000000-0000-0000-0000-000000000000')
             .ilike('content', '%' + safe + '%')
             .order('created_at', { ascending: false })
             .limit(200);
@@ -2084,14 +1889,6 @@ if (ctxMention) {
         if (contextMenu) contextMenu.classList.remove('active');
     });
 }
-if (ctxDirect) {
-    ctxDirect.addEventListener('click', () => {
-        var targetEmail = contextMenu ? contextMenu.dataset.targetEmail : '';
-        if (targetEmail) createDirectConversation(targetEmail);
-        if (contextMenu) contextMenu.classList.remove('active');
-    });
-}
-document.addEventListener('click', e => { if (contextMenu && !contextMenu.contains(e.target)) contextMenu.classList.remove('active'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && contextMenu) contextMenu.classList.remove('active'); });
 
 // ===================== 用户资料 =====================
@@ -2333,15 +2130,12 @@ async function sendMessageContent(content) {
                 var tempId = 'temp-'+Date.now();
                 addMessageToBottom({ id: tempId, content: fc, sender_name: senderName, sender_email: currentEmail, isMe: true, time: formatTimeShort(new Date().toISOString()), created_at: new Date().toISOString() });
                 if (chatInput) { chatInput.value = ''; attachments = []; renderAttachments(); autoResizeTextarea(); }
-                // 构造插入对象：全局会话不设 conversation_id（null），私聊设置
+                // 全局模式：直接插入消息，不写 conversation_id（默认 null）
                 var insertObj = {
                     content: fc,
                     sender_name: senderName,
                     sender_email: currentEmail
                 };
-                if (currentConversationId !== '00000000-0000-0000-0000-000000000000') {
-                    insertObj.conversation_id = currentConversationId;
-                }
                 var res = await supabase.from('messages').insert(insertObj).select().single();
                 if (res.error) throw res.error;
                 var data = res.data;
@@ -2372,17 +2166,10 @@ function updateOnlineUI() {
     if (onlineBadge) { onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); }
     if (modalOnlineCount) modalOnlineCount.textContent = onlineCount;
     renderOnlineUsers();
-    if (currentOtherUserId) {
-        const isOnline = Object.values(onlineUsers).some(u => u.user_id === currentOtherUserId);
-        if (onlineStatus) {
-            onlineStatus.textContent = isOnline ? '● 在线' : '● 离线';
-            onlineStatus.style.color = isOnline ? '#4ade80' : 'var(--text-muted)';
-        }
-    } else {
-        if (onlineStatus) {
-            onlineStatus.textContent = '● '+onlineCount+' 人在线';
-            onlineStatus.style.color = '';
-        }
+    // 全局聊天模式：始终显示在线总人数
+    if (onlineStatus) {
+        onlineStatus.textContent = '● '+onlineCount+' 人在线';
+        onlineStatus.style.color = '';
     }
 }
 function renderOnlineUsers() {
@@ -2452,13 +2239,14 @@ function showTypingIndicator(dn) {
     typingStopId = setTimeout(() => i.classList.remove('active'), 2000);
 }
 
-// ===================== 实时频道 =====================
-function subscribeMessages(convId) {
+// ===================== 实时频道（仅全局聊天） =====================
+function subscribeMessages() {
     if (window.chatChannel) {
         window.chatChannel.unsubscribe();
         window.chatChannel = null;
     }
-    var ch = supabase.channel('chat-room-' + convId, {
+    // 固定全局频道名，不再依赖 convId
+    var ch = supabase.channel('chat-room-global', {
         config: { presence: { key: currentUserId } }
     });
     ch.on('presence', { event:'sync' }, () => {
@@ -2471,16 +2259,19 @@ function subscribeMessages(convId) {
             else { setAuthMessage(data.payload.from + ' 提到了你','success'); setTimeout(() => setAuthMessage(''), 5000); }
         }
     });
-    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
+    // 不再使用 convId 过滤器，监听 messages 表全部变更，在回调里筛全局消息（conversation_id 为 null）
+    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => {
         var m = payload.new; if (!m || m.sender_email === currentEmail) return;
-        if (m.conversation_id !== currentConversationId) return;
+        // 跳过非全局消息（理论上不再存在，但兼容历史数据）
+        if (m.conversation_id && m.conversation_id !== '00000000-0000-0000-0000-000000000000') return;
         addMessageToBottom({ id: m.id, content: m.content, sender_name: m.sender_name || '匿名', sender_email: m.sender_email, isMe: false, time: formatTimeShort(m.created_at), created_at: m.created_at });
     });
-    ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
+    ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' }, payload => {
         var u = payload.new;
+        if (u.conversation_id && u.conversation_id !== '00000000-0000-0000-0000-000000000000') return;
         document.querySelectorAll('.message[data-message-id="'+u.id+'"]').forEach(el => { el.replaceWith(createMessageElement({ id: u.id, content: u.content, sender_name: u.sender_name, sender_email: u.sender_email, isMe: u.sender_email === currentEmail, time: formatTimeShort(u.created_at), created_at: u.created_at })); });
     });
-    ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages', filter: 'conversation_id=eq.' + convId }, payload => {
+    ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages' }, payload => {
         var el = messageList ? messageList.querySelector('[data-message-id="'+payload.old.id+'"]') : null;
         if (el) el.remove();
     });
@@ -2554,13 +2345,6 @@ if (avatarFileInput) {
 }
 var checkBtn = document.getElementById('checkUpdateBtn');
 if (checkBtn) checkBtn.addEventListener('click', checkForUpdate);
-if (deleteConvBtn) {
-    deleteConvBtn.addEventListener('click', function() {
-        if (currentConversationId && currentConversationId !== '00000000-0000-0000-0000-000000000000') {
-            deleteConversation(currentConversationId);
-        }
-    });
-}
 if (onlineUsersBtn) {
     onlineUsersBtn.addEventListener('click', e => { e.stopPropagation(); if (onlineModal) onlineModal.classList.toggle('active'); });
 }
