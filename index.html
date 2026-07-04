@@ -419,6 +419,14 @@
                     <button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </button>
+                    <button class="btn-icon" id="deleteConvBtn" title="删除会话" style="display:none;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                    </button>
                     <button class="online-users-btn" id="onlineUsersBtn" title="在线用户">
                         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span class="online-badge" id="onlineBadge">0</span>
@@ -614,6 +622,7 @@ var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention'), ctxDir
 var searchBar = $safe('searchBar'), searchInput = $safe('searchInput'), searchStatus = $safe('searchStatus');
 var searchBtn = $safe('searchBtn'), searchPrev = $safe('searchPrev'), searchNext = $safe('searchNext'), searchClose = $safe('searchClose');
 var chatTitle = $safe('chatTitle');
+var deleteConvBtn = $safe('deleteConvBtn');
 
 // ===================== 全局状态 =====================
 var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '';
@@ -1153,6 +1162,44 @@ function enterChat() {
     if (btnSend) btnSend.disabled = true;
     attachments = []; renderAttachments();
 }
+async function deleteConversation(convId) {
+    if (!confirm('确定要删除此私聊会话吗？所有消息将被永久删除。')) return;
+    try {
+        const { error: msgErr } = await supabase
+            .from('messages')
+            .delete()
+            .eq('conversation_id', convId);
+        if (msgErr) throw msgErr;
+        const { error: partErr } = await supabase
+            .from('conversation_participants')
+            .delete()
+            .eq('conversation_id', convId);
+        if (partErr) throw partErr;
+        const { error: convErr } = await supabase
+            .from('conversations')
+            .delete()
+            .eq('id', convId);
+        if (convErr) throw convErr;
+        await loadConversations();
+        if (currentConversationId === convId) {
+            const globalConv = conversationList.find(c => c.id === '00000000-0000-0000-0000-000000000000');
+            if (globalConv) {
+                switchConversation(globalConv.id);
+            } else {
+                await supabase.from('conversations').insert({
+                    id: '00000000-0000-0000-0000-000000000000',
+                    type: 'global',
+                    name: '全局聊天'
+                });
+                await loadConversations();
+                switchConversation('00000000-0000-0000-0000-000000000000');
+            }
+        }
+    } catch (e) {
+        alert('删除失败: ' + e.message);
+        console.error(e);
+    }
+}
 function closeSettingsFunc() { if (settingsOverlay) settingsOverlay.classList.remove('active'); }
 
 // ===================== 会话管理 =====================
@@ -1189,7 +1236,7 @@ function renderConversationList() {
             } else {
                 displayName = '私聊';
             }
-            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>`;
+            avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
         } else if (conv.type === 'global') {
             displayName = '全局聊天';
             avatarHtml = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
@@ -1320,6 +1367,9 @@ async function switchConversation(convId) {
             } else { title = '私聊'; sub = '# 未知用户'; }
         } else { title = conv.name || '群组'; sub = '# 群聊'; }
         chatTitle.innerHTML = `${esc(title)} <small>${sub}</small>`;
+    }
+    if (deleteConvBtn) {
+        deleteConvBtn.style.display = (conv && conv.type === 'direct') ? 'flex' : 'none';
     }
     updateOnlineUI();
     hasMoreMessages = true;
@@ -2504,6 +2554,13 @@ if (avatarFileInput) {
 }
 var checkBtn = document.getElementById('checkUpdateBtn');
 if (checkBtn) checkBtn.addEventListener('click', checkForUpdate);
+if (deleteConvBtn) {
+    deleteConvBtn.addEventListener('click', function() {
+        if (currentConversationId && currentConversationId !== '00000000-0000-0000-0000-000000000000') {
+            deleteConversation(currentConversationId);
+        }
+    });
+}
 if (onlineUsersBtn) {
     onlineUsersBtn.addEventListener('click', e => { e.stopPropagation(); if (onlineModal) onlineModal.classList.toggle('active'); });
 }
