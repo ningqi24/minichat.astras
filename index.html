@@ -383,8 +383,8 @@
         /* 消息分组（同用户 5 分钟内合并） */
         .message-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
         .message-group .message { max-width: 85%; animation: fadeIn 0.2s ease; }
-        .message-group .message:not(:first-child) .avatar-wrapper { display: none; }
-        .message-group .message:not(:first-child) .sender { display: none; }
+        .message-group .message:not(:first-child) .avatar-wrapper { visibility: hidden; }
+        .message-group .message:not(:first-child) .sender { visibility: hidden; }
         .message-group .message:first-child { margin-top: 4px; }
 
         /* 时间线标签（今天 / 昨天 / 更早） */
@@ -781,6 +781,7 @@ function getAvatarUrl(email) {
             var info = currentUserMap[email] || {};
             var ou = Object.values(onlineUsers).find(u => u.email === email);
             var url = ou ? ou.avatar_url : info.avatar_url;
+            if (url) return bustCache(url);
             if (!url || url === 'null' || url === 'undefined' || url.includes('ui-avatars.com')) {
                 // 如果 URL 是默认头像，不标记失败，因为默认头像总是可用的
                 if (url && url.includes('ui-avatars.com')) return url;
