@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="3.0.6" />
+    <meta name="version" content="3.1.0" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         /* ===== 样式与 v2.9.4 完全一致，仅微调侧边栏布局 ===== */
@@ -377,6 +377,75 @@
         .sidebar-badge.show{display:flex}
         .sidebar .nav-item.active .sidebar-badge{right:10px}
         @media(max-width:768px){.sidebar .nav-item span{display:none}.sidebar-badge{right:6px}}
+
+        /* ===================== v3.1.0 新增样式 ===================== */
+
+        /* 消息分组（同用户 5 分钟内合并） */
+        .message-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+        .message-group .message { max-width: 85%; animation: fadeIn 0.2s ease; }
+        .message-group .message:not(:first-child) .avatar-wrapper { display: none; }
+        .message-group .message:not(:first-child) .sender { display: none; }
+        .message-group .message:first-child { margin-top: 4px; }
+
+        /* 时间线标签（今天 / 昨天 / 更早） */
+        .time-label { text-align: center; margin: 16px 0 8px; font-size: 12px; color: var(--text-muted); opacity: 0.85; }
+        .time-label span { background: var(--bg-secondary); padding: 4px 12px; border-radius: 10px; border: 1px solid var(--border-color); }
+
+        /* 未读分割线 */
+        .unread-divider { text-align: center; margin: 8px 0; font-size: 12px; color: var(--accent); border-top: 1px dashed var(--accent); padding-top: 6px; opacity: 0.8; }
+        .unread-divider span { background: var(--bg-secondary); padding: 0 12px; }
+
+        /* 底部导航（移动端） */
+        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-sidebar); border-top: 1px solid var(--border-color); z-index: 100; height: 56px; justify-content: space-around; align-items: center; padding: 0 8px; }
+        .bottom-nav .nav-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.2s ease; font-size: 10px; background: none; border: none; font-family: inherit; }
+        .bottom-nav .nav-item.active { color: var(--accent); }
+        .bottom-nav .nav-item:active { transform: scale(0.92); }
+        .bottom-nav .nav-item svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .bottom-nav .nav-item .badge { background: #ef4444; color: #fff; border-radius: 10px; padding: 0 5px; font-size: 10px; min-width: 16px; height: 16px; line-height: 16px; text-align: center; display: none; align-items: center; justify-content: center; position: absolute; top: -2px; right: -4px; font-weight: 600; }
+        .bottom-nav .nav-item .badge.show { display: flex; }
+        @media (max-width: 768px) {
+            .sidebar { display: none !important; }
+            .bottom-nav { display: flex; }
+            .chat-main { margin-bottom: 56px; }
+            .chat-main .chat-header { padding: 12px 16px; }
+            .chat-main .chat-messages { padding: 12px; }
+            .chat-main .input-area { padding: 8px 12px 12px; }
+        }
+
+        /* 资料卡 */
+        .profile-card { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 500; animation: fadeIn 0.2s ease; }
+        .profile-card.active { display: flex; }
+        .profile-card .card { background: var(--bg-card); border-radius: var(--radius); padding: 32px; max-width: 360px; width: 90%; border: 1px solid var(--border-color); box-shadow: var(--shadow); text-align: center; }
+        .profile-card .card .avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; margin: 0 auto 12px; border: 3px solid var(--accent); background: var(--bg-input); }
+        .profile-card .card .display-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; word-break: break-word; }
+        .profile-card .card .email { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; word-break: break-all; }
+        .profile-card .card .status { display: inline-block; padding: 2px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 4px 0 12px; }
+        .profile-card .card .status.online { background: #4ade80; color: #000; }
+        .profile-card .card .status.offline { background: var(--text-muted); color: #fff; }
+        .profile-card .card .status.recent { background: #fbbf24; color: #000; }
+        .profile-card .card .meta { font-size: 13px; color: var(--text-secondary); margin: 4px 0; }
+        .profile-card .card .close-btn { margin-top: 16px; background: var(--bg-input); border: none; padding: 10px; border-radius: var(--radius-sm); color: var(--text-primary); font-weight: 500; cursor: pointer; width: 100%; transition: all 0.2s ease; }
+        .profile-card .card .close-btn:hover { background: var(--bg-hover); }
+
+        /* 分享按钮 */
+        .share-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 6px 8px; border-radius: 6px; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+        .share-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .share-btn:active { transform: scale(0.92); }
+
+        /* 缩略图 */
+        .msg-img-thumb { max-width: 180px; max-height: 180px; width: auto; height: auto; border-radius: 10px; cursor: pointer; margin: 8px 0 4px; display: block; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .msg-img-thumb:hover { transform: scale(1.02); }
+
+        /* 文件附件（PDF / Word / Excel / Video 等） */
+        .file-attachment { display: flex; align-items: center; gap: 10px; background: var(--bg-input); border-radius: 10px; padding: 10px 12px; margin: 6px 0 2px; max-width: 320px; border: 1px solid var(--border-color); }
+        .file-attachment .file-icon { font-size: 24px; line-height: 1; flex-shrink: 0; }
+        .file-attachment .file-info { flex: 1; min-width: 0; overflow: hidden; }
+        .file-attachment .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-attachment .file-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .file-attachment .file-download { background: var(--accent); border: none; color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+        .file-attachment .file-download:hover { background: var(--accent-hover); }
+        .file-attachment.video { flex-direction: column; align-items: stretch; max-width: 100%; padding: 8px; }
+        .file-attachment.video video { width: 100%; max-width: 360px; max-height: 240px; border-radius: 8px; display: block; margin: 0 auto; }
     </style>
 <base target="_blank">
 </head>
@@ -419,6 +488,9 @@
                 <div class="chat-title" id="chatTitle">全局聊天<small># 所有成员</small></div>
                 <div class="chat-header-right">
                     <span id="onlineStatus">● 在线</span>
+                    <button class="share-btn" id="shareBtn" title="分享聊天">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    </button>
                     <button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </button>
@@ -462,9 +534,9 @@
                     <div class="emoji-grid" id="emojiGrid"></div>
                 </div>
                 <div class="input-group">
-                    <textarea id="chatInput" placeholder="输入消息…（Shift+Enter换行）" rows="1"></textarea>
+                    <textarea id="chatInput" placeholder="输入消息…（Shift+Enter 换行）" rows="1"></textarea>
                     <div class="mention-dropdown" id="mentionDropdown"></div>
-                    <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none" multiple/>
+                    <input type="file" id="fileInput" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip" style="display:none" multiple/>
                     <button class="btn-icon" id="attachBtn" title="添加附件"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
                 </div>
                 <button class="send-btn" id="btnSend" disabled><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/><circle cx="11" cy="13" r="1.5"/></svg></button>
@@ -538,15 +610,7 @@
             </div>
         </div>
     </div>
-    <div class="user-profile-modal" id="userProfileModal">
-        <div class="modal-content">
-            <img class="avatar-large" id="profileAvatar" src="" alt="头像"/>
-            <div class="display-name" id="profileDisplayName">昵称</div>
-            <div class="email" id="profileEmail">邮箱</div>
-            <div class="status-badge" id="profileStatus">在线</div>
-            <button class="modal-close" id="closeProfileModal">关闭</button>
-        </div>
-    </div>
+    <!-- v3.1.0: 旧版 userProfileModal 已删除，统一使用新的 #profileCard 资料卡 -->
     <div class="quote-jump-modal" id="quoteJumpModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -577,12 +641,44 @@
     </div>
     <div class="context-menu" id="contextMenu">
         <div class="menu-item" id="ctxMention"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>@他</div>
+        <div class="menu-item" id="ctxProfile"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>查看资料</div>
+    </div>
+
+    <!-- v3.1.0 移动端底部导航 -->
+    <div class="bottom-nav" id="bottomNav">
+        <button class="nav-item active" data-tab="chat" id="bottomChatBtn">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>聊天</span>
+            <span class="badge" id="bottomUnreadBadge">0</span>
+        </button>
+        <button class="nav-item" data-tab="users" id="bottomUsersBtn">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>在线</span>
+            <span class="badge" id="bottomOnlineBadge">0</span>
+        </button>
+        <button class="nav-item" data-tab="settings" id="bottomSettingsBtn">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>设置</span>
+        </button>
+    </div>
+
+    <!-- v3.1.0 用户资料卡 -->
+    <div class="profile-card" id="profileCard">
+        <div class="card">
+            <img class="avatar" id="profileCardAvatar" src="" alt="头像"/>
+            <div class="display-name" id="profileCardName">昵称</div>
+            <div class="email" id="profileCardEmail">邮箱</div>
+            <div class="status" id="profileCardStatus">离线</div>
+            <div class="meta" id="profileCardJoined">注册时间: --</div>
+            <div class="meta" id="profileCardMessages">消息数: --</div>
+            <button class="close-btn" id="profileCardClose">关闭</button>
+        </div>
     </div>
 </div>
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '3.0.6';
+var APP_VERSION = '3.1.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -602,10 +698,10 @@ var onlineModal = $safe('onlineModal'), onlineUserList = $safe('onlineUserList')
 var modalOnlineCount = $safe('modalOnlineCount'), onlineUsersBtn = $safe('onlineUsersBtn');
 var closeOnlineModal = $safe('closeOnlineModal'), avatarPreview = $safe('avatarPreview');
 var avatarUploadBtn = $safe('avatarUploadBtn'), avatarFileInput = $safe('avatarFileInput');
-var avatarUploadStatus = $safe('avatarUploadStatus'), profileModal = $safe('userProfileModal');
+var avatarUploadStatus = $safe('avatarUploadStatus');
 var profileAvatar = $safe('profileAvatar'), profileDisplayName = $safe('profileDisplayName');
 var profileEmail = $safe('profileEmail'), profileStatus = $safe('profileStatus');
-var closeProfileModal = $safe('closeProfileModal'), emojiBtn = $safe('emojiBtn');
+var emojiBtn = $safe('emojiBtn');
 var emojiPanel = $safe('emojiPanel'), emojiTabs = $safe('emojiTabs'), emojiGrid = $safe('emojiGrid');
 var attachmentArea = $safe('attachmentArea'), mentionDropdown = $safe('mentionDropdown');
 var uploadOverlay = $safe('uploadOverlay'), closeUploadBtn = $safe('closeUploadBtn');
@@ -616,6 +712,24 @@ var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention');
 var searchBar = $safe('searchBar'), searchInput = $safe('searchInput'), searchStatus = $safe('searchStatus');
 var searchBtn = $safe('searchBtn'), searchPrev = $safe('searchPrev'), searchNext = $safe('searchNext'), searchClose = $safe('searchClose');
 var chatTitle = $safe('chatTitle');
+
+// v3.1.0 新增 DOM 引用
+var profileCard = $safe('profileCard');
+var profileCardAvatar = $safe('profileCardAvatar');
+var profileCardName = $safe('profileCardName');
+var profileCardEmail = $safe('profileCardEmail');
+var profileCardStatus = $safe('profileCardStatus');
+var profileCardJoined = $safe('profileCardJoined');
+var profileCardMessages = $safe('profileCardMessages');
+var profileCardClose = $safe('profileCardClose');
+var ctxProfile = $safe('ctxProfile');
+var bottomNav = $safe('bottomNav');
+var bottomUnreadBadge = $safe('bottomUnreadBadge');
+var bottomOnlineBadge = $safe('bottomOnlineBadge');
+var bottomChatBtn = $safe('bottomChatBtn');
+var bottomUsersBtn = $safe('bottomUsersBtn');
+var bottomSettingsBtn = $safe('bottomSettingsBtn');
+var shareBtn = $safe('shareBtn');
 
 // ===================== 全局状态 =====================
 var currentEmail = '', currentUserId = '', currentDisplayName = '', currentAvatarUrl = '';
@@ -628,6 +742,14 @@ var currentConversationId = '00000000-0000-0000-0000-000000000000';
 var presenceChannel = null;
 var failedAvatars = {};
 var avatarCache = {}; // 头像 URL 缓存，避免重复请求导致 NS_BINDING_ABORTED
+
+// v3.1.0 新增状态
+var lastReadMessageId = localStorage.getItem('minichat_last_read') || null;
+var newMessageCount = 0;             // 未读消息数（脱机/后台时累计）
+var allLoadedMessages = [];          // 缓存当前加载的所有消息（供轻量虚拟滚动使用）
+var lastTimeLabel = '';              // 最近一个时间标签字符串，避免重复添加
+var imageObserver = null;            // 用于图片懒加载的 IntersectionObserver
+var SUPABASE_IMG_TRANSFORM = '?width=200&quality=70'; // 缩略图后缀
 
 // ===================== 工具函数（增强） =====================
 function getDefaultAvatar(email) { return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(email ? email.split('@')[0] : '用户') + '&background=3b82f6&color=fff&size=128&bold=true'; }
@@ -748,6 +870,23 @@ function handleAvatarError(img, email) {
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 function formatTime(iso) { return new Date(iso).toLocaleString('zh-CN',{hour12:false}); }
 function formatTimeShort(iso) { return new Date(iso).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); }
+// v3.1.0 时间线（今天/昨天/更早）
+function formatTimeLine(iso) {
+    var d = new Date(iso);
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var ms = d.getTime();
+    var diff = today - ms;
+    var t = formatTimeShort(iso);
+    if (diff >= 0 && diff < 24*60*60*1000) return '今天 ' + t;
+    if (diff >= 24*60*60*1000 && diff < 48*60*60*1000) return '昨天 ' + t;
+    return formatTime(iso);
+}
+function getDayKey(iso) {
+    var d = new Date(iso);
+    return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+}
+
 function setAuthMessage(msg, type) {
     if (!authMessage) return;
     authMessage.textContent = msg;
@@ -757,6 +896,40 @@ function setAuthMessage(msg, type) {
 }
 function autoResizeTextarea() { if (!chatInput) return; chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; }
 function insertAtCursor(text) { if (!chatInput) return; chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input',{bubbles:true})); autoResizeTextarea(); }
+
+// v3.1.0 文件图标与大小格式化
+function getFileIcon(mimeType, name) {
+    var m = (mimeType || '').toLowerCase();
+    var n = (name || '').toLowerCase();
+    if (m.startsWith('image/')) return '🖼️';
+    if (m.startsWith('video/')) return '🎬';
+    if (m.startsWith('audio/')) return '🎵';
+    if (m === 'application/pdf' || n.endsWith('.pdf')) return '📄';
+    if (m.includes('word') || m.includes('document') || /\.(doc|docx)$/.test(n)) return '📝';
+    if (m.includes('excel') || m.includes('spreadsheet') || /\.(xls|xlsx|csv)$/.test(n)) return '📊';
+    if (m.includes('presentation') || /\.(ppt|pptx)$/.test(n)) return '🎤';
+    if (m.includes('zip') || n.endsWith('.zip') || n.endsWith('.rar') || n.endsWith('.7z')) return '🗜️';
+    if (m.startsWith('text/') || n.endsWith('.txt')) return '📃';
+    return '📎';
+}
+function formatFileSize(bytes) {
+    if (!bytes || bytes < 0) return '未知大小';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+    return (bytes/1024/1024/1024).toFixed(1) + ' GB';
+}
+
+// v3.1.0 敏感词过滤（前端轻量，服务器可补充）
+var SENSITIVE_WORDS = ['fuck', 'shit', 'bitch', 'asshole', '傻逼', '你妈的', '操你', '滚蛋', '智障'];
+function containsSensitive(text) {
+    if (!text) return false;
+    var lower = text.toLowerCase();
+    for (var i = 0; i < SENSITIVE_WORDS.length; i++) {
+        if (lower.indexOf(SENSITIVE_WORDS[i]) !== -1) return SENSITIVE_WORDS[i];
+    }
+    return false;
+}
 
 // ===================== 版本检测 =====================
 function checkForUpdate() {
@@ -1235,7 +1408,13 @@ async function loadHistory(append) {
                 });
                 if (!append) {
                     messageList.innerHTML = '';
+                    lastTimeLabel = '';
+                    allLoadedMessages = [];
                     msgs.forEach(m => addMessageToBottom(m));
+                    // 加载完成后认领已读
+                    setTimeout(function(){
+                        if (isUserAtBottom) markMessagesRead();
+                    }, 50);
                 } else {
                     prependMessages(msgs);
                 }
@@ -1260,47 +1439,44 @@ async function loadHistory(append) {
 var lastTimeDivider = 0;
 function createMessageElement(msg) {
     var content = msg.content, sender_name = msg.sender_name, sender_email = msg.sender_email, isMe = msg.isMe, time = msg.time, id = msg.id, created_at = msg.created_at;
-    var msgTime = new Date(created_at).getTime();
-    var fragment = document.createDocumentFragment();
-    if (!lastTimeDivider || (msgTime - lastTimeDivider > 5 * 60 * 1000)) {
-        var divider = document.createElement('div');
-        divider.className = 'time-divider';
-        divider.innerHTML = '<span>' + formatTime(created_at) + '</span>';
-        fragment.appendChild(divider);
-        lastTimeDivider = msgTime;
-    }
+    var hideHeader = !!msg._hideHeader;
     var div = document.createElement('div');
     div.className = 'message ' + (isMe ? 'me' : 'other');
     if (id) div.dataset.messageId = id;
     if (created_at) div.dataset.createdAt = created_at;
     if (sender_email) div.dataset.senderEmail = sender_email;
     var isRecalled = (content === '（已撤回）');
-    var aw = document.createElement('div'); aw.className = 'avatar-wrapper';
-    var ai = document.createElement('img');
-    ai.src = getAvatarUrl(sender_email);
-    ai.alt = '头像';
-    ai.loading = 'eager';
-    ai.dataset.senderEmail = sender_email;
-    ai.onerror = function() { handleAvatarError(this, sender_email); };
-    aw.appendChild(ai);
-    aw.addEventListener('click', e => { e.stopPropagation(); showUserProfile(sender_email); });
-    aw.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        var rect = aw.getBoundingClientRect();
-        var x = e.clientX || rect.left + rect.width/2, y = e.clientY || rect.top + rect.height/2;
-        if (contextMenu) {
-            contextMenu.dataset.targetEmail = sender_email;
-            contextMenu.dataset.targetName = sender_name || sender_email.split('@')[0];
-            contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
-            contextMenu.classList.add('active');
-        }
-    });
+    if (!hideHeader) {
+        var aw = document.createElement('div'); aw.className = 'avatar-wrapper';
+        var ai = document.createElement('img');
+        ai.src = getAvatarUrl(sender_email);
+        ai.alt = '头像';
+        ai.loading = 'eager';
+        ai.dataset.senderEmail = sender_email;
+        ai.onerror = function() { handleAvatarError(this, sender_email); };
+        aw.appendChild(ai);
+        aw.addEventListener('click', e => { e.stopPropagation(); showProfileCard(sender_email); });
+        aw.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            var rect = aw.getBoundingClientRect();
+            var x = e.clientX || rect.left + rect.width/2, y = e.clientY || rect.top + rect.height/2;
+            if (contextMenu) {
+                contextMenu.dataset.targetEmail = sender_email;
+                contextMenu.dataset.targetName = sender_name || sender_email.split('@')[0];
+                contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
+                contextMenu.classList.add('active');
+            }
+        });
+        div.appendChild(aw);
+    }
     var bubble = document.createElement('div'); bubble.className = 'bubble';
-    var sd = document.createElement('div'); sd.className = 'sender';
-    var ns = document.createElement('span'); ns.className = 'name'; ns.textContent = sender_name || '匿名'; sd.appendChild(ns);
-    if (sender_email && sender_email !== sender_name) { var es = document.createElement('span'); es.className = 'email'; es.textContent = sender_email; sd.appendChild(es); }
-    sd.addEventListener('click', e => { e.stopPropagation(); showUserProfile(sender_email); });
-    bubble.appendChild(sd);
+    if (!hideHeader) {
+        var sd = document.createElement('div'); sd.className = 'sender';
+        var ns = document.createElement('span'); ns.className = 'name'; ns.textContent = sender_name || '匿名'; sd.appendChild(ns);
+        if (sender_email && sender_email !== sender_name) { var es = document.createElement('span'); es.className = 'email'; es.textContent = sender_email; sd.appendChild(es); }
+        sd.addEventListener('click', e => { e.stopPropagation(); showProfileCard(sender_email); });
+        bubble.appendChild(sd);
+    }
     var cd = document.createElement('div'); cd.className = 'message-content'; cd.innerHTML = renderMessageContent(content);
     bubble.appendChild(cd);
     var ft = document.createElement('div'); ft.className = 'message-footer';
@@ -1312,7 +1488,7 @@ function createMessageElement(msg) {
         var fb = document.createElement('button'); fb.className = 'action-btn'; fb.title = '复制内容'; fb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
         fb.addEventListener('click', e => {
             e.stopPropagation();
-            var t = (content || '').replace(/!\[image\]\([^)]*\)/g,'[图片]').replace(/\[audio\]\([^)]*\)/g,'[音频]').replace(/\[quote:[^\]]*\]/g,'');
+            var t = (content || '').replace(/!\[image\]\([^)]*\)/g,'[图片]').replace(/\[audio\]\([^)]*\)/g,'[音频]').replace(/\[video\]\([^)]*\)/g,'[视频]').replace(/\[file\]\([^)]*\)/g,'[文件]').replace(/\[quote:[^\]]*\]/g,'');
             navigator.clipboard.writeText(t).then(() => {
                 var tip = document.createElement('span'); tip.textContent = '已复制'; tip.style.cssText = 'color:#4ade80;font-size:11px;margin-left:2px;';
                 ft.appendChild(tip); setTimeout(() => tip.remove(), 1500);
@@ -1330,26 +1506,60 @@ function createMessageElement(msg) {
         }
     }
     bubble.appendChild(ft);
-    div.appendChild(aw); div.appendChild(bubble);
-    fragment.appendChild(div);
-    return fragment;
+    div.appendChild(bubble);
+    return div;
 }
 function renderMessageContent(raw) {
     if (!raw) return '';
     var text = raw;
-    var quotes = [], images = [], audios = [];
+    var quotes = [], images = [], audios = [], videos = [], files = [];
     text = text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([^\|\]]+)\|([\s\S]*?)\]/g, (_,a,t,e,id,b) => { quotes.push({author:a,time:t,email:e,messageId:id,body:b}); return '\x00Q'+quotes.length+'Q\x00'; });
     text = text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([\s\S]*?)\]/g, (_,a,t,e,b) => { quotes.push({author:a,time:t,email:e,messageId:'',body:b}); return '\x00Q'+quotes.length+'Q\x00'; });
     text = text.replace(/!\[image\]\(([^)]+)\)/g, (_,u) => { images.push(u); return '\x00I'+images.length+'I\x00'; });
     text = text.replace(/\[audio\]\(([^)]+)\)/g, (_,u) => { audios.push(u); return '\x00A'+audios.length+'A\x00'; });
+    text = text.replace(/\[video\]\(([^)]+)\|([^)]*)\|([^)]*)\|([^)]*)\)/g, (_,u,m,n,s) => { videos.push({url:u,mime:m,name:n,size:s}); return '\x00V'+videos.length+'V\x00'; });
+    text = text.replace(/\[file\]\(([^)]+)\|([^)]*)\|([^)]*)\|([^)]*)\)/g, (_,u,m,n,s) => { files.push({url:u,mime:m,name:n,size:s}); return '\x00F'+files.length+'F\x00'; });
     text = text.replace(/@(\S+)/g, '<span class="mention">@$1</span>');
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_,l,u) => '<a class="rt-link" href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(l)+'</a>');
     text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
     text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
     text = text.replace(/\n/g, '<br>');
-    images.forEach((u,i) => { text = text.replace('\x00I'+(i+1)+'I\x00', '<img class="msg-img" src="'+esc(u)+'" onclick="window.previewImage(\''+esc(u)+'\')" alt="图片" loading="lazy" style="max-width:100%;height:auto;border-radius:10px;"/>'); });
+    // v3.1.0 图片懒加载缩略图（Supabase Storage 转参走 ?width=200&quality=70）
+    images.forEach((u,i) => {
+        var thumbUrl = u;
+        try {
+            var uo = new URL(u);
+            if (uo.pathname.indexOf('/storage/v1/object/') !== -1 || uo.pathname.indexOf('/storage/v1/render/') !== -1) {
+                thumbUrl = u + (u.indexOf('?') === -1 ? '?' : '&') + 'width=200&quality=70';
+            }
+        } catch(e) {}
+        var escapedU = esc(u);
+        text = text.replace('\x00I'+(i+1)+'I\x00',
+            '<img class="msg-img-thumb" data-full="'+escapedU+'" src="'+esc(thumbUrl)+'" alt="图片" loading="lazy" decoding="async" onclick="window.previewImage(\''+escapedU+'\')"/>');
+    });
     audios.forEach((u,i) => { text = text.replace('\x00A'+(i+1)+'A\x00', '<audio controls src="'+esc(u)+'" preload="metadata"></audio>'); });
+    videos.forEach((v,i) => {
+        var escaped = esc(v.url);
+        text = text.replace('\x00V'+(i+1)+'V\x00',
+            '<div class="file-attachment video"><video controls preload="metadata" src="'+escaped+'"></video></div>');
+    });
+    files.forEach((f,i) => {
+        var sizeBytes = parseInt(f.size)||0;
+        var safeUrl = esc(f.url);
+        var safeName = esc(f.name || '文件');
+        var meta = f.mime ? esc(f.mime) + ' · ' + formatFileSize(sizeBytes) : formatFileSize(sizeBytes);
+        var icon = getFileIcon(f.mime, f.name);
+        text = text.replace('\x00F'+(i+1)+'F\x00',
+            '<a class="file-attachment" href="'+safeUrl+'" target="_blank" rel="noopener" download="'+safeName+'">'+
+            '<span class="file-icon">'+icon+'</span>'+
+            '<div class="file-info">'+
+            '<div class="file-name">'+safeName+'</div>'+
+            '<div class="file-meta">'+meta+'</div>'+
+            '</div>'+
+            '<button class="file-download" type="button" onclick="event.preventDefault();event.stopPropagation();window.downloadFile(\''+safeUrl+'\',\''+safeName+'\');">下载</button>'+
+            '</a>');
+    });
     quotes.forEach((q,i) => {
         var timeAttr = q.time ? formatTimeShort(q.time) : '';
         text = text.replace('\x00Q'+(i+1)+'Q\x00',
@@ -1359,28 +1569,112 @@ function renderMessageContent(raw) {
     });
     return text;
 }
-function addMessageToBottom(msg) { 
-    var fragment = createMessageElement(msg);
-    if (messageList) messageList.appendChild(fragment);
+
+// v3.1.0 文件下载助手（走 fetch 拿到 blob 再触发保存）
+window.downloadFile = function(url, name) {
+    try {
+        fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); }).then(function(b){
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(b);
+            a.download = name || (url.split('/').pop() || 'download');
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+        }).catch(function(){ window.open(url, '_blank'); });
+    } catch(e) { window.open(url, '_blank'); }
+};
+// v3.1.0 添加一条消息到底部（同用户5分钟内会并入现有 message-group，避免重复头像/昵称）
+function addMessageToBottom(msg) {
+    if (!messageList) return;
+    // 判断能否并入最近一组
+    var lastGroup = messageList.lastElementChild;
+    if (lastGroup && lastGroup.classList.contains('message-group')) {
+        var lastMsg = lastGroup.lastElementChild;
+        var prevEmail = lastMsg && lastMsg.dataset.senderEmail;
+        var prevTime = lastMsg && lastMsg.dataset.createdAt;
+        var timeDiff = prevTime ? (new Date(msg.created_at) - new Date(prevTime)) : Infinity;
+        if (prevEmail && msg.sender_email === prevEmail && timeDiff < 5 * 60 * 1000) {
+            // 同组追加
+            var el = createMessageElement({ ...msg, _hideHeader: true });
+            lastGroup.appendChild(el);
+            observeImagesIn(lastGroup);
+        } else {
+            appendNewGroup(msg);
+        }
+    } else {
+        appendNewGroup(msg);
+    }
+    // 新鲜进入：更新内部缓存 & 未读标记
+    if (!msg.isMe) {
+        allLoadedMessages.push(msg);
+        if (lastReadMessageId && msg.id && msg.id !== 'undefined' && msg.id !== lastReadMessageId) {
+            newMessageCount++;
+        }
+    }
     if (isUserAtBottom) {
-        if (messageList) messageList.scrollTop = messageList.scrollHeight;
+        messageList.scrollTop = messageList.scrollHeight;
+        markMessagesRead();
     } else {
         unreadCount++;
         document.title = '(' + unreadCount + ') MiniChat';
         updateNewMsgButton();
     }
+    updateBottomNavBadge();
 }
-function prependMessages(msgs) { 
-    lastTimeDivider = 0;
-    var f = document.createDocumentFragment(); 
-    msgs.forEach(m => { 
-        var fragment = createMessageElement(m);
-        f.appendChild(fragment);
-    }); 
-    if (messageList) {
-        if (messageList.firstChild) messageList.insertBefore(f, messageList.firstChild); 
-        else messageList.appendChild(f);
+
+function appendNewGroup(msg) {
+    var dayKey = getDayKey(msg.created_at);
+    if (lastTimeLabel !== dayKey) {
+        var label = document.createElement('div');
+        label.className = 'time-label';
+        label.innerHTML = '<span>' + formatTimeLine(msg.created_at) + '</span>';
+        messageList.appendChild(label);
+        lastTimeLabel = dayKey;
     }
+    var groupDiv = document.createElement('div');
+    groupDiv.className = 'message-group';
+    groupDiv.appendChild(createMessageElement(msg));
+    messageList.appendChild(groupDiv);
+    observeImagesIn(groupDiv);
+}
+function prependMessages(msgs) {
+    if (!messageList) return;
+    lastTimeDivider = 0;
+    // msgs 已经是按时间正序排列（旧→新）
+    var frag = document.createDocumentFragment();
+    var groups = groupMessagesForPrepend(msgs);
+    groups.forEach(g => {
+        var dayKey = getDayKey(g[0].created_at);
+        var firstLabel = messageList.firstElementChild;
+        if (!firstLabel || (firstLabel.classList.contains('time-label') ? getDayKey(firstLabel.dataset.time || '') !== dayKey : getDayKey(firstLabel.firstElementChild && firstLabel.firstElementChild.dataset && firstLabel.firstElementChild.dataset.createdAt || '') !== dayKey)) {
+            var label = document.createElement('div');
+            label.className = 'time-label';
+            label.dataset.time = g[0].created_at;
+            label.innerHTML = '<span>' + formatTimeLine(g[0].created_at) + '</span>';
+            frag.appendChild(label);
+        }
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'message-group';
+        g.forEach((m, idx) => { groupDiv.appendChild(createMessageElement({ ...m, _hideHeader: idx > 0 })); });
+        frag.appendChild(groupDiv);
+    });
+    if (messageList.firstChild) messageList.insertBefore(frag, messageList.firstChild);
+    else messageList.appendChild(frag);
+    // 上滑加载的图片统一观察
+    observeImagesIn(messageList);
+}
+// 复用 addMessageToBottom 里的 5 分钟同组规则
+function groupMessagesForPrepend(msgs) {
+    var groups = [];
+    var cur = null;
+    msgs.forEach(function(m){
+        if (!cur) { cur = [m]; return; }
+        var prev = cur[cur.length-1];
+        var diff = new Date(m.created_at) - new Date(prev.created_at);
+        if (m.sender_email === prev.sender_email && diff < 5*60*1000) cur.push(m);
+        else { groups.push(cur); cur = [m]; }
+    });
+    if (cur) groups.push(cur);
+    return groups;
 }
 
 // ===================== 新消息按钮 =====================
@@ -1428,6 +1722,7 @@ if (newMessagesBtn) {
         isUserAtBottom = true;
         unreadCount = 0;
         updateNewMsgButton();
+        markMessagesRead();
     });
 }
 if (messageList) {
@@ -1899,25 +2194,48 @@ async function fetchUserProfiles(emails) {
     data.forEach(r => { m[r.email] = { display_name: r.display_name, avatar_url: r.avatar_url }; });
     return m;
 }
-function showUserProfile(email) {
-            if (!email) return;
-            var info = currentUserMap[email] || {};
-            if (email === currentEmail) info = { display_name: currentDisplayName, avatar_url: currentAvatarUrl };
-            var ou = Object.values(onlineUsers).find(u => u.email === email);
-            if (ou) { info.display_name = ou.display_name || info.display_name; info.avatar_url = ou.avatar_url || info.avatar_url; }
-            if (profileAvatar) {
-                profileAvatar.src = getAvatarUrl(email);
-                profileAvatar.loading = 'eager';
-                profileAvatar.onerror = function() { handleAvatarError(this, email); };
+function showUserProfile(email) { showProfileCard(email); }
+// v3.1.0 资料卡：昵称 / 邮箱 / 注册时间 / 消息总数 / 在线状态（在线 - 在线；离线 - 5分钟内 - 最近活跃）
+function showProfileCard(email) {
+    if (!email || !profileCard) return;
+    var info = currentUserMap[email] || {};
+    if (email === currentEmail) info = Object.assign({}, info, { display_name: currentDisplayName, avatar_url: currentAvatarUrl });
+    var ou = Object.values(onlineUsers).find(u => u.email === email);
+    var statusText = '离线', statusClass = 'offline';
+    if (ou) { statusText = '在线'; statusClass = 'online'; }
+    else if (info.last_seen && (Date.now() - new Date(info.last_seen).getTime() < 5 * 60 * 1000)) {
+        statusText = '最近活跃'; statusClass = 'recent';
+    }
+    if (profileCardAvatar) {
+        profileCardAvatar.src = getAvatarUrl(email);
+        profileCardAvatar.loading = 'eager';
+        profileCardAvatar.onerror = function(){ handleAvatarError(this, email); };
+    }
+    if (profileCardName) profileCardName.textContent = info.display_name || email.split('@')[0];
+    if (profileCardEmail) profileCardEmail.textContent = email;
+    if (profileCardStatus) {
+        profileCardStatus.textContent = statusText;
+        profileCardStatus.className = 'status ' + statusClass;
+    }
+    if (profileCardJoined) profileCardJoined.textContent = '注册时间: ' + (info.created_at ? formatTime(info.created_at) : '未知');
+    if (profileCardMessages) profileCardMessages.textContent = '消息数: 查询中…';
+    profileCard.classList.add('active');
+    // 取注册时间和消息总数
+    try {
+        supabase.from('profiles').select('created_at').eq('email', email).maybeSingle().then(function(res){
+            if (res && res.data && res.data.created_at && profileCardJoined) {
+                profileCardJoined.textContent = '注册时间: ' + formatTime(res.data.created_at);
+                info.created_at = res.data.created_at;
+                currentUserMap[email] = Object.assign({}, currentUserMap[email] || {}, { created_at: res.data.created_at });
             }
-            if (profileDisplayName) profileDisplayName.textContent = info.display_name || email.split('@')[0];
-            if (profileEmail) profileEmail.textContent = email;
-            if (profileStatus) {
-                profileStatus.textContent = !!ou ? '在线' : '离线';
-                profileStatus.className = 'status-badge' + (!!ou ? '' : ' offline');
-            }
-            if (profileModal) profileModal.classList.add('active');
-        }
+        });
+    } catch(e) {}
+    try {
+        supabase.from('messages').select('id', { count: 'exact' }).eq('sender_email', email).then(function(res){
+            if (res && res.count !== null && profileCardMessages) profileCardMessages.textContent = '消息数: ' + res.count;
+        });
+    } catch(e) {}
+}
 
 // ===================== 显示名称 =====================
 async function loadDisplayName() {
@@ -2065,8 +2383,12 @@ function renderAttachments() {
             if (att.existing) { var lk = document.createElement('span'); lk.textContent = '🔒'; item.appendChild(lk); }
             else { var rb = document.createElement('button'); rb.className = 'remove-attach'; rb.textContent = '×'; rb.addEventListener('click', e => { e.stopPropagation(); attachments.splice(idx,1); renderAttachments(); }); item.appendChild(rb); }
         } else {
+            // v3.1.0 统一附件渲染（音频 / 视频 / 文档）
             item.className = 'attachment-item';
-            item.innerHTML = '<span class="file-icon">🎵</span><span class="file-name">'+esc(att.name || '音频')+'</span>';
+            var icon = document.createElement('span'); icon.className = 'file-icon'; icon.textContent = getFileIcon(att.mime, att.name) + ' ';
+            item.appendChild(icon);
+            var ns2 = document.createElement('span'); ns2.className = 'file-name'; ns2.textContent = att.name || '文件'; item.appendChild(ns2);
+            if (att.size) { var ms = document.createElement('span'); ms.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:auto;'; ms.textContent = formatFileSize(att.size); item.appendChild(ms); }
             if (att.existing) item.innerHTML += '<span>🔒</span>';
             else { var rb = document.createElement('button'); rb.className = 'remove-attach'; rb.textContent = '×'; rb.addEventListener('click', e => { e.stopPropagation(); attachments.splice(idx,1); renderAttachments(); }); item.appendChild(rb); }
         }
@@ -2075,12 +2397,22 @@ function renderAttachments() {
 }
 function addAttachment(file) {
     var t = '';
-    if (file.type.startsWith('image/')) t = 'image';
-    else if (file.type.startsWith('audio/')) t = 'audio';
-    else { setAuthMessage('仅支持图片和音频','error'); setTimeout(() => setAuthMessage(''), 2000); return; }
-    if (t === 'image' && file.size > 5*1024*1024) { setAuthMessage('图片不能超过5MB','error'); setTimeout(() => setAuthMessage(''), 2000); return; }
-    if (t === 'audio' && file.size > 20*1024*1024) { setAuthMessage('音频不能超过20MB','error'); setTimeout(() => setAuthMessage(''), 2000); return; }
-    attachments.push({ id: Date.now()+Math.random(), file, type: t, name: file.name });
+    var fileType = file.type || '';
+    var fileName = file.name || '';
+    if (fileType.startsWith('image/')) t = 'image';
+    else if (fileType.startsWith('audio/')) t = 'audio';
+    else if (fileType.startsWith('video/')) t = 'video';
+    else if (fileType === 'application/pdf' || /\.pdf$/i.test(fileName)) t = 'pdf';
+    else if (/word|document|\.docx?$/i.test(fileType) || /\.docx?$/i.test(fileName)) t = 'doc';
+    else if (/excel|spreadsheet|\.xlsx?$/i.test(fileType) || /\.xlsx?$/i.test(fileName)) t = 'xls';
+    else if (/presentation|\.pptx?$/i.test(fileType) || /\.pptx?$/i.test(fileName)) t = 'ppt';
+    else if (fileType.startsWith('text/') || /\.txt$/i.test(fileName)) t = 'text';
+    else if (/zip|archive|\.(zip|rar|7z)$/i.test(fileName)) t = 'zip';
+    else { setAuthMessage('暂不支持该文件类型','error'); setTimeout(() => setAuthMessage(''), 2000); return; }
+    var limitMap = { image: 5*1024*1024, audio: 20*1024*1024, video: 50*1024*1024, pdf: 10*1024*1024, doc: 10*1024*1024, xls: 10*1024*1024, ppt: 10*1024*1024, text: 5*1024*1024, zip: 20*1024*1024 };
+    var max = limitMap[t] || 10*1024*1024;
+    if (file.size > max) { setAuthMessage('文件超过大小限制（' + formatFileSize(max) + '）','error'); setTimeout(() => setAuthMessage(''), 2000); return; }
+    attachments.push({ id: Date.now()+Math.random(), file, type: t, name: file.name, size: file.size, mime: file.type });
     renderAttachments();
 }
 async function uploadNewAttachments(list) {
@@ -2088,12 +2420,18 @@ async function uploadNewAttachments(list) {
     return await Promise.all(list.map(async att => {
         var pf = att.file;
         if (att.type === 'image' && att.file.size > 200*1024) try { pf = await compressImage(att.file, 1080, 0.7); } catch(e) {}
-        var ext = pf.name.split('.').pop(), fn = Date.now()+'_'+Math.random().toString(36).substr(2,5)+'.'+ext, fp = 'public/'+fn;
-        var bucket = att.type === 'image' ? 'chat-images' : 'chat-audios';
+        var ext = pf.name.split('.').pop() || 'bin';
+        var safeName = Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
+        var fp = 'public/'+safeName;
+        var bucket = ({image:'chat-images',audio:'chat-audios',video:'chat-videos',pdf:'chat-files',doc:'chat-files',xls:'chat-files',ppt:'chat-files',text:'chat-files',zip:'chat-files'})[att.type] || 'chat-files';
         var error = (await supabase.storage.from(bucket).upload(fp, pf, { cacheControl:'3600', upsert: false })).error;
         if (error) throw error;
         var url = supabase.storage.from(bucket).getPublicUrl(fp).data.publicUrl;
-        return att.type === 'image' ? '![image]('+url+')' : '[audio]('+url+')';
+        // 文档类型以 [file:URL|mime|name|size] 形式存储
+        if (att.type === 'image') return '![image]('+url+')';
+        if (att.type === 'audio') return '[audio]('+url+')';
+        if (att.type === 'video') return '[video]('+url+'|'+esc(att.mime||'video/mp4')+'|'+esc(att.name||'video.mp4')+'|'+att.file.size+')';
+        return '[file]('+url+'|'+esc(att.mime||'application/octet-stream')+'|'+esc(att.name||'file')+'|'+att.file.size+')';
     }));
 }
 
@@ -2103,6 +2441,15 @@ async function sendMessageContent(content) {
             var text = (content || '').trim();
             var hasText = text.length > 0, hasNew = attachments.some(a => !a.existing);
             if (!hasText && !hasNew) return;
+            // v3.1.0 敏感词检查
+            if (hasText) {
+                var bad = containsSensitive(text);
+                if (bad) {
+                    setAuthMessage('消息包含敏感词（"' + bad + '"），请修改后重试','error');
+                    setTimeout(function(){ setAuthMessage(''); }, 2500);
+                    return;
+                }
+            }
             var now = Date.now();
             if (now - lastSendTime < MIN_SEND_INTERVAL) { setAuthMessage('发送太快','error'); setTimeout(() => setAuthMessage(''), 1500); return; }
             if (isSending) return;
@@ -2166,6 +2513,7 @@ function updateOnlineUI() {
     if (onlineBadge) { onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); }
     if (modalOnlineCount) modalOnlineCount.textContent = onlineCount;
     renderOnlineUsers();
+    updateBottomNavBadge();
     // 全局聊天模式：始终显示在线总人数
     if (onlineStatus) {
         onlineStatus.textContent = '● '+onlineCount+' 人在线';
@@ -2284,20 +2632,41 @@ function subscribeMessages() {
 // ===================== 图片预览 =====================
 window.previewImage = function(url) {
     var o = document.createElement('div'); o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
-    var img = document.createElement('img'); img.src = url; img.style.cssText = 'max-width:90%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;';
+    var img = new Image(); img.src = url; img.style.cssText = 'max-width:90%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;cursor:zoom-in;transition:transform .25s;';
+    img.onload = function(){ /* 强制重排让过渡生效 */ img.style.transform='scale(1)'; };
     var bc = document.createElement('div'); bc.style.cssText = 'display:flex;gap:16px;';
-    var db = document.createElement('button'); db.textContent = '下载'; db.style.cssText = 'padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;cursor:pointer;';
+    var db = document.createElement('button'); db.textContent = '下载原图'; db.style.cssText = 'padding:12px 28px;border:none;border-radius:10px;background:#3b82f6;color:#fff;cursor:pointer;';
     db.onclick = () => {
         db.textContent = '下载中…'; db.disabled = true;
-        fetch(url).then(r=>r.blob()).then(b => { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = url.split('/').pop() || 'image.jpg'; a.click(); db.textContent = '已下载'; setTimeout(()=>{ db.textContent = '下载'; db.disabled = false; }, 2000); }).catch(() => { db.textContent = '失败'; setTimeout(()=>{ db.textContent = '下载'; db.disabled = false; }, 2000); });
+        fetch(url).then(r=>r.blob()).then(b => { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = url.split('/').pop() || 'image.jpg'; a.click(); db.textContent = '已下载'; setTimeout(()=>{ db.textContent = '下载原图'; db.disabled = false; }, 2000); }).catch(() => { db.textContent = '失败'; setTimeout(()=>{ db.textContent = '下载原图'; db.disabled = false; }, 2000); });
     };
     var cb = document.createElement('button'); cb.textContent = '关闭'; cb.style.cssText = 'padding:12px 28px;border:none;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;';
     cb.onclick = () => document.body.removeChild(o);
     bc.appendChild(db); bc.appendChild(cb);
     o.appendChild(img); o.appendChild(bc);
-    o.addEventListener('click', e => { if (e.target === o) document.body.removeChild(o); });
+    o.addEventListener('click', e => { if (e.target === o || e.target === img) document.body.removeChild(o); });
     document.body.appendChild(o);
 };
+
+// v3.1.0 图片懒加载：初次出现的才设真实 src
+function setupImageObserver() {
+    if (imageObserver || typeof IntersectionObserver === 'undefined') return;
+    imageObserver = new IntersectionObserver(function(entries){
+        entries.forEach(function(en){
+            if (en.isIntersecting) {
+                var img = en.target;
+                var full = img.dataset.full || img.src;
+                if (img.src !== full) img.src = full;
+                imageObserver.unobserve(img);
+            }
+        });
+    }, { root: messageList || null, rootMargin: '200px', threshold: 0.05 });
+}
+function observeImagesIn(root) {
+    if (!imageObserver || !root) return;
+    var imgs = root.querySelectorAll ? root.querySelectorAll('img.msg-img-thumb[data-full]:not([data-observed])') : [];
+    imgs.forEach(function(img){ img.setAttribute('data-observed','1'); imageObserver.observe(img); });
+}
 
 // ===================== 事件绑定 =====================
 if (attachBtn) {
@@ -2323,7 +2692,7 @@ if (chatInput) {
             if (item.kind === 'file' && item.type.startsWith('audio/')) { e.preventDefault(); var f = item.getAsFile(); if (f) addAttachment(f); return; }
         }
     });
-    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessageContent(chatInput.value); } });
+    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) { e.preventDefault(); sendMessageContent(chatInput.value); } });
 }
 if (btnSend) btnSend.addEventListener('click', () => { if (chatInput) sendMessageContent(chatInput.value); });
 
@@ -2350,10 +2719,6 @@ if (onlineUsersBtn) {
 }
 if (closeOnlineModal) closeOnlineModal.addEventListener('click', () => { if (onlineModal) onlineModal.classList.remove('active'); });
 document.addEventListener('click', e => { if (onlineModal && onlineModal.classList.contains('active') && !onlineModal.contains(e.target) && !onlineUsersBtn.contains(e.target)) onlineModal.classList.remove('active'); });
-if (closeProfileModal) closeProfileModal.addEventListener('click', () => { if (profileModal) profileModal.classList.remove('active'); });
-if (profileModal) {
-    profileModal.addEventListener('click', e => { if (e.target === profileModal) profileModal.classList.remove('active'); });
-}
 
 // ===================== 全局事件 =====================
 function handleDocumentClick(e) {
@@ -2394,16 +2759,136 @@ function setupGlobalEventListeners() {
                 });
             }
             if (btnLogin) btnLogin.addEventListener('click', handleAuth);
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) { unreadCount = 0; document.title = 'MiniChat'; updateNewMsgButton(); } });
+            // v3.1.0: 返回前台后只清桌面未读，小红点保留直到真正阅读
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateBottomNavBadge(); } });
             window.addEventListener('beforeunload', async () => { if (presenceChannel) { try { await presenceChannel.untrack(); } catch(e) {} presenceChannel.unsubscribe(); } if (window.chatChannel) { window.chatChannel.unsubscribe(); } });
             loadTheme();
             var sidebarVer = document.getElementById('sidebarVersion');
             if (sidebarVer) sidebarVer.textContent = 'v'+APP_VERSION;
             var panelVer = document.getElementById('panelVersion');
             if (panelVer) panelVer.textContent = 'MiniChat v'+APP_VERSION;
+
+            // ===================== v3.1.0 新增事件绑定 =====================
+            setupImageObserver();      // 初始化图片懒加载观察器
+            bindProfileCard();         // 资料卡关闭 / 点击外部
+            bindShareButton();         // 分享按钮
+            bindCtxProfile();          // 右键菜单 查看资料
+            bindBottomNav();           // 底部导航 Tab
+
             // 禁用 Service Worker，避免资源拦截问题
             // if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js?v='+APP_VERSION);
         });
+
+// ===================== v3.1.0 资料卡事件 =====================
+function bindProfileCard() {
+    if (profileCardClose) profileCardClose.addEventListener('click', () => profileCard && profileCard.classList.remove('active'));
+    if (profileCard) profileCard.addEventListener('click', e => { if (e.target === profileCard) profileCard.classList.remove('active'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && profileCard && profileCard.classList.contains('active')) profileCard.classList.remove('active'); });
+}
+
+// ===================== v3.1.0 右键 查看资料 =====================
+function bindCtxProfile() {
+    if (!ctxProfile) return;
+    ctxProfile.addEventListener('click', () => {
+        var targetEmail = contextMenu ? contextMenu.dataset.targetEmail : '';
+        if (targetEmail) showProfileCard(targetEmail);
+        if (contextMenu) contextMenu.classList.remove('active');
+    });
+}
+
+// ===================== v3.1.0 分享 =====================
+function shareChat() {
+    var url = window.location.href.split('#')[0];
+    var shareData = { title: 'MiniChat', text: '来 MiniChat 和我一起聊天吧！', url: url };
+    if (navigator.share) {
+        navigator.share(shareData).catch(function(err){ /* 用户取消 */ });
+        return;
+    }
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function(){
+            setAuthMessage('链接已复制，快分享给朋友吧！','success');
+            setTimeout(function(){ setAuthMessage(''); }, 2500);
+        }).catch(function(){
+            prompt('复制以下链接分享：', url);
+        });
+    } else { prompt('复制以下链接分享：', url); }
+}
+function bindShareButton() {
+    if (!shareBtn) return;
+    shareBtn.addEventListener('click', shareChat);
+}
+
+// ===================== v3.1.0 底部导航 =====================
+function updateBottomNavBadge() {
+    if (bottomUnreadBadge) {
+        if (unreadCount > 0) { bottomUnreadBadge.textContent = unreadCount > 99 ? '99+' : unreadCount; bottomUnreadBadge.classList.add('show'); }
+        else bottomUnreadBadge.classList.remove('show');
+    }
+    if (bottomOnlineBadge) {
+        if (onlineCount > 0) { bottomOnlineBadge.textContent = onlineCount > 99 ? '99+' : onlineCount; bottomOnlineBadge.classList.add('show'); }
+        else bottomOnlineBadge.classList.remove('show');
+    }
+}
+function bindBottomNav() {
+    if (!bottomNav) return;
+    var tabs = bottomNav.querySelectorAll('.nav-item');
+    tabs.forEach(function(tab){
+        tab.addEventListener('click', function(){
+            tabs.forEach(function(t){ t.classList.remove('active'); });
+            this.classList.add('active');
+            var tabName = this.dataset.tab;
+            // 收回可能的在线弹窗
+            if (onlineModal && onlineModal.classList.contains('active')) onlineModal.classList.remove('active');
+            if (tabName === 'chat') {
+                if (chatInput) chatInput.focus();
+            } else if (tabName === 'users') {
+                if (onlineModal) onlineModal.classList.add('active');
+            } else if (tabName === 'settings') {
+                if (settingsOverlay) settingsOverlay.classList.add('active');
+            }
+        });
+    });
+}
+
+// ===================== v3.1.0 未读标记 =====================
+function markMessagesRead() {
+    if (!messageList) return;
+    // 优先采用最近一条 .message 的 messageId 作为已读
+    var all = messageList.querySelectorAll('.message[data-message-id]');
+    var lastMsg = all[all.length - 1];
+    if (!lastMsg) return;
+    var id = lastMsg.dataset.messageId;
+    if (!id || id.startsWith('temp-')) return;
+    if (id !== lastReadMessageId) {
+        lastReadMessageId = id;
+        try { localStorage.setItem('minichat_last_read', id); } catch(e) {}
+    }
+    newMessageCount = 0;
+    unreadCount = 0;
+    document.title = 'MiniChat';
+    if (newMessagesBtn) newMessagesBtn.classList.remove('show');
+    if (newMsgBadge) newMsgBadge.style.display = 'none';
+    updateSidebarBadge();
+    updateBottomNavBadge();
+}
+
+// ===================== v3.1.0 轻量虚拟滚动（只在消息量极大时启用）=====================
+var VIRTUAL_SCROLL_THRESHOLD = 600;
+var virtualScrollEnabled = false;
+function enableVirtualScroll() {
+    if (virtualScrollEnabled || !messageList) return;
+    virtualScrollEnabled = true;
+    messageList.style.contain = 'strict';
+    messageList.addEventListener('scroll', onVirtualScroll, { passive: true });
+}
+function onVirtualScroll() {
+    // 防抖：仅在距顶部 / 底部 1000px 时预加载相邻区
+    if (!messageList || !virtualScrollEnabled) return;
+    if (messageList.scrollTop < 1000 && hasMoreMessages && !isLoadingMore) loadHistory(true);
+    if (messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight < 200) {
+        if (isUserAtBottom) markMessagesRead();
+    }
+}
 </script>
 </body>
 </html>
