@@ -5,344 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#4f46e5">
-    <title>MiniChat 服务协议 / Service Agreement</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <title>MiniChat · 服务协议</title>
     <link rel="icon" href="favicon.ico">
     <link rel="apple-touch-icon" href="favicon.ico">
     <style>
-        :root {
-            --bg: #ffffff;
-            --bg-soft: #f7f8fa;
-            --bg-card: #ffffff;
-            --bg-sidebar: #fafbfc;
-            --text: #1a1a1a;
-            --text-soft: #4a5568;
-            --text-muted: #8a94a6;
-            --border: #e5e7eb;
-            --border-soft: #eef0f4;
-            --accent: #4f46e5;
-            --accent-hover: #4338ca;
-            --accent-soft: #eef2ff;
-            --link: #4f46e5;
-            --shadow: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
-            --shadow-lg: 0 10px 40px rgba(0,0,0,.08);
-            --code-bg: #f3f4f6;
-            --quote-border: #d1d5db;
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #0f1115;
-                --bg-soft: #15181f;
-                --bg-card: #1a1d24;
-                --bg-sidebar: #0f1115;
-                --text: #e5e7eb;
-                --text-soft: #9ca3af;
-                --text-muted: #6b7280;
-                --border: #2a2f3a;
-                --border-soft: #20242c;
-                --accent: #818cf8;
-                --accent-hover: #a5b4fc;
-                --accent-soft: #1e1b4b;
-                --link: #a5b4fc;
-                --shadow: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
-                --shadow-lg: 0 10px 40px rgba(0,0,0,.4);
-                --code-bg: #1f242c;
-                --quote-border: #3a3f4b;
-            }
-        }
-        body[data-theme="light"] {
-            --bg: #ffffff;
-            --bg-soft: #f7f8fa;
-            --bg-card: #ffffff;
-            --bg-sidebar: #fafbfc;
-            --text: #1a1a1a;
-            --text-soft: #4a5568;
-            --text-muted: #8a94a6;
-            --border: #e5e7eb;
-            --border-soft: #eef0f4;
-            --accent: #4f46e5;
-            --accent-hover: #4338ca;
-            --accent-soft: #eef2ff;
-            --link: #4f46e5;
-            --code-bg: #f3f4f6;
-            --quote-border: #d1d5db;
-        }
-        body[data-theme="dark"] {
-            --bg: #0f1115;
-            --bg-soft: #15181f;
-            --bg-card: #1a1d24;
-            --bg-sidebar: #0f1115;
-            --text: #e5e7eb;
-            --text-soft: #9ca3af;
-            --text-muted: #6b7280;
-            --border: #2a2f3a;
-            --border-soft: #20242c;
-            --accent: #818cf8;
-            --accent-hover: #a5b4fc;
-            --accent-soft: #1e1b4b;
-            --link: #a5b4fc;
-            --code-bg: #1f242c;
-            --quote-border: #3a3f4b;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.7;
-            font-size: 15px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        a { color: var(--link); text-decoration: none; transition: color .2s; }
-        a:hover { color: var(--accent-hover); }
+        :root{--bg-primary:#0a0a0a;--bg-secondary:#111111;--bg-sidebar:#0d0d0d;--bg-card:#161616;--bg-input:#1c1c1c;--bg-hover:#202020;--text-primary:#f1f1f1;--text-secondary:#a5a5a5;--text-muted:#6a6a6a;--accent:#3b82f6;--accent-hover:#2563eb;--accent-light:rgba(59,130,246,0.15);--border-color:#262626;--shadow:0 8px 32px rgba(0,0,0,0.4);--shadow-sm:0 2px 8px rgba(0,0,0,0.25);--radius:16px;--radius-sm:10px;--radius-lg:20px;--transition:0.25s cubic-bezier(0.4,0,0.2,1);--transition-fast:0.15s cubic-bezier(0.4,0,0.2,1);--success:#4ade80;--error:#f87171;--scrollbar-thumb:#4a4a4a;--scrollbar-thumb-hover:#5a5a5a;--code-bg:rgba(255,255,255,0.08);--code-border:rgba(128,128,128,0.15);--link-color:#60a5fa;--quote-border:#3b82f6;--quote-bg:rgba(59,130,246,0.1);--modal-overlay:rgba(0,0,0,0.75)}
+        body.light-theme{--bg-primary:#fafafa;--bg-secondary:#ffffff;--bg-sidebar:#f8f9fa;--bg-card:#ffffff;--bg-input:#f1f3f5;--bg-hover:#e9ecef;--text-primary:#1a1a1a;--text-secondary:#5c636a;--text-muted:#9da4ab;--border-color:#e9ecef;--shadow:0 8px 32px rgba(0,0,0,0.06);--shadow-sm:0 2px 8px rgba(0,0,0,0.04);--code-bg:rgba(0,0,0,0.05);--code-border:rgba(0,0,0,0.08);--link-color:#2563eb;--quote-bg:rgba(59,130,246,0.05);--scrollbar-thumb:#cbd5e1;--scrollbar-thumb-hover:#94a3b8;--modal-overlay:rgba(0,0,0,0.5)}
+        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;border:none}
+        ::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover)}
+        *{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+        body{font-family:"MiSans","MiSans Latin","Xiaomi Lan Ting Pro","Inter","SF Pro Display","PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;background:var(--bg-secondary);color:var(--text-primary);line-height:1.7;font-size:14px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;transition:background .3s,color .3s;min-height:100vh}
+        a{color:var(--link-color);text-decoration:none;transition:color var(--transition-fast)}
+        a:hover{color:var(--accent)}
+        *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            backdrop-filter: saturate(180%) blur(8px);
-            -webkit-backdrop-filter: saturate(180%) blur(8px);
-            background: color-mix(in srgb, var(--bg) 85%, transparent);
-        }
-        .topbar-inner {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 14px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-        }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 16px;
-            color: var(--text);
-        }
-        .brand img { height: 28px; }
-        .topbar-actions { display: flex; align-items: center; gap: 8px; }
-        .lang-switch, .theme-toggle, .back-btn {
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-soft);
-            font-size: 13px;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all .2s;
-            font-family: inherit;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .lang-switch:hover, .theme-toggle:hover, .back-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            background: var(--accent-soft);
-        }
-        .back-btn { text-decoration: none; }
-        .lang-switch .active { color: var(--accent); font-weight: 600; }
+        .topbar{position:sticky;top:0;z-index:50;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);backdrop-filter:saturate(180%) blur(8px);-webkit-backdrop-filter:saturate(180%) blur(8px);background:color-mix(in srgb,var(--bg-secondary) 85%,transparent)}
+        .progress-bar{position:fixed;top:65px;left:0;height:2px;width:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0);z-index:49;pointer-events:none;transition:opacity var(--transition-fast);will-change:transform}
+        .topbar-inner{max-width:1200px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+        .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--text-primary)}
+        .brand img{height:24px}
+        .brand-sub{font-size:13px;font-weight:500;color:var(--text-secondary);margin-left:6px}
+        .topbar-actions{display:flex;align-items:center;gap:6px}
+        .icon-btn{background:none;border:1px solid var(--border-color);color:var(--text-secondary);cursor:pointer;padding:5px 9px;border-radius:var(--radius-sm);transition:all var(--transition-fast);font-size:13px;display:inline-flex;align-items:center;gap:4px;font-family:inherit}
+        .icon-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--accent)}
+        .lang-switch{display:inline-flex;align-items:center;gap:0;background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;padding:0}
+        .lang-switch .lang-opt{padding:6px 10px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all var(--transition-fast);border:none;background:transparent;font-family:inherit;border-right:1px solid var(--border-color)}
+        .lang-switch .lang-opt:last-child{border-right:none}
+        .lang-switch .lang-opt:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .lang-switch .lang-opt.active{background:var(--accent);color:#fff}
 
-        .layout {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 32px 24px 80px;
-            display: grid;
-            grid-template-columns: 240px 1fr;
-            gap: 40px;
-        }
-        .sidebar {
-            position: sticky;
-            top: 80px;
-            align-self: start;
-            max-height: calc(100vh - 100px);
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-        .sidebar h4 {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-bottom: 12px;
-            padding-left: 12px;
-        }
-        .toc { list-style: none; }
-        .toc li { margin: 2px 0; }
-        .toc a {
-            display: block;
-            padding: 8px 12px;
-            color: var(--text-soft);
-            border-radius: 6px;
-            font-size: 14px;
-            border-left: 2px solid transparent;
-            transition: all .2s;
-        }
-        .toc a:hover {
-            color: var(--accent);
-            background: var(--accent-soft);
-            border-left-color: var(--accent);
-        }
-        .toc a.active {
-            color: var(--accent);
-            background: var(--accent-soft);
-            border-left-color: var(--accent);
-            font-weight: 600;
-        }
+        .layout{max-width:1200px;margin:0 auto;padding:24px 20px 60px;display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:start}
+        .sidebar{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow-y:auto;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow-sm)}
+        .sidebar h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-bottom:8px;padding:4px 10px}
+        .toc{list-style:none;display:flex;flex-direction:column;gap:2px}
+        .toc li{margin:0}
+        .toc a{display:flex;align-items:center;gap:8px;padding:8px 10px;color:var(--text-secondary);border-radius:var(--radius-sm);font-size:13px;transition:all var(--transition-fast);border-left:2px solid transparent;font-weight:500}
+        .toc a .toc-num{font-size:11px;color:var(--text-muted);font-weight:600;min-width:16px}
+        .toc a:hover{color:var(--text-primary);background:var(--bg-hover);border-left-color:var(--border-color)}
+        .toc a.active{color:var(--accent);background:var(--accent-light);border-left-color:var(--accent);font-weight:600}
+        .toc a.active .toc-num{color:var(--accent)}
 
-        .content {
-            max-width: 800px;
-            min-width: 0;
-        }
-        .doc-header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border-soft); }
-        .doc-header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 8px;
-        }
-        .doc-meta {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-        .doc-meta .badge {
-            background: var(--accent-soft);
-            color: var(--accent);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
+        .content{min-width:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius);padding:36px 44px;box-shadow:var(--shadow-sm)}
+        .doc-header{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border-color)}
+        .doc-header h1{font-size:24px;font-weight:700;color:var(--text-primary);margin-bottom:8px;letter-spacing:-0.3px}
+        .doc-meta{display:flex;gap:14px;flex-wrap:wrap;color:var(--text-muted);font-size:12px;align-items:center}
+        .doc-meta .version-tag{background:var(--bg-input);color:var(--text-secondary);padding:2px 8px;border-radius:var(--radius-sm);font-weight:500;font-size:11px;border:1px solid var(--border-color)}
 
-        .section {
-            margin-bottom: 48px;
-            scroll-margin-top: 80px;
-        }
-        .section h2 {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-soft);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .section h2 .num {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 28px;
-            height: 28px;
-            background: var(--accent-soft);
-            color: var(--accent);
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 700;
-            padding: 0 8px;
-        }
-        .section h3 {
-            font-size: 17px;
-            font-weight: 600;
-            color: var(--text);
-            margin: 20px 0 10px;
-        }
-        .section p {
-            color: var(--text-soft);
-            margin-bottom: 12px;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-        .section ul, .section ol {
-            margin: 0 0 16px 24px;
-            color: var(--text-soft);
-        }
-        .section li { margin-bottom: 6px; line-height: 1.7; }
-        .section code {
-            background: var(--code-bg);
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: .9em;
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-        }
-        .section .highlight {
-            background: var(--accent-soft);
-            border-left: 3px solid var(--accent);
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin: 16px 0;
-            color: var(--text);
-        }
-        .section .last-updated {
-            color: var(--text-muted);
-            font-size: 13px;
-            margin-top: 8px;
-        }
+        .section{margin-bottom:28px;scroll-margin-top:80px}
+        .section:last-child{margin-bottom:0}
+        .section h2{font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-color);display:flex;align-items:baseline;gap:10px}
+        .section h2 .sec-num{font-size:14px;color:var(--text-secondary);font-weight:600;letter-spacing:1px;font-variant-numeric:tabular-nums}
+        .section h3{font-size:15px;font-weight:600;color:var(--text-primary);margin:18px 0 8px;display:flex;align-items:baseline;gap:6px}
+        .section h3 .sub-num{font-size:12px;color:var(--text-muted);font-weight:600;font-variant-numeric:tabular-nums}
+        .section p{color:var(--text-secondary);margin-bottom:10px;font-size:14px;line-height:1.8}
+        .section p strong{color:var(--text-primary);font-weight:600}
+        .section ul,.section ol{margin:0 0 12px 22px;color:var(--text-secondary);font-size:14px}
+        .section li{margin-bottom:5px;line-height:1.75}
+        .section li::marker{color:var(--text-muted)}
+        .section code{background:var(--code-bg);padding:1px 6px;border-radius:4px;font-size:.9em;font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;border:1px solid var(--code-border)}
+        .section .callout{background:var(--quote-bg);border-left:2px solid var(--quote-border);padding:10px 14px;margin:12px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0;color:var(--text-primary);font-size:13px}
+        .section .callout strong{color:var(--accent)}
 
-        .back-to-top {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-lg);
-            transition: all .2s;
-            z-index: 50;
-        }
-        .back-to-top.show { display: flex; }
-        .back-to-top:hover { background: var(--accent-hover); transform: translateY(-2px); }
+        .back-to-top{position:fixed;right:20px;bottom:20px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:var(--shadow);transition:all var(--transition-fast);z-index:40}
+        .back-to-top.show{display:flex}
+        .back-to-top:hover{background:var(--accent-hover);transform:translateY(-2px)}
 
-        .footer {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 24px;
-            border-top: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 13px;
-            text-align: center;
-        }
-        .footer a { color: var(--accent); }
+        .footer{max-width:1200px;margin:0 auto;padding:20px;border-top:1px solid var(--border-color);color:var(--text-muted);font-size:12px;text-align:center}
+        .footer a{color:var(--link-color);margin-left:4px}
 
-        @media (max-width: 900px) {
-            .layout { grid-template-columns: 1fr; gap: 20px; padding: 20px 16px 60px; }
-            .sidebar {
-                position: static;
-                max-height: none;
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                padding: 12px 16px;
-                background: var(--bg-soft);
-            }
-            .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-            .toc a { padding: 6px 8px; font-size: 13px; }
-            .doc-header h1 { font-size: 24px; }
-            .section h2 { font-size: 19px; }
-            .section h3 { font-size: 16px; }
-            .topbar-inner { padding: 12px 16px; flex-wrap: wrap; }
-            .brand { font-size: 15px; }
+        @media (max-width:900px){
+            .layout{grid-template-columns:1fr;gap:16px;padding:16px 12px 40px}
+            .sidebar{position:static;max-height:none;padding:10px}
+            .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:2px}
+            .toc a{padding:6px 8px;font-size:12px}
+            .content{padding:20px 18px}
+            .doc-header h1{font-size:20px}
+            .section h2{font-size:16px}
+            .section h3{font-size:14px}
+            .topbar-inner{padding:10px 12px}
+            .brand{font-size:14px}
+            .brand-sub{display:none}
+            .progress-bar{top:61px}
         }
-        @media (max-width: 480px) {
-            .toc { grid-template-columns: 1fr; }
-            .topbar-actions { gap: 6px; }
-            .lang-switch, .theme-toggle, .back-btn { font-size: 12px; padding: 5px 9px; }
+        @media (max-width:480px){
+            .toc{grid-template-columns:1fr}
+            .content{padding:16px 14px}
+            .footer{font-size:11px;flex-direction:column}
         }
     </style>
 </head>
@@ -351,19 +103,21 @@
         <div class="topbar-inner">
             <div class="brand">
                 <img src="assets/logo.svg" alt="MiniChat">
-                <span id="brandText">MiniChat · 服务协议</span>
+                <span class="brand-sub" id="brandText">服务协议</span>
             </div>
             <div class="topbar-actions">
-                <a href="index.html" class="back-btn" id="backBtn">← 返回</a>
-                <button class="theme-toggle" id="themeToggle" title="切换主题">🌓</button>
-                <div class="lang-switch">
-                    <span class="active" id="langZh" data-lang="zh">中</span>
-                    <span style="color:var(--text-muted);margin:0 2px">/</span>
-                    <span id="langEn" data-lang="en">EN</span>
+                <a href="index.html" class="icon-btn" id="backBtn">← 返回</a>
+                <button class="icon-btn" id="themeToggle" title="切换主题">
+                    <svg id="themeIcon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+                <div class="lang-switch" role="group" aria-label="语言切换">
+                    <button class="lang-opt" data-lang="zh" aria-pressed="true">中文</button>
+                    <button class="lang-opt" data-lang="en" aria-pressed="false">EN</button>
                 </div>
             </div>
         </div>
     </header>
+    <div class="progress-bar" id="progressBar" aria-hidden="true"></div>
 
     <main class="layout">
         <aside class="sidebar">
@@ -373,11 +127,10 @@
 
         <article class="content">
             <div class="doc-header">
-                <h1 id="docTitle">MiniChat 服务协议</h1>
+                <h1 id="docTitle">服务协议</h1>
                 <div class="doc-meta">
-                    <span class="badge" id="versionBadge">v4.0.0</span>
-                    <span id="lastUpdated">最后更新：2026-07-13</span>
-                    <span id="effectiveDate">生效日期：2026-07-13</span>
+                    <span class="version-tag" id="versionBadge">v4.0.0</span>
+                    <span id="lastUpdated">更新于 2026-07-13</span>
                 </div>
             </div>
 
@@ -386,10 +139,12 @@
         </article>
     </main>
 
-    <button class="back-to-top" id="backToTop" title="返回顶部">↑</button>
+    <button class="back-to-top" id="backToTop" title="返回顶部" aria-label="返回顶部">↑</button>
 
     <footer class="footer">
-        <span id="footerText">© 2026 MiniChat · 本协议受相关法律法规保护</span>
+        <span id="footerText">© 2026 MiniChat</span>
+        <span> · </span>
+        <a href="index.html" id="footerBack">返回主站</a>
     </footer>
 
 <script>
@@ -397,497 +152,178 @@ var APP_VERSION = '4.0.0';
 var LAST_UPDATED = '2026-07-13';
 
 var I18N = {
-    tocTitle: { zh: '目录', en: 'Contents' },
-    brandText: { zh: 'MiniChat · 服务协议', en: 'MiniChat · Service Agreement' },
-    backBtn: { zh: '← 返回', en: '← Back' },
-    footerText: { zh: '© 2026 MiniChat · 本协议受相关法律法规保护', en: '© 2026 MiniChat · This agreement is protected by applicable laws and regulations.' }
+    zh: {
+        tocTitle: '目录',
+        docTitle: '服务协议',
+        lastUpdated: '更新于 2026-07-13',
+        backBtn: '← 返回',
+        footerText: '© 2026 MiniChat',
+        footerBack: '返回主站',
+        sections: [
+            { id: 'user-agreement', num: 'I', toc: '一、用户协议', title: '一、用户协议' },
+            { id: 'privacy-policy', num: 'II', toc: '二、隐私政策', title: '二、隐私政策' },
+            { id: 'third-party-sharing', num: 'III', toc: '三、第三方共享', title: '三、第三方信息共享清单' },
+            { id: 'data-collection', num: 'IV', toc: '四、信息收集', title: '四、个人信息收集清单' },
+            { id: 'app-permissions', num: 'V', toc: '五、应用权限', title: '五、应用权限说明' }
+        ]
+    },
+    en: {
+        tocTitle: 'Contents',
+        docTitle: 'Service Agreement',
+        lastUpdated: 'Updated 2026-07-13',
+        backBtn: '← Back',
+        footerText: '© 2026 MiniChat',
+        footerBack: 'Back to MiniChat',
+        sections: [
+            { id: 'user-agreement-en', num: 'I', toc: 'User Agreement', title: 'I. User Agreement' },
+            { id: 'privacy-policy-en', num: 'II', toc: 'Privacy Policy', title: 'II. Privacy Policy' },
+            { id: 'third-party-sharing-en', num: 'III', toc: 'Third-Party Sharing', title: 'III. Third-Party Information Sharing' },
+            { id: 'data-collection-en', num: 'IV', toc: 'Information Collection', title: 'IV. Personal Information Collection' },
+            { id: 'app-permissions-en', num: 'V', toc: 'App Permissions', title: 'V. App Permissions Statement' }
+        ]
+    }
 };
 
-function t(key) { var lang = document.body.dataset.lang || 'zh'; return I18N[key][lang]; }
+var CONTENT = {};
+CONTENT['user-agreement'] = {
+    zh: [
+        { h3: '1.1 协议接受', html: '<p>本协议是您与 MiniChat 运营方之间就使用 MiniChat 服务所订立的协议。使用本服务即视为您已知悉并同意本协议全部内容。</p><p>如您不同意任何条款，请立即停止使用本服务。</p>' },
+        { h3: '1.2 账号注册', html: '<ul><li>您须年满 13 周岁。</li><li>请使用真实有效的电子邮箱地址完成注册。</li><li>每个自然人仅可注册并持有一个 MiniChat 账户。</li><li>请妥善保管账户与密码，因主动泄露或保管不善导致的损失由您自行承担。</li></ul>' },
+        { h3: '1.3 行为规范', html: '<p>您承诺在使用本服务时遵守法律法规及社会公序良俗，不得：</p><ul><li>制作、上传或传播违反国家法律法规、危害国家安全、宣扬邪教迷信、传播淫秽色情或暴力的内容；</li><li>发布侵犯他人知识产权、名誉权、肖像权、隐私权等合法权益的内容；</li><li>从事商业广告、垃圾信息、骚扰信息或恶意营销活动；</li><li>利用技术手段刷量、刷评、刷赞，破坏平台秩序；</li><li>实施网络攻击、病毒传播、数据窃取、账号盗用等危害网络安全的行为；</li><li>其他违反法律或本服务规则的行为。</li></ul>' },
+        { h3: '1.4 知识产权', html: '<p>本服务所含文字、图片、音频、视频、软件、界面设计、代码、数据等内容的知识产权归 MiniChat 运营方或合法授权方所有。</p><p>您发布的原创内容著作权归您本人所有，同时您授予 MiniChat 运营方一项全球性、免费、不可撤销、非排他性的许可，允许其在本服务及相关推广中使用、复制、修改、汇编、传播您的内容。</p>' },
+        { h3: '1.5 服务变更与终止', html: '<p>MiniChat 运营方有权根据业务需要修改、暂停或终止本服务的全部或部分功能，无需事先征得您的同意。重大变更将通过站内通知或邮件公告。</p><p>如您违反本协议，MiniChat 运营方有权立即暂停或终止您的账户及服务，且无需承担任何责任。</p>' },
+        { h3: '1.6 免责声明', html: '<p>本服务按"现状"提供。MiniChat 运营方不对服务的及时性、安全性、可用性、准确性作出任何明示或暗示的保证。因不可抗力（包括自然灾害、网络攻击、电信运营商故障、政府行为等）导致的服务中断或数据丢失，MiniChat 运营方将尽力恢复但不承担责任。</p>' },
+        { h3: '1.7 法律适用与争议解决', html: '<p>本协议的订立、执行和解释均适用中华人民共和国法律。因本协议产生的争议，双方应友好协商；协商不成的，任何一方均有权将争议提交至 MiniChat 运营方所在地有管辖权的人民法院。</p>' }
+    ],
+    en: [
+        { h3: '1.1 Acceptance', html: '<p>This Agreement constitutes a contract between you and the MiniChat operator regarding your use of the Service. By using the Service, you acknowledge and agree to all terms herein.</p><p>If you do not agree to any term, please stop using the Service immediately.</p>' },
+        { h3: '1.2 Account Registration', html: '<ul><li>You must be at least 13 years old.</li><li>Register with a real and valid email address.</li><li>Each natural person may register and maintain only one MiniChat account.</li><li>You are responsible for safeguarding your account and password; losses caused by your own disclosure or negligence are yours to bear.</li></ul>' },
+        { h3: '1.3 User Conduct', html: '<p>You agree to comply with applicable laws and social morality. You shall not:</p><ul><li>Create, upload, or distribute content that violates national laws, endangers national security, advocates cults or superstitions, or disseminates obscenity or violence;</li><li>Post content that infringes on the intellectual property, reputation, portrait, or privacy rights of others;</li><li>Engage in commercial advertising, spam, harassment, or malicious marketing;</li><li>Use technical means to artificially inflate views, reviews, or likes;</li><li>Conduct cyber attacks, virus distribution, data theft, or account hijacking;</li><li>Engage in any other conduct that violates laws or Service rules.</li></ul>' },
+        { h3: '1.4 Intellectual Property', html: '<p>All content included in the Service (including text, images, audio, video, software, interface design, code, data) is the property of the MiniChat operator or its licensors.</p><p>You retain copyright to original content you post, while granting the MiniChat operator a worldwide, royalty-free, irrevocable, non-exclusive license to use, reproduce, modify, compile, and distribute such content within the Service and related promotions.</p>' },
+        { h3: '1.5 Service Changes and Termination', html: '<p>The MiniChat operator reserves the right to modify, suspend, or terminate all or part of the Service at any time based on business needs. Major changes will be announced through in-site notifications or emails.</p><p>If you violate this Agreement, the MiniChat operator may immediately suspend or terminate your account and Service access without liability.</p>' },
+        { h3: '1.6 Disclaimer', html: '<p>The Service is provided on an "as-is" basis. The operator makes no express or implied warranties regarding timeliness, security, availability, or accuracy. The operator will use commercially reasonable efforts to restore Service in the event of force majeure, but assumes no liability for service interruption or data loss.</p>' },
+        { h3: '1.7 Governing Law and Dispute Resolution', html: '<p>This Agreement is governed by the laws of the People\'s Republic of China. Any dispute shall first be resolved through friendly negotiation; if negotiation fails, either party may submit the dispute to the people\'s court with jurisdiction at the location of the MiniChat operator.</p>' }
+    ]
+};
 
-var SECTIONS = [
-    {
-        id: 'user-agreement',
-        tocZh: '一、用户协议',
-        tocEn: 'I. User Agreement',
-        zh: {
-            title: '一、用户协议',
-            html: `
-                <p>欢迎使用 <strong>MiniChat</strong>（以下简称"本服务"）。本协议是您与 MiniChat 运营方之间就使用本服务所订立的具有法律约束力的协议。在使用本服务之前，请您仔细阅读本协议的全部条款。一旦您注册、登录或以任何方式使用本服务，即视为您已充分理解、知悉并同意接受本协议的全部内容。</p>
+CONTENT['privacy-policy'] = {
+    zh: [
+        { h3: '2.1 适用范围', html: '<p>本政策适用于 MiniChat 运营方向您提供的全部服务，包括聊天、消息推送、文件传输、个人资料展示、社交互动等。当您通过第三方平台使用本服务时，本政策同样适用。</p>' },
+        { h3: '2.2 信息收集', html: '<p>为提供完整、稳定、安全的服务，我们会在以下场景中收集您的信息：</p><ul><li>账户注册信息：电子邮箱、显示名称、头像；</li><li>使用信息：登录时间、在线状态、最后活跃时间；</li><li>内容信息：您主动发布、发送、上传的文字、图片、音频、视频、文件等；</li><li>设备信息：浏览器类型、操作系统、语言设置、屏幕分辨率、IP 地址；</li><li>Cookie 与本地存储：用于保存登录状态、主题偏好、语言设置、消息草稿。</li></ul>' },
+        { h3: '2.3 信息使用', html: '<ul><li>为您提供、维护并改进本服务的各项功能；</li><li>验证您的身份，防止账户被盗用或冒用；</li><li>向您推送与本服务相关的通知、公告和消息提醒；</li><li>分析使用情况，优化用户体验和性能；</li><li>检测、预防和应对欺诈、滥用、安全风险；</li><li>遵守法律法规和监管要求。</li></ul>' },
+        { h3: '2.4 存储与保护', html: '<div class="callout"><strong>所有数据</strong>均存储于经过严格筛选的第三方云服务（Supabase）机房中，并通过 TLS/SSL 加密传输。我们采用业界通行的安全措施保护您的个人信息，包括访问控制、数据加密、安全审计、漏洞扫描等。</div><p>尽管我们采取了合理的安全措施，但互联网环境并非绝对安全。若发生信息安全事件，我们将依法及时通知您，并采取必要补救措施。</p>' },
+        { h3: '2.5 共享与披露', html: '<p>我们承诺不会出售您的个人信息，亦不会与第三方任意共享。仅在以下情况下，您的信息可能会被披露：</p><ul><li>事先获得您本人的明确同意或授权；</li><li>根据法律法规、政府部门、司法机关的强制性要求；</li><li>为维护运营方、其他用户或社会公众的合法权益、人身或财产安全；</li><li>向提供基础设施服务的合作方以"完成服务所必需的最少信息"原则共享。</li></ul>' },
+        { h3: '2.6 您的权利', html: '<ul><li>查询权：可随时查看您的账户信息、发布内容；</li><li>更正权：可随时修改显示名称、头像、密码等账户信息；</li><li>删除权：可随时申请删除账户及相关数据（注销功能位于"设置 → 账户操作"）；</li><li>撤回授权：可随时停止使用本服务并撤回此前授予的权限；</li><li>投诉举报：发现个人信息被违规使用时，可通过反馈渠道联系我们。</li></ul>' },
+        { h3: '2.7 政策更新', html: '<p>本政策可能根据业务调整、法律法规变更等情况进行修订。修订后的政策将在本页面公布，重大变更将通过站内通知、邮件等方式告知。继续使用本服务即视为接受修订后的政策。</p>' }
+    ],
+    en: [
+        { h3: '2.1 Scope', html: '<p>This policy applies to all Services provided by the MiniChat operator, including chat, message push, file transfer, profile display, and social interaction. This policy also applies when you use the Service through third-party platforms.</p>' },
+        { h3: '2.2 Information Collection', html: '<p>To provide a complete, stable, and secure Service, we collect your information in the following scenarios:</p><ul><li>Account information: email address, display name, avatar;</li><li>Usage information: login time, online status, last active time;</li><li>Content information: text, images, audio, video, files you actively publish or upload;</li><li>Device information: browser type, operating system, language settings, screen resolution, IP address;</li><li>Cookies and local storage: for saving login state, theme preferences, language settings, and message drafts.</li></ul>' },
+        { h3: '2.3 Use of Information', html: '<ul><li>Providing, maintaining, and improving the Service;</li><li>Verifying your identity and preventing account theft or impersonation;</li><li>Sending notifications, announcements, and message reminders related to the Service;</li><li>Analyzing usage to optimize user experience and performance;</li><li>Detecting, preventing, and responding to fraud, abuse, and security risks;</li><li>Complying with laws, regulations, and regulatory requirements.</li></ul>' },
+        { h3: '2.4 Storage and Protection', html: '<p>All data is stored in rigorously vetted third-party cloud services (Supabase) and transmitted over TLS/SSL encryption. We employ industry-standard security measures, including access control, data encryption, security auditing, and vulnerability scanning.</p><p>Although we have implemented reasonable security measures, the Internet environment is not absolutely secure. In the event of a security incident, we will notify you in a timely manner and take necessary remedial measures.</p>' },
+        { h3: '2.5 Sharing and Disclosure', html: '<p>We pledge not to sell your personal information or arbitrarily share it with third parties. Your information may be disclosed only in the following circumstances:</p><ul><li>With your prior explicit consent or authorization;</li><li>To comply with mandatory requirements of laws, regulations, government departments, or judicial authorities;</li><li>To protect the legitimate rights and interests, personal safety, or property safety of the operator, other users, or the public;</li><li>To share with infrastructure partners under the principle of "minimum information necessary to complete the service."</li></ul>' },
+        { h3: '2.6 Your Rights', html: '<ul><li>Right of access: view your account information and posted content at any time;</li><li>Right of rectification: modify your display name, avatar, password, and other account information;</li><li>Right of erasure: request deletion of your account and related data (located in "Settings → Account Actions");</li><li>Right to withdraw consent: stop using the Service and withdraw previously granted permissions at any time;</li><li>Right to complain: contact us through the feedback channel if you find your personal information is being misused.</li></ul>' },
+        { h3: '2.7 Policy Updates', html: '<p>This policy may be revised based on business adjustments or changes in laws. The revised policy will be published on this page, and major changes will be announced through in-site notifications, emails, or other means. Continued use of the Service shall constitute acceptance of the revised policy.</p>' }
+    ]
+};
 
-                <h3>1.1 协议接受</h3>
-                <p>您确认：在使用本服务前，您已充分阅读、理解并同意接受本协议及本服务公布的各类规则。本协议包括但不限于本协议正文、隐私政策、第三方信息共享清单、个人信息收集清单、应用权限说明及所有已经发布的或将来可能发布的各类规则、声明、通知、说明等。上述所有内容均为本协议不可分割的组成部分，与本协议正文具有同等法律效力。</p>
-                <p>如您不同意本协议的任何条款，请立即停止使用本服务。您的使用行为（包括但不限于注册、登录、浏览、发布信息等）将被视为您已接受本协议的全部内容。</p>
+CONTENT['third-party-sharing'] = {
+    zh: [
+        { h3: '3.1 Supabase（数据基础设施）', html: '<p><strong>共享目的：</strong>用户身份认证、数据存储、实时消息同步。</p><p><strong>共享信息：</strong>电子邮箱、加密密码哈希、用户资料、消息内容、文件附件。</p><p><strong>共享方式：</strong>通过 Supabase 提供的安全 API 进行加密传输。</p><p><strong>第三方隐私政策：</strong><a href="https://supabase.com/privacy" target="_blank" rel="noopener">https://supabase.com/privacy</a></p>' },
+        { h3: '3.2 Gravatar（全球通用头像服务）', html: '<p><strong>共享目的：</strong>根据您的邮箱地址获取您的全球通用头像。</p><p><strong>共享信息：</strong>经过 MD5 加密的电子邮箱地址。</p><p><strong>第三方隐私政策：</strong><a href="https://automattic.com/privacy/" target="_blank" rel="noopener">https://automattic.com/privacy/</a></p>' },
+        { h3: '3.3 未成年人特别说明', html: '<p>如您是未成年人，在使用本服务前，请务必请您的父母或法定监护人阅读本协议及本清单，并在征得他们同意的前提下使用本服务。</p>' },
+        { h3: '3.4 共享清单更新', html: '<p>本清单可能根据业务调整、合规要求等情况进行更新。更新后的清单将在本页面公布。继续使用本服务即视为接受更新后的清单。</p>' }
+    ],
+    en: [
+        { h3: '3.1 Supabase (Data Infrastructure)', html: '<p><strong>Purpose:</strong> User authentication, data storage, real-time message synchronization.</p><p><strong>Information shared:</strong> Email address, encrypted password hash, user profile, message content, file attachments.</p><p><strong>Sharing method:</strong> Encrypted transmission via Supabase\'s secure API.</p><p><strong>Third-party policy:</strong> <a href="https://supabase.com/privacy" target="_blank" rel="noopener">https://supabase.com/privacy</a></p>' },
+        { h3: '3.2 Gravatar (Global Avatar Service)', html: '<p><strong>Purpose:</strong> Retrieve your globally recognized avatar based on your email address.</p><p><strong>Information shared:</strong> MD5-encrypted email address.</p><p><strong>Third-party policy:</strong> <a href="https://automattic.com/privacy/" target="_blank" rel="noopener">https://automattic.com/privacy/</a></p>' },
+        { h3: '3.3 Special Note for Minors', html: '<p>If you are a minor, please ask your parents or legal guardians to read this Agreement and this list before using the Service, and use the Service only with their consent.</p>' },
+        { h3: '3.4 Updates', html: '<p>This list may be updated based on business adjustments or compliance requirements. The updated list will be published on this page. Continued use of the Service shall constitute acceptance of the updated list.</p>' }
+    ]
+};
 
-                <h3>1.2 账号注册</h3>
-                <ul>
-                    <li>您须年满 <strong>13 周岁</strong>。未满 13 周岁的未成年人不得注册或使用本服务。</li>
-                    <li>您应当使用真实、有效的电子邮箱地址完成注册。注册信息发生变更时，您应及时更新。</li>
-                    <li>您应妥善保管自己的账户和密码。因您主动泄露、保管不善或遭受他人攻击、诈骗等行为导致的损失，由您本人承担。</li>
-                    <li>每个自然人仅可注册并持有 <strong>一个</strong> MiniChat 账户。多账号注册、恶意注册行为将被视为违规。</li>
-                </ul>
+CONTENT['data-collection'] = {
+    zh: [
+        { h3: '4.1 账户基础信息', html: '<ul><li><strong>电子邮箱地址：</strong>用于账户注册、登录、密码重置、安全验证；</li><li><strong>加密密码：</strong>使用 Bcrypt 算法加密存储，绝不以明文形式保存；</li><li><strong>显示名称：</strong>用于在聊天中标识您，默认为邮箱前缀，可自行修改；</li><li><strong>头像 URL：</strong>用于在聊天、个人资料中展示您的头像。</li></ul>' },
+        { h3: '4.2 行为信息', html: '<ul><li><strong>登录时间与最后活跃时间：</strong>用于显示在线状态、消息送达状态；</li><li><strong>IP 地址：</strong>用于安全审计、异常登录检测、防滥用；</li><li><strong>浏览器 User-Agent：</strong>用于兼容性优化与问题排查。</li></ul>' },
+        { h3: '4.3 内容信息', html: '<ul><li><strong>聊天消息：</strong>您主动发送的文字、图片、音频、视频、文件及其他附件；</li><li><strong>撤回记录：</strong>撤回消息的元数据（消息 ID、撤回时间），用于客户端显示；</li><li><strong>用户偏好：</strong>主题模式、语言偏好、消息草稿。</li></ul>' },
+        { h3: '4.4 设备权限', html: '<ul><li><strong>本地存储权限：</strong>用于保存登录状态、用户偏好、消息草稿等；</li><li><strong>通知权限：</strong>用于在收到新消息时向您推送桌面通知（需您主动授权）。</li></ul>' },
+        { h3: '4.5 存储期限', html: '<div class="callout">您的个人信息将在您使用本服务期间<strong>持续保存</strong>。如您注销账户，我们将依法在合理期限内删除您的个人信息或进行匿名化处理，法律另有规定的除外。</div>' }
+    ],
+    en: [
+        { h3: '4.1 Basic Account Information', html: '<ul><li><strong>Email address:</strong> Used for registration, login, password reset, and security verification;</li><li><strong>Encrypted password:</strong> Stored using the Bcrypt algorithm; never in plaintext;</li><li><strong>Display name:</strong> Identifies you in chat; defaults to email prefix, modifiable;</li><li><strong>Avatar URL:</strong> Displays your avatar in chat and profile.</li></ul>' },
+        { h3: '4.2 Behavioral Information', html: '<ul><li><strong>Login time and last active time:</strong> For displaying online status and message delivery status;</li><li><strong>IP address:</strong> For security auditing, abnormal login detection, and anti-abuse;</li><li><strong>Browser User-Agent:</strong> For compatibility optimization and troubleshooting.</li></ul>' },
+        { h3: '4.3 Content Information', html: '<ul><li><strong>Chat messages:</strong> Text, images, audio, video, files, and other attachments you actively send;</li><li><strong>Recall records:</strong> Metadata of recalled messages (ID, recall time), used for client display;</li><li><strong>User preferences:</strong> Theme mode, language preference, message drafts.</li></ul>' },
+        { h3: '4.4 Device Permissions', html: '<ul><li><strong>Local storage:</strong> For saving login state, preferences, and drafts;</li><li><strong>Notification permission:</strong> For desktop notifications when receiving new messages (requires your active authorization).</li></ul>' },
+        { h3: '4.5 Retention Period', html: '<div class="callout">Your personal information will be <strong>retained continuously</strong> during your use of the Service. If you cancel your account, we will delete or anonymize your personal information within a reasonable period as required by law, except as otherwise provided by law.</div>' }
+    ]
+};
 
-                <h3>1.3 用户行为规范</h3>
-                <p>您承诺在使用本服务时遵守中华人民共和国相关法律法规及社会公序良俗，不得利用本服务从事下列行为：</p>
-                <ul>
-                    <li>制作、上传、传播任何违反国家法律法规、危害国家安全、破坏民族团结、宣扬邪教迷信、传播淫秽色情或暴力的内容；</li>
-                    <li>发布、传播任何侵犯他人知识产权、名誉权、肖像权、隐私权等合法权益的内容；</li>
-                    <li>利用本服务从事任何形式的商业广告、垃圾信息、骚扰信息或恶意营销活动；</li>
-                    <li>利用技术手段恶意刷量、刷评、刷赞，破坏平台正常运营秩序；</li>
-                    <li>实施任何形式的网络攻击、病毒传播、数据窃取、账号盗用等危害网络安全的行为；</li>
-                    <li>其他违反法律、行政法规、社会公德或本服务规则的行为。</li>
-                </ul>
+CONTENT['app-permissions'] = {
+    zh: [
+        { h3: '5.1 通知权限', html: '<p><strong>用途：</strong>当您收到新消息时，在浏览器或系统中显示桌面通知。</p><p><strong>申请时机：</strong>首次收到新消息时由浏览器自动弹窗申请。</p><p><strong>是否必需：</strong>否。拒绝授权不影响您使用其他核心功能。</p>' },
+        { h3: '5.2 本地存储权限', html: '<p><strong>用途：</strong>保存登录状态、用户偏好、消息草稿、未发送内容。</p><p><strong>申请时机：</strong>首次访问时自动使用，无需用户授权。</p><p><strong>是否必需：</strong>是。关闭后可能导致无法保持登录或丢失草稿。</p>' },
+        { h3: '5.3 麦克风权限', html: '<p><strong>用途：</strong>录制并发送语音消息。</p><p><strong>申请时机：</strong>点击语音录制按钮时由浏览器自动弹窗申请。</p><p><strong>是否必需：</strong>否。</p>' },
+        { h3: '5.4 摄像头权限', html: '<p><strong>用途：</strong>拍摄并发送照片。</p><p><strong>申请时机：</strong>点击拍照按钮时由浏览器自动弹窗申请。</p><p><strong>是否必需：</strong>否。</p>' },
+        { h3: '5.5 剪贴板权限', html: '<p><strong>用途：</strong>识别您粘贴的图片、文件等内容。</p><p><strong>申请时机：</strong>使用 Ctrl/Cmd + V 粘贴文件时自动申请。</p><p><strong>是否必需：</strong>否。</p>' },
+        { h3: '5.6 后台运行权限（PWA）', html: '<p><strong>用途：</strong>在您安装 PWA 后，保持消息的实时接收。</p><p><strong>是否必需：</strong>否。关闭后消息将在您重新打开应用时加载。</p>' },
+        { h3: '5.7 权限总览', html: '<div class="callout">本应用遵循"按需申请、最小授权"原则。除本地存储（用于基本功能）外，其他所有权限均为可选项。我们绝不会在您不知情的情况下访问您的设备、读取您的数据或进行任何后台行为。</div>' }
+    ],
+    en: [
+        { h3: '5.1 Notification Permission', html: '<p><strong>Purpose:</strong> Display desktop notifications when you receive new messages.</p><p><strong>Request timing:</strong> The browser automatically prompts when receiving a new message for the first time.</p><p><strong>Required:</strong> No. Declining does not affect other core features.</p>' },
+        { h3: '5.2 Local Storage Permission', html: '<p><strong>Purpose:</strong> Save login state, user preferences, message drafts, unsent content.</p><p><strong>Request timing:</strong> Automatically used on first visit; no authorization required.</p><p><strong>Required:</strong> Yes. Disabling may result in inability to stay logged in or loss of drafts.</p>' },
+        { h3: '5.3 Microphone Permission', html: '<p><strong>Purpose:</strong> Record and send voice messages.</p><p><strong>Request timing:</strong> The browser automatically prompts when you click the voice record button.</p><p><strong>Required:</strong> No.</p>' },
+        { h3: '5.4 Camera Permission', html: '<p><strong>Purpose:</strong> Capture and send photos.</p><p><strong>Request timing:</strong> The browser automatically prompts when you click the camera button.</p><p><strong>Required:</strong> No.</p>' },
+        { h3: '5.5 Clipboard Permission', html: '<p><strong>Purpose:</strong> Identify images, files, and other content you paste.</p><p><strong>Request timing:</strong> Automatically requested when using Ctrl/Cmd + V to paste files.</p><p><strong>Required:</strong> No.</p>' },
+        { h3: '5.6 Background Run Permission (PWA)', html: '<p><strong>Purpose:</strong> After installing the PWA, keep messages received in real time.</p><p><strong>Required:</strong> No. When disabled, messages will load the next time you open the app.</p>' },
+        { h3: '5.7 Overview', html: '<div class="callout">This application follows the principle of "request on demand, minimum authorization." Apart from local storage (used for basic functions), all other permissions are optional. We will never access your device, read your data, or perform any background activity without your knowledge.</div>' }
+    ]
+};
 
-                <h3>1.4 知识产权</h3>
-                <p>本服务所包含的所有内容（包括但不限于文字、图片、音频、视频、软件、界面设计、代码、数据等）的知识产权归 MiniChat 运营方或合法授权方所有，受著作权法、商标法等法律法规的保护。未经权利人书面许可，您不得以任何形式复制、修改、传播、发行或用于商业用途。</p>
-                <p>您在本服务中发布的原创内容，著作权归您本人所有。但您同时授予 MiniChat 运营方一项全球性、免费、不可撤销的、非排他性的许可，允许其在本服务及相关推广中使用、复制、修改、汇编、传播您的内容。</p>
+function applyTheme(theme) {
+    document.body.classList.toggle('light-theme', theme === 'light');
+}
 
-                <h3>1.5 服务变更与终止</h3>
-                <p>MiniChat 运营方有权根据业务发展需要，随时修改、暂停或终止本服务的全部或部分功能，而无需事先征得您的同意。重大变更将通过站内通知、邮件或其他合理方式进行公告。</p>
-                <p>如您违反本协议的任何条款，MiniChat 运营方有权立即暂停或终止您的账户及服务，且无需承担任何责任。</p>
-
-                <h3>1.6 免责声明</h3>
-                <p>本服务按"现状"提供。MiniChat 运营方不对服务的及时性、安全性、可用性、准确性作出任何明示或暗示的保证。因不可抗力（包括但不限于自然灾害、网络攻击、电信运营商故障、政府行为等）导致的服务中断或数据丢失，MiniChat 运营方将尽力恢复但不承担任何责任。</p>
-
-                <h3>1.7 法律适用与争议解决</h3>
-                <p>本协议的订立、执行和解释均适用中华人民共和国法律。因本协议产生的任何争议，双方应友好协商解决；协商不成的，任何一方均有权将争议提交至 MiniChat 运营方所在地有管辖权的人民法院通过诉讼方式解决。</p>
-            `
-        },
-        en: {
-            title: 'I. User Agreement',
-            html: `
-                <p>Welcome to <strong>MiniChat</strong> (hereinafter referred to as "the Service"). This Agreement constitutes a legally binding agreement between you and the MiniChat operator regarding your use of the Service. Please read all the terms of this Agreement carefully before using the Service. By registering, logging in, or using the Service in any manner, you acknowledge that you have fully read, understood, and agreed to be bound by all terms of this Agreement.</p>
-
-                <h3>1.1 Acceptance of Agreement</h3>
-                <p>You confirm that, prior to using the Service, you have fully read, understood, and agreed to accept this Agreement and all published rules. This Agreement includes, but is not limited to, the main body of this Agreement, the Privacy Policy, the Third-Party Information Sharing List, the Personal Information Collection List, the App Permissions Statement, and all rules, statements, notices, and explanations that have been or will be published. All of the above constitute integral parts of this Agreement and have the same legal effect as the main body.</p>
-                <p>If you do not agree to any term of this Agreement, please stop using the Service immediately. Your usage (including but not limited to registration, login, browsing, and posting) will be deemed as your acceptance of the full content of this Agreement.</p>
-
-                <h3>1.2 Account Registration</h3>
-                <ul>
-                    <li>You must be at least <strong>13 years old</strong>. Minors under 13 are not permitted to register for or use the Service.</li>
-                    <li>You shall register with a real and valid email address. You should update your registration information promptly when it changes.</li>
-                    <li>You are responsible for safeguarding your account and password. Losses caused by your own disclosure, negligence, or third-party attacks shall be borne by you.</li>
-                    <li>Each natural person may register and maintain <strong>only one</strong> MiniChat account. Multi-account registration and malicious registration will be deemed as violations.</li>
-                </ul>
-
-                <h3>1.3 User Conduct</h3>
-                <p>You agree to comply with applicable laws and regulations and social morality when using the Service, and shall not use the Service to engage in the following activities:</p>
-                <ul>
-                    <li>Creating, uploading, or distributing any content that violates national laws, endangers national security, undermines national unity, advocates cults or superstitions, disseminates obscenity or violence;</li>
-                    <li>Posting or distributing any content that infringes upon intellectual property rights, reputation rights, portrait rights, privacy rights, or other legitimate rights of third parties;</li>
-                    <li>Using the Service for any form of commercial advertising, spam, harassment, or malicious marketing;</li>
-                    <li>Using technical means to artificially inflate views, reviews, or likes, disrupting the normal operation of the platform;</li>
-                    <li>Conducting any form of cyber attacks, virus distribution, data theft, account hijacking, or other activities that endanger network security;</li>
-                    <li>Any other behavior that violates laws, administrative regulations, social morality, or Service rules.</li>
-                </ul>
-
-                <h3>1.4 Intellectual Property</h3>
-                <p>All content included in the Service (including but not limited to text, images, audio, video, software, interface design, code, data) is the property of the MiniChat operator or its licensors and is protected by copyright, trademark, and other laws. Without prior written permission, you shall not reproduce, modify, distribute, or use such content for commercial purposes in any form.</p>
-                <p>You retain copyright to original content you post. However, you grant the MiniChat operator a worldwide, royalty-free, irrevocable, non-exclusive license to use, reproduce, modify, compile, and distribute your content within the Service and related promotions.</p>
-
-                <h3>1.5 Service Changes and Termination</h3>
-                <p>The MiniChat operator reserves the right to modify, suspend, or terminate all or part of the Service at any time based on business needs, without prior consent. Major changes will be announced through in-site notifications, emails, or other reasonable means.</p>
-                <p>If you violate any term of this Agreement, the MiniChat operator has the right to immediately suspend or terminate your account and Service access, without assuming any liability.</p>
-
-                <h3>1.6 Disclaimer</h3>
-                <p>The Service is provided on an "as-is" basis. The MiniChat operator makes no express or implied warranties regarding timeliness, security, availability, or accuracy. The operator will use commercially reasonable efforts to restore Service in the event of force majeure (including but not limited to natural disasters, cyber attacks, telecommunications failures, government actions), but assumes no liability for service interruption or data loss.</p>
-
-                <h3>1.7 Governing Law and Dispute Resolution</h3>
-                <p>The execution, performance, and interpretation of this Agreement shall be governed by the laws of the People's Republic of China. Any dispute arising from this Agreement shall be resolved through friendly negotiation. If negotiation fails, either party may submit the dispute to the people's court with jurisdiction at the location of the MiniChat operator.</p>
-            `
-        }
-    },
-    {
-        id: 'privacy-policy',
-        tocZh: '二、隐私政策',
-        tocEn: 'II. Privacy Policy',
-        zh: {
-            title: '二、隐私政策',
-            html: `
-                <p>MiniChat 高度重视用户的隐私保护。本政策详细说明我们在您使用本服务时如何收集、使用、存储、共享和保护您的个人信息。请您仔细阅读本政策，了解您的权利及我们保护您个人信息的方式。</p>
-
-                <h3>2.1 适用范围</h3>
-                <p>本政策适用于 MiniChat 运营方向您提供的全部服务，包括但不限于聊天、消息推送、文件传输、个人资料展示、社交互动等各项功能。当您通过第三方平台（如嵌入式链接、API 接入）使用本服务时，本政策同样适用。</p>
-
-                <h3>2.2 信息收集</h3>
-                <p>为向您提供完整、稳定、安全的服务，我们会在以下场景中收集您的信息：</p>
-                <ul>
-                    <li><strong>账户注册信息：</strong>您注册时提供的电子邮箱、显示名称、头像（头像数据来源于 Gravatar 全球通用头像服务或您主动上传的图片）。</li>
-                    <li><strong>使用信息：</strong>您的登录时间、在线状态、最后活跃时间等基础使用数据。</li>
-                    <li><strong>内容信息：</strong>您主动发布、发送、上传的文字、图片、音频、视频、文件等内容数据。</li>
-                    <li><strong>设备信息：</strong>浏览器类型、操作系统、语言设置、屏幕分辨率、IP 地址等用于服务优化和安全防护的设备信息。</li>
-                    <li><strong>Cookie 与本地存储：</strong>用于保存您的登录状态、主题偏好、语言设置、消息草稿等个性化数据。</li>
-                </ul>
-
-                <h3>2.3 信息使用</h3>
-                <p>我们收集到的信息将用于以下目的：</p>
-                <ul>
-                    <li>为您提供、维护并改进本服务的各项功能；</li>
-                    <li>验证您的身份，防止账户被盗用或冒用；</li>
-                    <li>向您推送与本服务相关的通知、公告和消息提醒；</li>
-                    <li>分析使用情况，优化用户体验和性能；</li>
-                    <li>检测、预防和应对欺诈、滥用、安全风险；</li>
-                    <li>遵守法律法规和监管要求。</li>
-                </ul>
-
-                <h3>2.4 信息存储与保护</h3>
-                <div class="highlight">所有数据均存储于经过严格筛选的第三方云服务（Supabase）机房中，并通过 TLS/SSL 加密传输。我们采用业界通行的安全措施保护您的个人信息，包括但不限于访问控制、数据加密、安全审计、漏洞扫描等。</div>
-                <p>尽管我们采取了合理的安全措施，但请理解互联网环境并非绝对安全。若发生信息安全事件，我们将依法及时通知您，并采取必要补救措施。</p>
-
-                <h3>2.5 信息共享与披露</h3>
-                <p>我们承诺不会出售您的个人信息，亦不会与第三方任意共享。仅在以下情况下，您的信息可能会被披露：</p>
-                <ul>
-                    <li>事先获得您本人的明确同意或授权；</li>
-                    <li>根据法律法规、政府部门、司法机关的强制性要求；</li>
-                    <li>为维护 MiniChat 运营方、其他用户或社会公众的合法权益、人身或财产安全；</li>
-                    <li>向为我们提供基础设施服务的合作方（如云服务商）以"完成服务所必需的最少信息"原则共享。</li>
-                </ul>
-
-                <h3>2.6 您的权利</h3>
-                <p>您对自己的个人信息享有以下权利：</p>
-                <ul>
-                    <li><strong>查询权：</strong>您可随时查看您的账户信息、发布内容；</li>
-                    <li><strong>更正权：</strong>您可随时修改您的显示名称、头像、密码等账户信息；</li>
-                    <li><strong>删除权：</strong>您可随时申请删除您的账户及相关数据（注销功能位于"设置 → 账户操作"中）；</li>
-                    <li><strong>撤回授权：</strong>您可随时停止使用本服务并撤回您此前授予的权限；</li>
-                    <li><strong>投诉举报：</strong>如您发现个人信息被违规使用，可通过页脚的反馈渠道联系我们。</li>
-                </ul>
-
-                <h3>2.7 政策更新</h3>
-                <p>本政策可能根据业务调整、法律法规变更等情况进行修订。修订后的政策将在本页面公布，重大变更将通过站内通知、邮件等方式进行告知。继续使用本服务即视为接受修订后的政策。</p>
-            `
-        },
-        en: {
-            title: 'II. Privacy Policy',
-            html: `
-                <p>MiniChat takes user privacy protection very seriously. This policy details how we collect, use, store, share, and protect your personal information when you use the Service. Please read this policy carefully to understand your rights and how we protect your personal information.</p>
-
-                <h3>2.1 Scope of Application</h3>
-                <p>This policy applies to all Services provided to you by the MiniChat operator, including but not limited to chat, message push, file transfer, profile display, social interaction, and other functions. This policy also applies when you use the Service through third-party platforms (such as embedded links or API access).</p>
-
-                <h3>2.2 Information Collection</h3>
-                <p>To provide you with a complete, stable, and secure Service, we collect your information in the following scenarios:</p>
-                <ul>
-                    <li><strong>Account registration information:</strong> The email address, display name, and avatar (avatar data comes from Gravatar, a globally recognized avatar service, or images you upload) you provide during registration.</li>
-                    <li><strong>Usage information:</strong> Your login time, online status, last active time, and other basic usage data.</li>
-                    <li><strong>Content information:</strong> Text, images, audio, video, files, and other content data you actively publish, send, or upload.</li>
-                    <li><strong>Device information:</strong> Browser type, operating system, language settings, screen resolution, IP address, and other device information used for Service optimization and security protection.</li>
-                    <li><strong>Cookies and local storage:</strong> Used to save your login state, theme preferences, language settings, message drafts, and other personalized data.</li>
-                </ul>
-
-                <h3>2.3 Information Use</h3>
-                <p>Information we collect will be used for the following purposes:</p>
-                <ul>
-                    <li>Providing, maintaining, and improving the various functions of the Service;</li>
-                    <li>Verifying your identity to prevent account theft or impersonation;</li>
-                    <li>Sending you notifications, announcements, and message reminders related to the Service;</li>
-                    <li>Analyzing usage to optimize user experience and performance;</li>
-                    <li>Detecting, preventing, and responding to fraud, abuse, and security risks;</li>
-                    <li>Complying with laws, regulations, and regulatory requirements.</li>
-                </ul>
-
-                <h3>2.4 Information Storage and Protection</h3>
-                <div class="highlight">All data is stored in rigorously vetted third-party cloud services (Supabase) and transmitted over TLS/SSL encryption. We employ industry-standard security measures to protect your personal information, including but not limited to access control, data encryption, security auditing, and vulnerability scanning.</div>
-                <p>Although we have implemented reasonable security measures, please understand that the Internet environment is not absolutely secure. In the event of a security incident, we will notify you in a timely manner in accordance with the law and take necessary remedial measures.</p>
-
-                <h3>2.5 Information Sharing and Disclosure</h3>
-                <p>We pledge not to sell your personal information or arbitrarily share it with third parties. Your information may be disclosed only in the following circumstances:</p>
-                <ul>
-                    <li>With your prior explicit consent or authorization;</li>
-                    <li>To comply with mandatory requirements of laws, regulations, government departments, or judicial authorities;</li>
-                    <li>To protect the legitimate rights and interests, personal safety, or property safety of the MiniChat operator, other users, or the public;</li>
-                    <li>To share with partners providing infrastructure services (such as cloud service providers) under the principle of "minimum information necessary to complete the service."</li>
-                </ul>
-
-                <h3>2.6 Your Rights</h3>
-                <p>You have the following rights regarding your personal information:</p>
-                <ul>
-                    <li><strong>Right of access:</strong> You may view your account information and posted content at any time;</li>
-                    <li><strong>Right of rectification:</strong> You may modify your display name, avatar, password, and other account information at any time;</li>
-                    <li><strong>Right of erasure:</strong> You may request deletion of your account and related data at any time (the deletion function is located in "Settings → Account Actions");</li>
-                    <li><strong>Right to withdraw consent:</strong> You may stop using the Service and withdraw previously granted permissions at any time;</li>
-                    <li><strong>Right to complain:</strong> If you find that your personal information is being used improperly, please contact us through the feedback channel in the footer.</li>
-                </ul>
-
-                <h3>2.7 Policy Updates</h3>
-                <p>This policy may be revised based on business adjustments, changes in laws and regulations, etc. The revised policy will be published on this page, and major changes will be announced through in-site notifications, emails, or other means. Continued use of the Service shall constitute acceptance of the revised policy.</p>
-            `
-        }
-    },
-    {
-        id: 'third-party-sharing',
-        tocZh: '三、第三方信息共享清单',
-        tocEn: 'III. Third-Party Information Sharing List',
-        zh: {
-            title: '三、第三方信息共享清单',
-            html: `
-                <p>为向您提供稳定、可靠的服务，MiniChat 会在必要范围内与特定的第三方共享您的部分信息。我们承诺以"完成服务所必需的最少信息"为原则进行共享，并要求第三方同样遵守严格的隐私保护义务。</p>
-
-                <h3>3.1 Supabase（数据基础设施）</h3>
-                <ul>
-                    <li><strong>共享目的：</strong>用户身份认证、数据存储、实时消息同步</li>
-                    <li><strong>共享信息：</strong>电子邮箱、加密密码哈希、用户资料、消息内容、文件附件</li>
-                    <li><strong>共享方式：</strong>通过 Supabase 提供的安全 API 进行加密传输</li>
-                    <li><strong>第三方隐私政策：</strong><a href="https://supabase.com/privacy" target="_blank" rel="noopener">https://supabase.com/privacy</a></li>
-                </ul>
-
-                <h3>3.2 Gravatar（全球通用头像服务）</h3>
-                <ul>
-                    <li><strong>共享目的：</strong>根据您的邮箱地址获取您的全球通用头像</li>
-                    <li><strong>共享信息：</strong>经过 MD5 加密的电子邮箱地址</li>
-                    <li><strong>第三方隐私政策：</strong><a href="https://automattic.com/privacy/" target="_blank" rel="noopener">https://automattic.com/privacy/</a></li>
-                </ul>
-
-                <h3>3.3 未成年人特别说明</h3>
-                <p>如您是未成年人，在使用本服务前，请务必请您的父母或法定监护人阅读本协议及本清单，并在征得他们同意的前提下使用本服务。</p>
-
-                <h3>3.4 共享清单更新</h3>
-                <p>本清单可能根据业务调整、合规要求等情况进行更新。更新后的清单将在本页面公布。继续使用本服务即视为接受更新后的清单。</p>
-            `
-        },
-        en: {
-            title: 'III. Third-Party Information Sharing List',
-            html: `
-                <p>To provide you with a stable and reliable Service, MiniChat shares some of your information with specific third parties within the necessary scope. We are committed to the principle of "minimum information necessary to complete the Service" and require third parties to comply with equally strict privacy protection obligations.</p>
-
-                <h3>3.1 Supabase (Data Infrastructure)</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> User authentication, data storage, real-time message synchronization</li>
-                    <li><strong>Information shared:</strong> Email address, encrypted password hash, user profile, message content, file attachments</li>
-                    <li><strong>Sharing method:</strong> Encrypted transmission via Supabase's secure API</li>
-                    <li><strong>Third-party privacy policy:</strong> <a href="https://supabase.com/privacy" target="_blank" rel="noopener">https://supabase.com/privacy</a></li>
-                </ul>
-
-                <h3>3.2 Gravatar (Global Avatar Service)</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> Retrieve your globally recognized avatar based on your email address</li>
-                    <li><strong>Information shared:</strong> MD5-encrypted email address</li>
-                    <li><strong>Third-party privacy policy:</strong> <a href="https://automattic.com/privacy/" target="_blank" rel="noopener">https://automattic.com/privacy/</a></li>
-                </ul>
-
-                <h3>3.3 Special Note for Minors</h3>
-                <p>If you are a minor, please be sure to ask your parents or legal guardians to read this Agreement and this list before using the Service, and use the Service only with their consent.</p>
-
-                <h3>3.4 Sharing List Updates</h3>
-                <p>This list may be updated based on business adjustments, compliance requirements, etc. The updated list will be published on this page. Continued use of the Service shall constitute acceptance of the updated list.</p>
-            `
-        }
-    },
-    {
-        id: 'data-collection',
-        tocZh: '四、个人信息收集清单',
-        tocEn: 'IV. Personal Information Collection List',
-        zh: {
-            title: '四、个人信息收集清单',
-            html: `
-                <p>为保障服务的正常运行并履行法律法规要求，MiniChat 会按照下列规则收集您的个人信息。我们严格遵循"最小必要"原则，仅收集为实现特定功能所必需的信息。</p>
-
-                <h3>4.1 账户基础信息</h3>
-                <ul>
-                    <li><strong>电子邮箱地址：</strong>用于账户注册、登录、密码重置、安全验证</li>
-                    <li><strong>加密密码：</strong>使用 Bcrypt 算法加密存储，绝不以明文形式保存</li>
-                    <li><strong>显示名称：</strong>用于在聊天中标识您，默认为邮箱前缀，可自行修改</li>
-                    <li><strong>头像 URL：</strong>用于在聊天、个人资料中展示您的头像</li>
-                </ul>
-
-                <h3>4.2 行为信息</h3>
-                <ul>
-                    <li><strong>登录时间与最后活跃时间：</strong>用于显示在线状态、消息送达状态</li>
-                    <li><strong>IP 地址：</strong>用于安全审计、异常登录检测、防滥用</li>
-                    <li><strong>浏览器 User-Agent：</strong>用于兼容性优化与问题排查</li>
-                </ul>
-
-                <h3>4.3 内容信息</h3>
-                <ul>
-                    <li><strong>聊天消息：</strong>包括您主动发送的文字、图片、音频、视频、文件及其他附件</li>
-                    <li><strong>撤回记录：</strong>您撤回消息的元数据（消息 ID、撤回时间），用于客户端显示</li>
-                    <li><strong>用户偏好：</strong>主题模式（深色/浅色/跟随系统）、语言偏好、消息草稿</li>
-                </ul>
-
-                <h3>4.4 设备权限</h3>
-                <ul>
-                    <li><strong>本地存储权限：</strong>用于保存登录状态、用户偏好、消息草稿等</li>
-                    <li><strong>通知权限：</strong>用于在收到新消息时向您推送桌面通知（需您主动授权）</li>
-                </ul>
-
-                <h3>4.5 存储期限</h3>
-                <p>您的个人信息将在您使用本服务期间持续保存。如您注销账户，我们将依法在合理期限内删除您的个人信息或进行匿名化处理，法律另有规定的除外。</p>
-            `
-        },
-        en: {
-            title: 'IV. Personal Information Collection List',
-            html: `
-                <p>To ensure the normal operation of the Service and to comply with legal requirements, MiniChat collects your personal information in accordance with the following rules. We strictly follow the "minimum necessary" principle and only collect information necessary to implement specific functions.</p>
-
-                <h3>4.1 Basic Account Information</h3>
-                <ul>
-                    <li><strong>Email address:</strong> Used for account registration, login, password reset, and security verification</li>
-                    <li><strong>Encrypted password:</strong> Stored using the Bcrypt algorithm; never stored in plaintext</li>
-                    <li><strong>Display name:</strong> Used to identify you in chat, defaults to email prefix, can be modified</li>
-                    <li><strong>Avatar URL:</strong> Used to display your avatar in chat and profile</li>
-                </ul>
-
-                <h3>4.2 Behavioral Information</h3>
-                <ul>
-                    <li><strong>Login time and last active time:</strong> Used to display online status and message delivery status</li>
-                    <li><strong>IP address:</strong> Used for security auditing, abnormal login detection, and anti-abuse</li>
-                    <li><strong>Browser User-Agent:</strong> Used for compatibility optimization and troubleshooting</li>
-                </ul>
-
-                <h3>4.3 Content Information</h3>
-                <ul>
-                    <li><strong>Chat messages:</strong> Including text, images, audio, video, files, and other attachments you actively send</li>
-                    <li><strong>Recall records:</strong> Metadata of recalled messages (message ID, recall time), used for client display</li>
-                    <li><strong>User preferences:</strong> Theme mode (dark/light/follow system), language preference, message drafts</li>
-                </ul>
-
-                <h3>4.4 Device Permissions</h3>
-                <ul>
-                    <li><strong>Local storage permission:</strong> Used to save login state, user preferences, message drafts, etc.</li>
-                    <li><strong>Notification permission:</strong> Used to push desktop notifications when receiving new messages (requires your active authorization)</li>
-                </ul>
-
-                <h3>4.5 Retention Period</h3>
-                <p>Your personal information will be retained continuously during your use of the Service. If you cancel your account, we will delete your personal information or anonymize it within a reasonable period as required by law, except as otherwise provided by law.</p>
-            `
-        }
-    },
-    {
-        id: 'app-permissions',
-        tocZh: '五、应用权限说明',
-        tocEn: 'V. App Permissions Statement',
-        zh: {
-            title: '五、应用权限说明',
-            html: `
-                <p>MiniChat 是一款基于浏览器的网页应用（即 Progressive Web App），运行过程中仅会向您申请实现核心功能所必需的权限。我们尊重您的选择，所有权限均可由您自主决定是否授予，并可随时撤销。</p>
-
-                <h3>5.1 通知权限</h3>
-                <ul>
-                    <li><strong>用途：</strong>当您收到新消息时，在浏览器或系统中显示桌面通知</li>
-                    <li><strong>申请时机：</strong>首次收到新消息时由浏览器自动弹窗申请</li>
-                    <li><strong>是否必需：</strong>否。拒绝授权不影响您使用其他核心功能</li>
-                    <li><strong>撤销方式：</strong>浏览器设置 → 网站权限 → 通知</li>
-                </ul>
-
-                <h3>5.2 本地存储权限</h3>
-                <ul>
-                    <li><strong>用途：</strong>保存登录状态、用户偏好、消息草稿、未发送内容</li>
-                    <li><strong>申请时机：</strong>首次访问时自动使用，无需用户授权</li>
-                    <li><strong>是否必需：</strong>是。关闭后可能导致无法保持登录或丢失草稿</li>
-                    <li><strong>撤销方式：</strong>浏览器设置 → 网站数据 → 删除</li>
-                </ul>
-
-                <h3>5.3 麦克风权限（仅在发送语音消息时）</h3>
-                <ul>
-                    <li><strong>用途：</strong>录制并发送语音消息</li>
-                    <li><strong>申请时机：</strong>点击语音录制按钮时由浏览器自动弹窗申请</li>
-                    <li><strong>是否必需：</strong>否。拒绝授权不影响您使用其他核心功能</li>
-                </ul>
-
-                <h3>5.4 摄像头权限（仅在拍照时）</h3>
-                <ul>
-                    <li><strong>用途：</strong>拍摄并发送照片</li>
-                    <li><strong>申请时机：</strong>点击拍照按钮时由浏览器自动弹窗申请</li>
-                    <li><strong>是否必需：</strong>否。拒绝授权不影响您使用其他核心功能</li>
-                </ul>
-
-                <h3>5.5 剪贴板权限（仅在粘贴文件时）</h3>
-                <ul>
-                    <li><strong>用途：</strong>识别您粘贴的图片、文件等内容</li>
-                    <li><strong>申请时机：</strong>使用 Ctrl/Cmd + V 粘贴文件时自动申请</li>
-                    <li><strong>是否必需：</strong>否</li>
-                </ul>
-
-                <h3>5.6 后台运行权限（PWA）</h3>
-                <ul>
-                    <li><strong>用途：</strong>在您安装 PWA 后，保持消息的实时接收</li>
-                    <li><strong>是否必需：</strong>否。关闭后消息将在您重新打开应用时加载</li>
-                </ul>
-
-                <h3>5.7 权限总览</h3>
-                <p>本应用遵循"按需申请、最小授权"原则。除本地存储（用于基本功能）外，其他所有权限均为可选项。我们绝不会在您不知情的情况下访问您的设备、读取您的数据或进行任何后台行为。</p>
-            `
-        },
-        en: {
-            title: 'V. App Permissions Statement',
-            html: `
-                <p>MiniChat is a browser-based web application (i.e., Progressive Web App). During operation, it only requests the permissions necessary to implement core functions. We respect your choices, and all permissions are at your discretion to grant and may be revoked at any time.</p>
-
-                <h3>5.1 Notification Permission</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> Display desktop notifications in the browser or system when you receive new messages</li>
-                    <li><strong>Request timing:</strong> The browser automatically prompts when receiving a new message for the first time</li>
-                    <li><strong>Required:</strong> No. Declining does not affect other core features</li>
-                    <li><strong>How to revoke:</strong> Browser settings → Site permissions → Notifications</li>
-                </ul>
-
-                <h3>5.2 Local Storage Permission</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> Save login state, user preferences, message drafts, unsent content</li>
-                    <li><strong>Request timing:</strong> Automatically used on first visit, no user authorization required</li>
-                    <li><strong>Required:</strong> Yes. Disabling may result in inability to stay logged in or loss of drafts</li>
-                    <li><strong>How to revoke:</strong> Browser settings → Site data → Delete</li>
-                </ul>
-
-                <h3>5.3 Microphone Permission (Voice Messages Only)</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> Record and send voice messages</li>
-                    <li><strong>Request timing:</strong> The browser automatically prompts when you click the voice record button</li>
-                    <li><strong>Required:</strong> No. Declining does not affect other core features</li>
-                </ul>
-
-                <h3>5.4 Camera Permission (Photo Capture Only)</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> Capture and send photos</li>
-                    <li><strong>Request timing:</strong> The browser automatically prompts when you click the camera button</li>
-                    <li><strong>Required:</strong> No. Declining does not affect other core features</li>
-                </ul>
-
-                <h3>5.5 Clipboard Permission (File Paste Only)</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> Identify images, files, and other content you paste</li>
-                    <li><strong>Request timing:</strong> Automatically requested when using Ctrl/Cmd + V to paste files</li>
-                    <li><strong>Required:</strong> No</li>
-                </ul>
-
-                <h3>5.6 Background Run Permission (PWA)</h3>
-                <ul>
-                    <li><strong>Purpose:</strong> After installing the PWA, keep messages received in real time</li>
-                    <li><strong>Required:</strong> No. When disabled, messages will load the next time you open the app</li>
-                </ul>
-
-                <h3>5.7 Permission Overview</h3>
-                <p>This application follows the principle of "request on demand, minimum authorization." Apart from local storage (used for basic functions), all other permissions are optional. We will never access your device, read your data, or perform any background activity without your knowledge.</p>
-            `
-        }
-    }
-];
+function getCurrentTheme() {
+    var saved = localStorage.getItem('minichat_theme');
+    if (saved && saved !== 'auto') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 function applyLang(lang) {
+    var data = I18N[lang];
+    if (!data) return;
     document.body.dataset.lang = lang;
-    document.documentElement.lang = (lang === 'zh' ? 'zh-CN' : 'en');
-    document.getElementById('langZh').classList.toggle('active', lang === 'zh');
-    document.getElementById('langEn').classList.toggle('active', lang === 'en');
-    document.getElementById('tocTitle').textContent = I18N.tocTitle[lang];
-    document.getElementById('brandText').textContent = I18N.brandText[lang];
-    document.getElementById('backBtn').textContent = I18N.backBtn[lang];
-    document.getElementById('footerText').textContent = I18N.footerText[lang];
-
-    document.getElementById('docTitle').textContent = (lang === 'zh' ? 'MiniChat 服务协议' : 'MiniChat Service Agreement');
-    document.getElementById('contentZh').style.display = (lang === 'zh' ? 'block' : 'none');
-    document.getElementById('contentEn').style.display = (lang === 'en' ? 'block' : 'none');
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.title = lang === 'zh' ? 'MiniChat · 服务协议' : 'MiniChat · Service Agreement';
+    var el;
+    if ((el = document.getElementById('tocTitle'))) el.textContent = data.tocTitle;
+    if ((el = document.getElementById('brandText'))) el.textContent = lang === 'zh' ? '服务协议' : 'Service Agreement';
+    if ((el = document.getElementById('docTitle'))) el.textContent = data.docTitle;
+    if ((el = document.getElementById('lastUpdated'))) el.textContent = data.lastUpdated;
+    if ((el = document.getElementById('backBtn'))) el.textContent = data.backBtn;
+    if ((el = document.getElementById('footerText'))) el.textContent = data.footerText;
+    if ((el = document.getElementById('footerBack'))) el.textContent = data.footerBack;
+    if ((el = document.getElementById('contentZh'))) el.style.display = lang === 'zh' ? 'block' : 'none';
+    if ((el = document.getElementById('contentEn'))) el.style.display = lang === 'en' ? 'block' : 'none';
+    document.querySelectorAll('.lang-opt').forEach(function(b) {
+        var active = b.dataset.lang === lang;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
 }
 
 function buildTOC() {
     var lang = document.body.dataset.lang || 'zh';
+    var data = I18N[lang];
     var toc = document.getElementById('toc');
     toc.innerHTML = '';
-    SECTIONS.forEach(function(s, i) {
+    data.sections.forEach(function(s) {
         var li = document.createElement('li');
         var a = document.createElement('a');
         a.href = '#' + s.id;
-        a.textContent = lang === 'zh' ? s.tocZh : s.tocEn;
         a.dataset.target = s.id;
+        a.innerHTML = '<span class="toc-num">' + s.num + '</span><span>' + s.toc + '</span>';
         a.addEventListener('click', function(e) {
             e.preventDefault();
             var target = document.getElementById(s.id);
@@ -903,104 +339,145 @@ function buildContent() {
     var en = document.getElementById('contentEn');
     zh.innerHTML = '';
     en.innerHTML = '';
-    SECTIONS.forEach(function(s) {
+    var keys = ['user-agreement', 'privacy-policy', 'third-party-sharing', 'data-collection', 'app-permissions'];
+    var enTitles = {
+        'user-agreement': 'I. User Agreement',
+        'privacy-policy': 'II. Privacy Policy',
+        'third-party-sharing': 'III. Third-Party Information Sharing',
+        'data-collection': 'IV. Personal Information Collection',
+        'app-permissions': 'V. App Permissions Statement'
+    };
+    keys.forEach(function(key, idx) {
         var secZh = document.createElement('section');
         secZh.className = 'section';
-        secZh.id = s.id;
-        secZh.innerHTML = s.zh.html;
+        secZh.id = key;
         var h2zh = document.createElement('h2');
-        h2zh.innerHTML = '<span class="num">' + s.zh.title.split('、')[0] + '</span>' + s.zh.title.split('、').slice(1).join('、');
-        secZh.insertBefore(h2zh, secZh.firstChild);
+        h2zh.innerHTML = '<span class="sec-num">' + I18N.zh.sections[idx].num + '</span><span>' + I18N.zh.sections[idx].title + '</span>';
+        secZh.appendChild(h2zh);
+        CONTENT[key].zh.forEach(function(block) {
+            var h3 = document.createElement('h3');
+            var parts = block.h3.split(' ');
+            h3.innerHTML = '<span class="sub-num">' + parts[0] + '</span><span>' + parts.slice(1).join(' ') + '</span>';
+            secZh.appendChild(h3);
+            var wrap = document.createElement('div');
+            wrap.innerHTML = block.html;
+            secZh.appendChild(wrap);
+        });
         zh.appendChild(secZh);
 
         var secEn = document.createElement('section');
         secEn.className = 'section';
-        secEn.id = s.id + '-en';
-        secEn.innerHTML = s.en.html;
+        secEn.id = key + '-en';
         var h2en = document.createElement('h2');
-        var enTitle = s.en.title;
-        var parts = enTitle.split(' ');
-        h2en.innerHTML = '<span class="num">' + parts[0] + '</span>' + parts.slice(1).join(' ');
-        secEn.insertBefore(h2en, secEn.firstChild);
+        h2en.innerHTML = '<span class="sec-num">' + I18N.en.sections[idx].num + '</span><span>' + enTitles[key] + '</span>';
+        secEn.appendChild(h2en);
+        CONTENT[key].en.forEach(function(block) {
+            var h3 = document.createElement('h3');
+            var parts = block.h3.split(' ');
+            h3.innerHTML = '<span class="sub-num">' + parts[0] + '</span><span>' + parts.slice(1).join(' ') + '</span>';
+            secEn.appendChild(h3);
+            var wrap = document.createElement('div');
+            wrap.innerHTML = block.html;
+            secEn.appendChild(wrap);
+        });
         en.appendChild(secEn);
     });
 }
 
 function setupTheme() {
-    var saved = localStorage.getItem('minichat_agreement_theme');
-    if (saved) {
-        document.body.dataset.theme = saved;
-    }
+    applyTheme(getCurrentTheme());
     var toggle = document.getElementById('themeToggle');
-    toggle.addEventListener('click', function() {
-        var current = document.body.dataset.theme;
-        var sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var isDark = current ? (current === 'dark') : sysDark;
-        var next = isDark ? 'light' : 'dark';
-        document.body.dataset.theme = next;
-        localStorage.setItem('minichat_agreement_theme', next);
-    });
+    if (!toggle) return;
+    toggle.onclick = function() {
+        var current = getCurrentTheme();
+        var next = current === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('minichat_theme', next);
+        applyTheme(next);
+    };
 }
 
 function setupBackToTop() {
     var btn = document.getElementById('backToTop');
+    var progress = document.getElementById('progressBar');
     window.addEventListener('scroll', function() {
-        if (window.scrollY > 400) btn.classList.add('show');
-        else btn.classList.remove('show');
+        var scrollTop = window.scrollY;
+        var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        var progress_ = docHeight > 0 ? Math.min(scrollTop / docHeight, 1) : 0;
+        if (progress) progress.style.transform = 'scaleX(' + progress_ + ')';
+        btn.classList.toggle('show', scrollTop > 300);
     });
-    btn.addEventListener('click', function() {
+    btn.onclick = function() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    };
 }
 
 function setupScrollSpy() {
-    var sections = SECTIONS.map(function(s) { return document.getElementById(s.id); });
+    var sections = document.querySelectorAll('.section');
     var tocLinks = document.querySelectorAll('.toc a');
     window.addEventListener('scroll', function() {
-        var scrollY = window.scrollY + 120;
+        var scrollY = window.scrollY + 100;
         var active = null;
         for (var i = sections.length - 1; i >= 0; i--) {
-            if (sections[i] && sections[i].offsetTop <= scrollY) {
+            if (sections[i] && sections[i].getBoundingClientRect().top + window.scrollY <= scrollY) {
                 active = sections[i].id;
                 break;
             }
         }
+        if (!active && sections.length) active = sections[0].id;
         tocLinks.forEach(function(a) {
             a.classList.toggle('active', a.dataset.target === active);
         });
     });
 }
 
-function init() {
-    var saved = localStorage.getItem('minichat_agreement_lang');
-    var lang;
-    if (saved) {
-        lang = saved;
-    } else {
-        var browserLang = (navigator.language || '').toLowerCase();
-        lang = browserLang.indexOf('zh') === 0 ? 'zh' : 'en';
-    }
-    document.body.dataset.lang = lang;
-    buildTOC();
-    buildContent();
-    applyLang(lang);
-    setupTheme();
-    setupBackToTop();
-    setupScrollSpy();
-
-    document.getElementById('langZh').addEventListener('click', function() { setLang('zh'); });
-    document.getElementById('langEn').addEventListener('click', function() { setLang('en'); });
+function setupLang() {
+    var switchEl = document.querySelector('.lang-switch');
+    if (!switchEl) return;
+    switchEl.onclick = function(e) {
+        var btn = e.target;
+        while (btn && btn !== switchEl) {
+            if (btn.classList && btn.classList.contains('lang-opt')) {
+                var lang = btn.dataset && btn.dataset.lang;
+                if (lang) setLang(lang);
+                break;
+            }
+            btn = btn.parentNode;
+        }
+    };
 }
 
 function setLang(lang) {
     document.body.dataset.lang = lang;
-    localStorage.setItem('minichat_agreement_lang', lang);
+    localStorage.setItem('minichat_lang', lang);
     buildTOC();
+    buildContent();
     applyLang(lang);
-    setTimeout(function() { buildContent(); applyLang(lang); setupScrollSpy(); }, 0);
+    setupScrollSpy();
 }
 
-init();
+function init() {
+    try {
+        var saved = localStorage.getItem('minichat_lang');
+        var lang = (saved && saved !== 'system' && (saved === 'zh' || saved === 'en')) ? saved : 
+                   ((navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en');
+        document.body.dataset.lang = lang;
+        buildTOC();
+        buildContent();
+        applyLang(lang);
+        setupTheme();
+        setupBackToTop();
+        setupScrollSpy();
+        setupLang();
+    } catch (e) {
+        console.error('agreements.html init error:', e);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 </script>
 </body>
 </html>
