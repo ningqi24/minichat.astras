@@ -19,15 +19,16 @@
         body.light-theme{--bg-primary:#fafafa;--bg-secondary:#ffffff;--bg-sidebar:#f8f9fa;--bg-card:#ffffff;--bg-input:#f1f3f5;--bg-hover:#e9ecef;--bg-overlay:rgba(255,255,255,0.85);--text-primary:#1a1a1a;--text-secondary:#5c636a;--text-muted:#9da4ab;--border-color:#e9ecef;--shadow:0 8px 32px rgba(0,0,0,0.06);--shadow-sm:0 2px 8px rgba(0,0,0,0.04);--bubble-me:#f0f0f0;--bubble-me-border:#e0e0e0;--quote-bg:rgba(59,130,246,0.05);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.05);--code-border:rgba(0,0,0,0.08);--link-color:#2563eb;--success:#16a34a;--error:#dc2626;--scrollbar-thumb:#cbd5e1;--scrollbar-thumb-hover:#94a3b8;--modal-overlay:rgba(0,0,0,0.5)}
         ::-webkit-scrollbar{width:6px;height:6px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;border:none}
+        ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;border:none;transition:background .2s}
         ::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover)}
         *{margin:0;padding:0;box-sizing:border-box}
         *:focus{outline:none}
         *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 3px rgba(59,130,246,.2);border-radius:6px}
         body{font-family:"MiSans","MiSans Latin","Xiaomi Lan Ting Pro","Inter","SF Pro Display","PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;width:100vw;overflow:hidden;transition:background .3s,color .3s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
         .app{width:100vw;height:100vh;background:var(--bg-secondary);display:flex;overflow:hidden;position:relative}
-        .new-messages-btn{position:absolute;bottom:100px;right:30px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:44px;height:44px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;z-index:100;display:none;align-items:center;justify-content:center;font-size:20px;animation:fadeIn .2s ease}
+        .new-messages-btn{position:absolute;bottom:100px;right:30px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:44px;height:44px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;z-index:100;display:none;align-items:center;justify-content:center;font-size:20px;animation:fadeIn .2s ease;transition:transform .2s ease}
         .new-messages-btn.show{display:flex}
+        .new-messages-btn:hover{transform:scale(1.1)}
         .new-messages-btn .badge{position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;border-radius:10px;padding:0 5px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center}
         .time-divider{text-align:center;margin:16px 0 8px;font-size:12px;color:var(--text-muted);opacity:0.8}
         .time-divider span{background:var(--bg-secondary);padding:4px 12px;border-radius:10px;border:1px solid var(--border-color)}
@@ -54,10 +55,12 @@
         .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px}
         .login-card input{width:100%;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;outline:none;transition:var(--transition);margin-bottom:12px}
         .login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-        .login-card .btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease}
+        .login-card .btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
+        .login-card .btn-primary::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .3s ease}
+        .login-card .btn-primary:hover::before{left:100%}
         .login-card .btn-primary:hover{background:var(--accent-hover);box-shadow:0 3px 12px rgba(59,130,246,.25);transform:translateY(-1px)}
         .login-card .btn-primary:active{transform:scale(.97)}
-        .login-card .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+        .login-card .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
         .login-card .auth-message{font-size:12px;text-align:center;margin-top:14px;min-height:18px}
         .login-card .auth-message.success{color:var(--success)}
         .login-card .auth-message.error{color:var(--error)}
@@ -95,30 +98,52 @@
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}
         .main-interface{display:flex;width:100%;height:100%}
         .main-interface.hidden{display:none}
-        .sidebar{width:240px;flex-shrink:0;background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;padding:12px}
-        .sidebar .logo-area{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border-color);margin-bottom:4px;border-radius:var(--radius-sm);cursor:pointer;transition:background .2s}
+        .sidebar-wrapper{width:240px;flex-shrink:0;transition:width .4s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar-wrapper.collapsed{width:56px}
+        .sidebar{width:100%;height:100%;background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;padding:12px;position:relative;overflow:hidden;transition:padding .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar-wrapper.collapsed .logo-text,.sidebar-wrapper.collapsed .version-tag,.sidebar-wrapper.collapsed .user-email,.sidebar-wrapper.collapsed .user-status,.sidebar-wrapper.collapsed .user-details,.sidebar-wrapper.collapsed .nav-item span,.sidebar-wrapper.collapsed .sidebar-badge{opacity:0;pointer-events:none;width:0;height:0;margin:0;padding:0;overflow:hidden;transition:all .3s ease}
+        .sidebar-wrapper.collapsed .logo-area{justify-content:center;padding:8px 0}
+        .sidebar-wrapper.collapsed .nav-item{justify-content:center;padding:8px;gap:0;overflow:hidden;width:40px;height:40px;align-self:center;border-radius:50%}
+        .sidebar-wrapper.collapsed .nav-item svg{width:20px;height:20px;flex-shrink:0}
+        .sidebar-wrapper.collapsed .sidebar{padding:8px 4px}
+        .sidebar-wrapper.collapsed .user-info{flex-direction:column;gap:6px;padding:6px}
+        .sidebar-wrapper.collapsed .user-avatar-btn{width:36px;height:36px}
+        .sidebar-wrapper.collapsed .user-avatar{width:36px;height:36px}
+        .sidebar-wrapper.collapsed .user-collapse-btn{width:36px;height:36px;padding:0;transform:rotate(180deg)}
+        .sidebar-wrapper.collapsed .user-settings-btn{width:36px;height:36px;padding:0}
+        .sidebar .user-collapse-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:5px;border-radius:5px;transition:all .2s ease;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:4px;width:32px;height:32px}
+        .sidebar .user-collapse-btn:hover{background:var(--bg-input);color:var(--text-primary);transform:rotate(180deg)}
+        .sidebar .logo-area{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-bottom:12px;border-radius:var(--radius-sm);cursor:pointer;transition:all .35s cubic-bezier(.25,.46,.45,.94);position:relative}
+        .sidebar .logo-area::after{content:'';position:absolute;bottom:-8px;left:12px;right:12px;height:1px;background:var(--border-color);opacity:1;transform-origin:left;transition:opacity .35s cubic-bezier(.25,.46,.45,.94),transform .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar-wrapper.collapsed .logo-area::after{opacity:0;transform:scaleX(0)}
+        .sidebar-wrapper.collapsed .logo-area{margin-bottom:8px}
+        .sidebar-wrapper.collapsed .logo-area::after{bottom:-4px;left:0;right:0}
         .sidebar .logo-area:hover{background:var(--bg-hover)}
-        .sidebar .logo-area img{height:28px;max-width:100%;object-fit:contain}
-        .sidebar .logo-area .logo-text{font-size:16px;font-weight:700;color:var(--text-primary)}
-        .sidebar .logo-area .version-tag{color:var(--text-muted);font-size:11px}
-        .sidebar .nav{flex:1;overflow-y:auto}
-        .sidebar .nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;transition:all .3s ease;margin-bottom:2px;font-weight:500;position:relative;overflow:hidden}
+        .sidebar .logo-area img{height:28px;max-width:100%;object-fit:contain;transition:height .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar .logo-area .logo-text{font-size:16px;font-weight:700;color:var(--text-primary);transition:all .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar .logo-area .version-tag{color:var(--text-muted);font-size:11px;transition:all .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar .nav{flex:1;overflow-y:auto;margin-top:4px}
+        .sidebar .nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-sm);color:var(--text-secondary);cursor:pointer;transition:all .35s cubic-bezier(.25,.46,.45,.94);margin-bottom:2px;font-weight:500;position:relative;overflow:hidden}
         .sidebar .nav-item::before{content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;background:var(--accent);opacity:0;transform:translate(-50%,-50%);transition:width .4s ease,height .4s ease,opacity .3s ease}
         .sidebar .nav-item:hover::before{width:300px;height:300px;opacity:0.08}
         .sidebar .nav-item:hover{color:var(--text-primary);background:var(--bg-hover)}
         .sidebar .nav-item:active::before{opacity:0.15}
         .sidebar .nav-item.active{background:var(--bubble-me);color:var(--text-primary);border:1px solid var(--bubble-me-border)}
         .sidebar .nav-item.active svg{stroke:var(--text-primary)}
-        .sidebar .nav-item svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-        .sidebar .user-section{border-top:1px solid var(--border-color);padding:10px 6px 16px;margin-top:auto}
-        .sidebar .user-info{display:flex;align-items:center;gap:8px;padding:5px;border-radius:var(--radius-sm);transition:background .2s}
+        .sidebar .nav-item svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:width .35s cubic-bezier(.25,.46,.45,.94),height .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar .user-section{padding:10px 6px 16px;margin-top:auto;transition:padding .35s cubic-bezier(.25,.46,.45,.94);position:relative}
+        .sidebar .user-section::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--border-color);opacity:1;transform-origin:left;transition:opacity .35s cubic-bezier(.25,.46,.45,.94),transform .35s cubic-bezier(.25,.46,.45,.94)}
+        .sidebar-wrapper.collapsed .user-section::before{opacity:0;transform:scaleX(0)}
+        .sidebar .user-info{display:flex;align-items:center;gap:8px;padding:5px;border-radius:var(--radius-sm);transition:all .35s cubic-bezier(.25,.46,.45,.94)}
         .sidebar .user-info:hover{background:var(--bg-hover)}
-        .sidebar .user-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--bg-input);border:2px solid transparent;flex-shrink:0;cursor:pointer;transition:border-color .2s}
+        .sidebar .user-avatar-btn{background:none;border:none;padding:0;border-radius:50%;cursor:pointer;transition:all .2s ease;flex-shrink:0}
+        .sidebar .user-avatar-btn:hover{transform:scale(1.1)}
+        .sidebar .user-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--bg-input);border:2px solid transparent;cursor:pointer;transition:all .35s cubic-bezier(.25,.46,.45,.94)}
         .sidebar .user-info:hover .user-avatar{border-color:var(--accent)}
-        .sidebar .user-details{flex:1;min-width:0;cursor:pointer}
+        .sidebar .user-details{flex:1;min-width:0;cursor:pointer;transition:all .35s cubic-bezier(.25,.46,.45,.94)}
         .sidebar .user-email{font-size:12px;color:var(--text-primary);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .sidebar .user-status{font-size:10px;color:var(--text-muted)}
-        .sidebar .user-settings-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:5px;border-radius:5px;transition:all .2s ease;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .sidebar .user-settings-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:5px;border-radius:5px;transition:all .2s ease;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px}
         .sidebar .user-settings-btn:hover{background:var(--bg-input);color:var(--text-primary);transform:scale(1.05)}
         .chat-main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-secondary);position:relative}
         .chat-main .chat-header{padding:12px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
@@ -208,9 +233,10 @@
         .chat-main .message .avatar-wrapper{flex-shrink:0;width:var(--avatar-size);height:var(--avatar-size);min-width:var(--avatar-size);max-width:var(--avatar-size);max-height:var(--avatar-size);cursor:pointer}
         .chat-main .message .avatar-wrapper img{width:var(--avatar-size);height:var(--avatar-size);border-radius:50%;object-fit:cover;background:var(--bg-input);border:2px solid transparent;transition:var(--transition)}
         .chat-main .message.me .avatar-wrapper img{border-color:var(--border-color)}
-        .chat-main .message .bubble{padding:10px 16px;border-radius:var(--radius);word-wrap:break-word;overflow-wrap:break-word;line-height:1.6;font-size:14px;flex:1;min-width:0;position:relative;transition:var(--transition)}
+        .chat-main .message .bubble{padding:10px 16px;border-radius:var(--radius);word-wrap:break-word;overflow-wrap:break-word;line-height:1.6;font-size:14px;flex:1;min-width:0;position:relative;transition:var(--transition);box-shadow:0 1px 3px rgba(0,0,0,.1)}
         .chat-main .message.other .bubble{background:var(--bg-card);color:var(--text-primary);border-bottom-left-radius:4px;border:1px solid var(--border-color)}
         .chat-main .message.me .bubble{background:var(--bubble-me);color:var(--text-primary);border-bottom-right-radius:4px;border:1px solid var(--bubble-me-border)}
+        .chat-main .message:hover .bubble{transform:scale(1.01);box-shadow:0 4px 12px rgba(0,0,0,.15)}
         .chat-main .message.me .bubble .mention{color:#fef3c7;background:rgba(251,191,36,.25)}
         .chat-main .message.me .bubble a.rt-link{color:#c7d2fe}
         .chat-main .message .sender{font-size:13px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;cursor:pointer}
@@ -428,16 +454,20 @@
         .nickname-row{display:flex;gap:6px;align-items:center;width:100%;flex-wrap:nowrap}
         .nickname-row input{flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:13px;outline:none;min-width:0}
         .panel-version{font-size:12px;color:var(--text-muted)}
-        .img-preview-overlay{position:fixed;inset:0;background:var(--modal-overlay);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .2s ease}
-        .img-preview-img{max-width:90%;max-height:70%;object-fit:contain;border-radius:12px;margin-bottom:24px;cursor:zoom-in;transition:transform .25s ease;transform:scale(.95);opacity:.8}
-        .img-preview-img.loaded{transform:scale(1);opacity:1}
-        .img-preview-actions{display:flex;gap:12px;margin-top:8px;padding:8px}
+        .img-preview-overlay{position:fixed;inset:0;background:var(--modal-overlay);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .2s ease;cursor:zoom-out;user-select:none}
+        .img-preview-container{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+        .img-preview-img{max-width:90%;max-height:70%;object-fit:contain;border-radius:12px;cursor:zoom-in;transition:transform .15s ease;transform:scale(1);opacity:.8;transform-origin:center center}
+        .img-preview-img.loaded{opacity:1}
+        .img-preview-img.zoomed{cursor:grab}
+        .img-preview-img.zoomed:active{cursor:grabbing}
+        .img-preview-actions{display:flex;gap:12px;margin-top:8px;padding:8px;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:10;flex-wrap:wrap;justify-content:center}
         .img-preview-actions button{padding:10px 24px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease;min-width:110px;font-family:inherit}
         .img-preview-actions .btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.25)}
         .img-preview-actions .btn-primary:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.35)}
         .img-preview-actions .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
         .img-preview-actions .btn-secondary{background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color)}
         .img-preview-actions .btn-secondary:hover{background:var(--bg-hover);border-color:var(--accent);transform:translateY(-1px)}
+        .img-preview-zoom-info{position:absolute;top:24px;right:24px;background:rgba(0,0,0,.6);color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;backdrop-filter:blur(4px);pointer-events:none}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
@@ -778,29 +808,36 @@
         </div>
     </div>
     <div class="main-interface hidden" id="mainInterface">
-        <aside class="sidebar">
-            <div class="logo-area" id="logoArea">
-                <img src="assets/logo.svg" alt="Logo"/>
-                <span class="logo-text">MiniChat</span>
-                <span class="version-tag" id="sidebarVersion"></span>
-            </div>
-            <nav class="nav" aria-label="主导航">
-                <div class="nav-item active" id="globalChatNav" data-conversation-id="00000000-0000-0000-0000-000000000000" role="button" tabindex="0" aria-label="全局聊天">
-                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <span data-i18n="globalChat">全局聊天</span>
-                    <span class="sidebar-badge" id="sidebarUnreadBadge">0</span>
+        <aside class="sidebar-wrapper">
+            <div class="sidebar">
+                <div class="logo-area" id="logoArea">
+                    <img src="assets/logo.svg" alt="Logo"/>
+                    <span class="logo-text">MiniChat</span>
+                    <span class="version-tag" id="sidebarVersion"></span>
                 </div>
-            </nav>
-            <div class="user-section">
-                <div class="user-info" id="sidebarUserInfo">
-                    <img class="user-avatar" id="sidebarUserAvatar" src="" alt="头像"/>
-                    <div class="user-details">
-                        <div class="user-email" id="sidebarUserEmail">未登录</div>
-                        <div class="user-status" data-i18n="online">在线</div>
+                <nav class="nav" aria-label="主导航">
+                    <div class="nav-item active" id="globalChatNav" data-conversation-id="00000000-0000-0000-0000-000000000000" role="button" tabindex="0" aria-label="全局聊天">
+                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span data-i18n="globalChat">全局聊天</span>
+                        <span class="sidebar-badge" id="sidebarUnreadBadge">0</span>
                     </div>
-                    <button class="user-settings-btn" id="settingsNav" title="设置" aria-label="设置">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
+                </nav>
+                <div class="user-section">
+                    <div class="user-info" id="sidebarUserInfo">
+                        <button class="user-avatar-btn" id="sidebarUserAvatarBtn" title="个人信息" aria-label="个人信息">
+                            <img class="user-avatar" id="sidebarUserAvatar" src="" alt="头像"/>
+                        </button>
+                        <div class="user-details">
+                            <div class="user-email" id="sidebarUserEmail">未登录</div>
+                            <div class="user-status" data-i18n="online">在线</div>
+                        </div>
+                        <button class="user-collapse-btn" id="sidebarCollapseBtn" title="折叠侧边栏" aria-label="折叠侧边栏">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <button class="user-settings-btn" id="settingsNav" title="设置" aria-label="设置">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -998,6 +1035,36 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="settings-group">
+                            <div class="settings-group-title" data-i18n="notifications">通知设置</div>
+                            <div class="setting-item">
+                                <div><div class="setting-label" data-i18n="desktopNotifications">桌面通知</div><div class="setting-desc" data-i18n="desktopNotificationsDesc">收到新消息时显示桌面通知</div></div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notifyDesktop">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div><div class="setting-label" data-i18n="soundEnabled">通知声音</div><div class="setting-desc" data-i18n="soundEnabledDesc">收到新消息时播放提示音</div></div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notifySound">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div><div class="setting-label" data-i18n="mentionNotifications">@提醒</div><div class="setting-desc" data-i18n="mentionNotificationsDesc">被@时发送通知</div></div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notifyMention">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="settings-tab-content" id="tab-account">
                         <div class="settings-group">
@@ -1172,6 +1239,7 @@ var authTitle = $safe('authTitle'), authSub = $safe('authSub'), btnLogin = $safe
 var termsOverlay = $safe('termsOverlay'), termsClose = $safe('termsClose'), termsAgree = $safe('termsAgree'), termsConfirm = $safe('termsConfirm');
 var messageList = $safe('messageList'), chatInput = $safe('chatInput');
 var sidebarUserEmail = $safe('sidebarUserEmail'), sidebarUserAvatar = $safe('sidebarUserAvatar');
+var sidebarCollapseBtn = $safe('sidebarCollapseBtn'), sidebar = document.querySelector('.sidebar-wrapper');
 
 var btnSend = $safe('btnSend');
 var fileInput = $safe('fileInput'), attachBtn = $safe('attachBtn');
@@ -1957,6 +2025,13 @@ var i18n = {
         inputAuto: '自动',
         inputAlwaysShow: '始终显示',
         inputAlwaysHide: '始终隐藏',
+        notifications: '通知设置',
+        desktopNotifications: '桌面通知',
+        desktopNotificationsDesc: '收到新消息时显示桌面通知',
+        soundEnabled: '通知声音',
+        soundEnabledDesc: '收到新消息时播放提示音',
+        mentionNotifications: '@提醒',
+        mentionNotificationsDesc: '被@时发送通知',
         deletedUser: '已注销用户',
         closeSettings: '关闭设置',
         send: '发送',
@@ -2809,6 +2884,13 @@ var i18n = {
         inputAuto: 'Auto',
         inputAlwaysShow: 'Always Show',
         inputAlwaysHide: 'Always Hide',
+        notifications: 'Notifications',
+        desktopNotifications: 'Desktop Notifications',
+        desktopNotificationsDesc: 'Show desktop notifications for new messages',
+        soundEnabled: 'Notification Sound',
+        soundEnabledDesc: 'Play sound for new messages',
+        mentionNotifications: '@ Mentions',
+        mentionNotificationsDesc: 'Notify when mentioned',
         deletedUser: 'Deleted User',
         closeSettings: 'Close Settings',
         send: 'Send',
@@ -3893,11 +3975,27 @@ function enterChat() {
                     showUserProfile(currentEmail);
                 });
             }
+            var sidebarUserAvatarBtn = document.getElementById('sidebarUserAvatarBtn');
+            if (sidebarUserAvatarBtn) {
+                sidebarUserAvatarBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    showUserProfile(currentEmail);
+                });
+            }
             if (sidebarUserEmail) {
                 sidebarUserEmail.addEventListener('click', function(e) {
                     e.stopPropagation();
                     showUserProfile(currentEmail);
                 });
+            }
+            if (sidebarCollapseBtn && sidebar) {
+                sidebarCollapseBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                    var isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('minichat_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+                });
+                var saved = localStorage.getItem('minichat_sidebar_collapsed');
+                if (saved === 'true') sidebar.classList.add('collapsed');
             }
         }
 
@@ -4976,6 +5074,22 @@ if (ctxMention) {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && contextMenu) contextMenu.classList.remove('active'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && customModal && customModal.classList.contains('active')) closeCustomModal(); });
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    var activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.readOnly) return;
+    if (quoteJumpModal && quoteJumpModal.classList.contains('active')) { closeQuoteJumpModal(); return; }
+    if (settingsOverlay && settingsOverlay.classList.contains('active')) { closeSettingsFunc(); return; }
+    if (uploadOverlay && uploadOverlay.classList.contains('active')) { hideUploadOverlay(); if (fileInput) fileInput.value = ''; return; }
+    if (profileCard && profileCard.classList.contains('active')) { profileCard.classList.remove('active'); return; }
+    if (mobileActionSheet && mobileActionSheet.classList.contains('active')) { closeMobileActionSheet(); return; }
+    if (termsOverlay && termsOverlay.classList.contains('active')) { termsOverlay.classList.remove('active'); return; }
+    if (versionUpdateModal && versionUpdateModal.classList.contains('active')) { versionUpdateModal.classList.remove('active'); return; }
+    if (allMembersModal && allMembersModal.classList.contains('active')) { allMembersModal.classList.remove('active'); return; }
+    if (onlineModal && onlineModal.classList.contains('active')) { onlineModal.classList.remove('active'); return; }
+    var imgOverlay = document.querySelector('.img-preview-overlay');
+    if (imgOverlay) { imgOverlay.remove(); return; }
+});
 
 // ===================== 用户资料 =====================
 async function fetchUserProfiles(emails) {
@@ -5739,8 +5853,83 @@ function subscribeMessages() {
 // ===================== 图片预览 =====================
 window.previewImage = function(url) {
     var o = document.createElement('div'); o.className = 'img-preview-overlay';
+    var container = document.createElement('div'); container.className = 'img-preview-container';
     var img = new Image(); img.src = url; img.className = 'img-preview-img';
+    var zoomInfo = document.createElement('div'); zoomInfo.className = 'img-preview-zoom-info'; zoomInfo.textContent = '100%';
     img.onload = function(){ img.classList.add('loaded'); };
+
+    var scale = 1;
+    var translateX = 0;
+    var translateY = 0;
+    var isDragging = false;
+    var lastX = 0;
+    var lastY = 0;
+
+    function updateTransform() {
+        img.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+        zoomInfo.textContent = Math.round(scale * 100) + '%';
+        if (scale > 1) {
+            img.classList.add('zoomed');
+        } else {
+            img.classList.remove('zoomed');
+            translateX = 0;
+            translateY = 0;
+            img.style.transform = 'scale(' + scale + ')';
+        }
+    }
+
+    function handleWheel(e) {
+        e.preventDefault();
+        var delta = e.deltaY > 0 ? -0.1 : 0.1;
+        var newScale = Math.max(1, Math.min(5, scale + delta));
+        if (newScale !== scale) {
+            scale = newScale;
+            updateTransform();
+        }
+    }
+
+    function handleMouseDown(e) {
+        if (scale <= 1) return;
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        img.style.transition = 'none';
+    }
+
+    function handleMouseMove(e) {
+        if (!isDragging || scale <= 1) return;
+        var dx = e.clientX - lastX;
+        var dy = e.clientY - lastY;
+        translateX += dx;
+        translateY += dy;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        img.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+    }
+
+    function handleMouseUp() {
+        isDragging = false;
+        img.style.transition = 'transform .15s ease';
+    }
+
+    function handleDoubleClick(e) {
+        e.stopPropagation();
+        if (scale > 1) {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+        } else {
+            scale = 2;
+        }
+        updateTransform();
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    img.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    img.addEventListener('dblclick', handleDoubleClick);
+
     var bc = document.createElement('div'); bc.className = 'img-preview-actions';
     var db = document.createElement('button'); db.className = 'btn-primary'; db.textContent = t('downloadOriginal');
     db.onclick = () => {
@@ -5748,10 +5937,13 @@ window.previewImage = function(url) {
         fetch(url).then(r=>r.blob()).then(b => { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = url.split('/').pop() || 'image.jpg'; a.click(); db.textContent = t('downloaded'); setTimeout(()=>{ db.textContent = t('downloadOriginal'); db.disabled = false; }, 2000); }).catch(() => { db.textContent = t('downloadFailed'); setTimeout(()=>{ db.textContent = t('downloadOriginal'); db.disabled = false; }, 2000); });
     };
     var cb = document.createElement('button'); cb.className = 'btn-secondary'; cb.textContent = t('close');
-    cb.onclick = () => document.body.removeChild(o);
+    cb.onclick = () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); document.body.removeChild(o); };
     bc.appendChild(db); bc.appendChild(cb);
-    o.appendChild(img); o.appendChild(bc);
-    o.addEventListener('click', e => { if (e.target === o || e.target === img) document.body.removeChild(o); });
+    container.appendChild(img);
+    container.appendChild(zoomInfo);
+    o.appendChild(container);
+    o.appendChild(bc);
+    o.onclick = () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); document.body.removeChild(o); };
     document.body.appendChild(o);
 };
 
@@ -5934,6 +6126,32 @@ if (langDropdownBtn && langDropdownMenu) {
     });
 }
 updateThemeButtons();
+
+var notifyDesktop = document.getElementById('notifyDesktop');
+var notifySound = document.getElementById('notifySound');
+var notifyMention = document.getElementById('notifyMention');
+if (notifyDesktop) {
+    notifyDesktop.checked = localStorage.getItem('minichat_notify_desktop') !== 'false';
+    notifyDesktop.addEventListener('change', function() {
+        localStorage.setItem('minichat_notify_desktop', this.checked ? 'true' : 'false');
+        if (this.checked && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    });
+}
+if (notifySound) {
+    notifySound.checked = localStorage.getItem('minichat_notify_sound') !== 'false';
+    notifySound.addEventListener('change', function() {
+        localStorage.setItem('minichat_notify_sound', this.checked ? 'true' : 'false');
+    });
+}
+if (notifyMention) {
+    notifyMention.checked = localStorage.getItem('minichat_notify_mention') !== 'false';
+    notifyMention.addEventListener('change', function() {
+        localStorage.setItem('minichat_notify_mention', this.checked ? 'true' : 'false');
+    });
+}
+
 var accountEmailEl = document.getElementById('accountEmail');
 if (accountEmailEl && window.currentEmail) {
     accountEmailEl.textContent = window.currentEmail;
