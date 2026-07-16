@@ -24,8 +24,8 @@
         *{margin:0;padding:0;box-sizing:border-box}
         *:focus{outline:none}
         *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 3px rgba(59,130,246,.2);border-radius:6px}
-        body{font-family:"MiSans","MiSans Latin","Xiaomi Lan Ting Pro","Inter","SF Pro Display","PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;width:100vw;overflow:hidden;transition:background .3s,color .3s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
-        .app{width:100vw;height:100vh;background:var(--bg-secondary);display:flex;overflow:hidden;position:relative}
+        body{font-family:"MiSans","MiSans Latin","Xiaomi Lan Ting Pro","Inter","SF Pro Display","PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;height:100dvh;width:100vw;overflow:hidden;transition:background .3s,color .3s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+        .app{width:100vw;height:100vh;height:100dvh;background:var(--bg-secondary);display:flex;overflow:hidden;position:relative}
         .new-messages-btn{position:absolute;bottom:100px;right:30px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:44px;height:44px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;z-index:100;display:none;align-items:center;justify-content:center;font-size:20px;animation:fadeIn .2s ease;transition:transform .2s ease}
         .new-messages-btn.show{display:flex}
         .new-messages-btn:hover{transform:scale(1.1)}
@@ -553,26 +553,7 @@
         .typing-dots span:nth-child(2){animation-delay:0.2s}
         .typing-dots span:nth-child(3){animation-delay:0.4s}
         @keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:0.3}30%{transform:translateY(-4px);opacity:1}}
-        @media(max-width:768px){.sidebar{width:200px;padding:12px}.sidebar .nav-item span{display:none}.sidebar .nav-item{justify-content:center}.sidebar .user-email{font-size:11px;text-align:center}.chat-main .chat-header{padding:12px 16px}.chat-main .chat-messages{padding:12px 12px 80px}.chat-main .input-area{bottom:12px;width:calc(100% - 24px);gap:6px}.login-card{padding:28px 20px}.splash-icons img{height:50px}.splash-icons{gap:20px}.online-modal{right:10px;left:10px;top:50px;max-width:none}.chat-main .message{max-width:90%}.attachment-area{padding:4px 8px}.mention-dropdown{bottom:calc(100% + 4px);left:-4px;right:-4px;max-height:240px;font-size:13px}.mention-dropdown .mention-item{padding:7px 12px;min-height:42px}.mention-dropdown .mention-item img{width:28px;height:28px}.upload-overlay .upload-dialog{padding:24px 20px;min-width:auto;width:85%}.quote-jump-modal .modal-box{padding:20px}.version-update-modal .modal-box{padding:24px}
-            .settings-overlay { position: fixed !important; align-items: stretch !important; }
-            .settings-panel { padding: 0 !important; width: 100% !important; max-width: 100% !important; height: 100% !important; min-height: 100% !important; border-radius: 0 !important; border: none !important; }
-            .settings-content { padding: 20px 16px; overflow-y: auto !important; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; }
-            .settings-group { padding: 16px; }
-            .nickname-row { flex-wrap: wrap; }
-            .nickname-row input { flex: 1 1 140px; }
-            .avatar-upload-area { flex-wrap: wrap; justify-content: center; }
-            .avatar-upload-area .upload-btn { width: 100%; text-align: center; }
-        }
-        @media(max-width:480px){.sidebar{width:60px;padding:8px}.sidebar .logo-area img{height:28px;max-width:40px}.sidebar .nav-item{padding:10px}.splash-icons img{height:40px}.splash-icons{gap:14px}.splash-status{font-size:10px;margin-top:16px}.chat-main .chat-header{padding:10px 14px}.chat-main .chat-messages{padding:8px 8px 80px}.chat-main .message{max-width:95%}.chat-main .message .bubble{padding:8px 12px;font-size:13px}.chat-main .input-area{bottom:8px;width:calc(100% - 16px);gap:4px}.chat-main .input-area .input-group textarea{padding:6px 10px;font-size:13px}.login-card{padding:24px 16px}.login-card h1{font-size:24px}.auth-title{font-size:20px}.auth-sub{font-size:14px}.sidebar .user-info{padding:4px}.sidebar .user-avatar{width:28px;height:28px}.sidebar .user-email{font-size:10px}
-            .settings-content { padding: 16px 12px; }
-            .settings-group { padding: 12px; }
-            .settings-group-title { font-size: 13px; }
-            .setting-label { font-size: 14px; }
-            .nickname-row input { font-size: 13px; padding: 8px 10px; }
-            .btn-save, .btn-danger, .btn-accent { padding: 8px 12px; font-size: 12px; }
-            .theme-option { min-width: 75px; padding: 10px 12px; }
-            .theme-preview { width: 28px; height: 28px; }
-        }
+
         .search-bar{display:none;padding:10px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);align-items:center;gap:8px;animation:searchBarIn .18s ease-out}
         .search-bar.open{display:flex}
         @keyframes searchBarIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
@@ -597,7 +578,7 @@
         .sidebar-badge{position:absolute;top:6px;right:14px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:600;display:none;align-items:center;justify-content:center;padding:0 5px;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.2)}
         .sidebar-badge.show{display:flex}
         .sidebar .nav-item.active .sidebar-badge{right:10px}
-        @media(max-width:768px){.sidebar .nav-item span{display:none}.sidebar-badge{right:6px}}
+
 
         /* ===================== v3.1.0 新增样式 ===================== */
 
@@ -624,16 +605,7 @@
         .bottom-nav .nav-item svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .bottom-nav .nav-item .badge { background: #ef4444; color: #fff; border-radius: 10px; padding: 0 5px; font-size: 10px; min-width: 16px; height: 16px; line-height: 16px; text-align: center; display: none; align-items: center; justify-content: center; position: absolute; top: -2px; right: -4px; font-weight: 600; }
         .bottom-nav .nav-item .badge.show { display: flex; }
-        @media (max-width: 768px) {
-            .sidebar { display: none !important; }
-            .bottom-nav { display: flex; }
-            .chat-main { margin-bottom: 0; }
-            .chat-main .chat-header { padding: 12px 16px; }
-            .chat-main .chat-messages { padding: 12px 12px 130px; }
-            .chat-main .input-area { bottom: 64px; width: calc(100% - 16px); max-width: none; }
-            .new-messages-btn { bottom: 180px; }
-            .mobile-logo { display: block; }
-        }
+
 
         /* 资料卡 */
         .profile-card { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 500; animation: fadeIn 0.2s ease; }
@@ -694,71 +666,94 @@
         .file-attachment.video { flex-direction: column; align-items: stretch; max-width: 100%; padding: 8px; }
         .file-attachment.video video { width: 100%; max-width: 360px; max-height: 240px; border-radius: 8px; display: block; margin: 0 auto; }
 
+
+        /* ===================== 移动端统一适配 ===================== */
         @media (max-width: 768px) {
-            .mobile-hide-text span, .mobile-hide-text .btn-text {
-                display: none;
-            }
-            
-            .mobile-show-icon {
-                width: 40px;
-                height: 40px;
-                padding: 0;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            .mobile-only {
-                display: none;
-            }
-            
-            .mobile-more-btn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: none;
-                border: none;
-                color: var(--text-secondary);
-                cursor: pointer;
-                padding: 6px;
-                border-radius: 6px;
-                transition: var(--transition);
-                font-size: 18px;
-            }
-            
-            .mobile-more-btn:hover {
-                background: var(--bg-hover);
-                color: var(--text-primary);
-            }
-            
-            .mobile-hidden {
-                display: none !important;
-            }
-            
-            .settings-sidebar {
-                width: 60px;
-                padding: 8px 4px;
-            }
-            
-            .settings-sidebar .settings-tab span {
-                display: none;
-            }
-            
-            .settings-sidebar .settings-tab {
-                justify-content: center;
-                padding: 12px 4px;
-                gap: 0;
-            }
+            /* 布局切换 */
+            .sidebar { display: none !important; }
+            .sidebar-wrapper { width: 0 !important; }
+            .bottom-nav { display: flex; }
+            .mobile-logo { display: block; }
+
+            /* 移动端显示/隐藏类 */
+            .mobile-hidden { display: none !important; }
+            .mobile-only { display: block; }
+            .mobile-hide-text span, .mobile-hide-text .btn-text { display: none; }
+            .mobile-show-icon { width: 40px; height: 40px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+            .mobile-more-btn { display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 6px; border-radius: 6px; transition: var(--transition); font-size: 18px; }
+            .mobile-more-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+            /* 聊天区域 */
+            .chat-main { margin-bottom: 0; }
+            .chat-main .chat-header { padding: 12px 16px; }
+            .chat-main .chat-messages { padding: 12px 12px 180px; }
+            .chat-main .message { max-width: 90%; }
+            .chat-main .message .bubble { padding: 10px 14px; }
+            .chat-main .input-area { bottom: 68px; width: calc(100% - 24px); max-width: none; z-index: 110; }
+            .new-messages-btn { bottom: 260px; right: 20px; }
+
+            /* 在线成员弹窗 */
+            .online-modal { right: 10px; left: 10px; top: 50px; max-width: none; }
+
+            /* 提及下拉 */
+            .mention-dropdown { bottom: calc(100% + 4px); left: -4px; right: -4px; max-height: 240px; font-size: 13px; }
+            .mention-dropdown .mention-item { padding: 7px 12px; min-height: 42px; }
+            .mention-dropdown .mention-item img { width: 28px; height: 28px; }
+
+            /* 附件与上传 */
+            .attachment-area { padding: 4px 8px; }
+            .upload-overlay .upload-dialog { padding: 24px 20px; min-width: auto; width: 85%; }
+
+            /* 弹窗适配 */
+            .quote-jump-modal .modal-box { padding: 20px; }
+            .version-update-modal .modal-box { padding: 24px; }
+
+            /* 登录卡片 */
+            .login-card { padding: 28px 20px; }
+            .splash-icons img { height: 50px; }
+            .splash-icons { gap: 20px; }
+
+            /* 设置面板全屏 */
+            .settings-overlay { position: fixed !important; align-items: stretch !important; }
+            .settings-panel { padding: 0 !important; width: 100% !important; max-width: 100% !important; height: 100% !important; min-height: 100% !important; border-radius: 0 !important; border: none !important; }
+            .settings-content { padding: 20px 16px; overflow-y: auto !important; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; }
+            .settings-group { padding: 16px; }
+            .nickname-row { flex-wrap: wrap; }
+            .nickname-row input { flex: 1 1 140px; }
+            .avatar-upload-area { flex-wrap: wrap; justify-content: center; }
+            .avatar-upload-area .upload-btn { width: 100%; text-align: center; }
+            .settings-sidebar { width: 60px; padding: 8px 4px; }
+            .settings-sidebar .settings-tab span { display: none; }
+            .settings-sidebar .settings-tab { justify-content: center; padding: 12px 4px; gap: 0; }
         }
-        
+
+        @media (max-width: 480px) {
+            .chat-main .chat-header { padding: 10px 14px; }
+            .chat-main .chat-messages { padding: 8px 8px 160px; }
+            .chat-main .message { max-width: 95%; }
+            .chat-main .message .bubble { padding: 8px 12px; font-size: 13px; }
+            .chat-main .input-area { bottom: 68px; width: calc(100% - 16px); gap: 4px; }
+            .chat-main .input-area .input-group textarea { padding: 6px 10px; font-size: 13px; }
+            .login-card { padding: 24px 16px; }
+            .login-card h1 { font-size: 24px; }
+            .auth-title { font-size: 20px; }
+            .auth-sub { font-size: 14px; }
+            .splash-icons img { height: 40px; }
+            .splash-icons { gap: 14px; }
+            .splash-status { font-size: 10px; margin-top: 16px; }
+            .settings-content { padding: 16px 12px; }
+            .settings-group { padding: 12px; }
+            .settings-group-title { font-size: 13px; }
+            .setting-label { font-size: 14px; }
+            .nickname-row input { font-size: 13px; padding: 8px 10px; }
+            .btn-save, .btn-danger, .btn-accent { padding: 8px 12px; font-size: 12px; }
+            .theme-option { min-width: 75px; padding: 10px 12px; }
+            .theme-preview { width: 28px; height: 28px; }
+        }
+
         @media (min-width: 769px) {
-            .mobile-more-btn {
-                display: none !important;
-            }
-            .mobile-hidden {
-                display: inline-block !important;
-            }
+            .mobile-more-btn { display: none !important; }
+            .mobile-only { display: none !important; }
         }
     </style>
 <base target="_blank">
@@ -1574,8 +1569,21 @@ function setAuthMessage(msg, type) {
     if (type === 'success') authMessage.classList.add('success');
     if (type === 'error') authMessage.classList.add('error');
 }
-function autoResizeTextarea() { if (!chatInput) return; chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; }
+function autoResizeTextarea() { if (!chatInput) return; chatInput.style.height = 'auto'; chatInput.style.height = Math.min(Math.max(chatInput.scrollHeight,48),150)+'px'; adjustMobileMessagePadding(); }
 function insertAtCursor(text) { if (!chatInput) return; chatInput.value += text; chatInput.focus(); chatInput.dispatchEvent(new Event('input',{bubbles:true})); autoResizeTextarea(); }
+
+function adjustMobileMessagePadding() {
+    if (!messageList) return;
+    if (window.innerWidth > 768) {
+        messageList.style.paddingBottom = '';
+        return;
+    }
+    var inputArea = document.querySelector('.chat-main .input-area');
+    if (!inputArea) return;
+    var h = inputArea.offsetHeight;
+    var pb = Math.max(160, h + 90);
+    messageList.style.paddingBottom = pb + 'px';
+}
 
 // v3.1.0 文件图标与大小格式化
 function getFileIcon(mimeType, name) {
@@ -5307,6 +5315,7 @@ function renderAttachments() {
         }
         attachmentArea.appendChild(item);
     });
+    adjustMobileMessagePadding();
 }
 function addAttachment(file) {
     var t = '';
@@ -5805,7 +5814,8 @@ function showTypingIndicator(dn) {
     t.textContent = (dn || '用户') + ' 正在输入';
     i.classList.add('active');
     clearTimeout(typingStopId);
-    typingStopId = setTimeout(() => i.classList.remove('active'), 2000);
+    typingStopId = setTimeout(() => { i.classList.remove('active'); adjustMobileMessagePadding(); }, 2000);
+    adjustMobileMessagePadding();
 }
 
 // ===================== 实时频道（仅全局聊天） =====================
@@ -6266,6 +6276,7 @@ function setupGlobalEventListeners() {
             // v3.1.0: 返回前台后只清桌面未读，小红点保留直到真正阅读
             document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateBottomNavBadge(); } });
             window.addEventListener('beforeunload', async () => { if (presenceChannel) { try { await presenceChannel.untrack(); } catch(e) {} presenceChannel.unsubscribe(); } if (window.chatChannel) { window.chatChannel.unsubscribe(); } });
+            window.addEventListener('resize', adjustMobileMessagePadding);
             loadTheme();
             loadLanguage();
             var sidebarVer = document.getElementById('sidebarVersion');
