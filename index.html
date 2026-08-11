@@ -1738,9 +1738,19 @@ async function handleFloxChatLogin(email) {
     );
     var edgeData = await edgeResp.json();
     if (edgeData.error) throw new Error(edgeData.error);
-    await supabase.auth.setSession({ access_token: edgeData.access_token, refresh_token: edgeData.refresh_token });
+    if (!edgeData.access_token || !edgeData.refresh_token) throw new Error('边缘函数未返回有效令牌');
+    var setRes = await supabase.auth.setSession({ access_token: edgeData.access_token, refresh_token: edgeData.refresh_token });
+    if (setRes.error) throw new Error('设置会话失败: ' + setRes.error.message);
+    // 验证会话已生效
+    var checkRes = await supabase.auth.getSession();
+    if (!checkRes.data.session) throw new Error('会话未建立，请重试');
     currentEmail = email;
     currentUserId = edgeData.user_id;
+    // 对齐正常登录流程：创建/更新 profile、恢复已注销用户消息
+    await ensureProfile(currentUserId, email);
+    await checkAndRestoreMessages(email);
+    // 显式持久化 minichat_user，确保刷新后可恢复
+    localStorage.setItem('minichat_user', JSON.stringify({ email: email, id: edgeData.user_id }));
     enterChat();
 }
 
