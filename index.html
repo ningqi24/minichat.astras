@@ -776,14 +776,14 @@
             <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
             <!-- FloxChat 验证码登录 -->
             <div class="floxchat-login" id="floxLogin">
-                <button class="floxchat-back" id="floxBack">&larr; 返回邮箱登录</button>
+                <button type="button" class="floxchat-back" id="floxBack">&larr; 返回邮箱登录</button>
                 <div class="floxchat-step1" id="floxStep1">
                     <input type="email" id="floxEmail" placeholder="FloxChat 注册邮箱"/>
                     <button class="btn-primary" id="btnFloxSendCode">发送验证码</button>
                 </div>
                 <div class="floxchat-step2" id="floxStep2" style="display:none">
                     <input type="text" id="floxCode" placeholder="验证码" maxlength="6"/>
-                    <button class="btn-primary" id="btnFloxVerify">验证并登录</button>
+                    <button type="button" class="btn-primary" id="btnFloxVerify">验证并登录</button>
                 </div>
                 <div class="auth-message" id="floxMsg"></div>
             </div>
