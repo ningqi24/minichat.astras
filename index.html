@@ -1868,10 +1868,9 @@ async function handleFloxVerify() {
             body: JSON.stringify({ email: floxEmailVal, code: code })
         });
         var rawText = await verifyResp.text();
-        var verifyData;
-        try { verifyData = JSON.parse(rawText); } catch(e) { verifyData = { ok: false }; }
-        if (!verifyData.ok) {
-            msgEl.textContent = '验证码错误: ' + (verifyData.message || verifyData.error || rawText.slice(0,40));
+        var isOk = rawText.toLowerCase().indexOf('verified') !== -1;
+        if (!isOk) {
+            msgEl.textContent = '验证码错误: ' + rawText.slice(0,40);
             btn.disabled = false;
             return;
         }
