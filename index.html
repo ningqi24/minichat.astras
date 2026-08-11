@@ -93,6 +93,10 @@
         .terms-link:hover{background:var(--accent);color:#fff;transform:translateX(2px)}
         .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:13px;padding:3px 5px;border-radius:4px;transition:background .2s,color .2s}
         .login-card .pwd-wrapper .toggle-pwd:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .floxchat-login{display:none}
+        .floxchat-login .floxchat-step1,.floxchat-login .floxchat-step2{display:flex;flex-direction:column;gap:10px}
+        .floxchat-login .floxchat-back{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:4px 0;text-align:left;margin-bottom:4px}
+        .floxchat-login .floxchat-back:hover{color:var(--accent-hover)}
         .sidebar .logo-area .logo-text{font-size:18px;font-weight:700;color:var(--text-primary);margin-left:4px}
         .sidebar .version-tag{font-size:10px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}
@@ -770,7 +774,21 @@
             <div class="pwd-wrapper"><input type="password" id="authPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="密码"/><button class="toggle-pwd" id="togglePwd" type="button"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <button class="btn-primary" id="btnLogin" data-i18n="login">登录</button>
             <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
+            <!-- FloxChat 验证码登录 -->
+            <div class="floxchat-login" id="floxLogin">
+                <button class="floxchat-back" id="floxBack">&larr; 返回邮箱登录</button>
+                <div class="floxchat-step1" id="floxStep1">
+                    <input type="email" id="floxEmail" placeholder="FloxChat 注册邮箱"/>
+                    <button class="btn-primary" id="btnFloxSendCode">发送验证码</button>
+                </div>
+                <div class="floxchat-step2" id="floxStep2" style="display:none">
+                    <input type="text" id="floxCode" placeholder="验证码" maxlength="6"/>
+                    <button class="btn-primary" id="btnFloxVerify">验证并登录</button>
+                </div>
+                <div class="auth-message" id="floxMsg"></div>
+            </div>
             <div class="auth-message" id="authMessage"></div>
+            <div style="text-align:center;margin-top:4px;font-size:12px"><a id="switchFloxChat" style="color:var(--accent);cursor:pointer">FloxChat验证码登录</a></div>
         </div>
     </div>
     <div class="terms-overlay" id="termsOverlay">
@@ -1706,6 +1724,26 @@ var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
 if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ===================== FloxChat 桥接 =====================
+function makeBridgePassword(email) {
+    var h = 0, s = "floxchat_to_minichat_2024" + email;
+    for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+    return "fc_" + Math.abs(h).toString(36).slice(0, 16);
+}
+async function handleFloxChatLogin(email) {
+    var edgeResp = await fetch(
+        "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task",
+        { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, password: makeBridgePassword(email), display_name: email.split("@")[0], secret: "flox-meow-2024" }) }
+    );
+    var edgeData = await edgeResp.json();
+    if (edgeData.error) throw new Error(edgeData.error);
+    await supabase.auth.setSession({ access_token: edgeData.access_token, refresh_token: edgeData.refresh_token });
+    currentEmail = email;
+    currentUserId = edgeData.user_id;
+    enterChat();
+}
+
 // ===================== 认证 =====================
 function switchMode(mode) {
     isLoginMode = (mode === 'login');
@@ -1764,6 +1802,80 @@ async function doAuth(email, pwd) {
         }
         else { setAuthMessage('注册成功！请查收邮件确认后登录。','success'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
     } catch(e) { console.error(e); setAuthMessage('网络错误，请重试','error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
+}
+// ===================== FloxChat 验证码登录交互 =====================
+var floxEmailVal = '';
+function switchToFloxLogin() {
+    document.querySelector('.login-card .auth-title').textContent = 'FloxChat 登录';
+    document.querySelector('.login-card .auth-sub').style.display = 'none';
+    document.querySelector('.login-card > input').style.display = 'none';
+    document.querySelector('.login-card .pwd-wrapper').style.display = 'none';
+    document.getElementById('btnLogin').style.display = 'none';
+    document.querySelector('.auth-toggle').style.display = 'none';
+    document.querySelector('.auth-message').style.display = 'none';
+    document.getElementById('floxLogin').style.display = 'block';
+    document.getElementById('floxStep1').style.display = 'flex';
+    document.getElementById('floxStep2').style.display = 'none';
+    document.getElementById('switchFloxChat').style.display = 'none';
+    document.getElementById('floxMsg').textContent = '';
+}
+function switchBackFromFlox() {
+    document.querySelector('.login-card .auth-title').textContent = isLoginMode ? t('welcome') : t('createAccount');
+    document.querySelector('.login-card .auth-sub').style.display = '';
+    document.querySelector('.login-card > input').style.display = '';
+    document.querySelector('.login-card .pwd-wrapper').style.display = '';
+    document.getElementById('btnLogin').style.display = '';
+    document.querySelector('.auth-toggle').style.display = '';
+    document.querySelector('.auth-message').style.display = '';
+    document.getElementById('floxLogin').style.display = 'none';
+    document.getElementById('switchFloxChat').style.display = '';
+}
+async function handleFloxSendCode() {
+    var email = document.getElementById('floxEmail').value.trim();
+    if (!email) { document.getElementById('floxMsg').textContent = '请输入邮箱'; return; }
+    floxEmailVal = email;
+    document.getElementById('btnFloxSendCode').disabled = true;
+    document.getElementById('floxMsg').textContent = '发送中…';
+    try {
+        var resp = await fetch('https://chatear.shebiao.dpdns.org/send-code', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+        var data = await resp.json();
+        if (data.message === 'Code sent') {
+            document.getElementById('floxStep1').style.display = 'none';
+            document.getElementById('floxStep2').style.display = 'flex';
+            document.getElementById('floxMsg').textContent = '验证码已发送';
+        } else {
+            document.getElementById('floxMsg').textContent = '发送失败: ' + (data.message || data.error || '');
+        }
+    } catch(e) {
+        document.getElementById('floxMsg').textContent = '网络错误，请重试';
+    }
+    document.getElementById('btnFloxSendCode').disabled = false;
+}
+async function handleFloxVerify() {
+    var code = document.getElementById('floxCode').value.trim();
+    if (!code) { document.getElementById('floxMsg').textContent = '请输入验证码'; return; }
+    document.getElementById('btnFloxVerify').disabled = true;
+    document.getElementById('floxMsg').textContent = '验证中…';
+    try {
+        var verifyResp = await fetch('https://chatear.shebiao.dpdns.org/verify-code', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: floxEmailVal, code: code })
+        });
+        var verifyData = await verifyResp.json();
+        if (!verifyData.ok) {
+            document.getElementById('floxMsg').textContent = '验证码错误';
+            document.getElementById('btnFloxVerify').disabled = false;
+            return;
+        }
+        document.getElementById('floxMsg').textContent = '登录中…';
+        await handleFloxChatLogin(floxEmailVal);
+    } catch(e) {
+        document.getElementById('floxMsg').textContent = e.message || '登录失败，请重试';
+        document.getElementById('btnFloxVerify').disabled = false;
+    }
 }
 function showTermsModal(callback) {
     if (!termsOverlay) { if (callback) callback(false); return; }
@@ -6273,6 +6385,15 @@ function setupGlobalEventListeners() {
                 });
             }
             if (btnLogin) btnLogin.addEventListener('click', handleAuth);
+            // FloxChat
+            var switchFlox = document.getElementById('switchFloxChat');
+            if (switchFlox) switchFlox.addEventListener('click', switchToFloxLogin);
+            var floxBack = document.getElementById('floxBack');
+            if (floxBack) floxBack.addEventListener('click', switchBackFromFlox);
+            var btnSend = document.getElementById('btnFloxSendCode');
+            if (btnSend) btnSend.addEventListener('click', handleFloxSendCode);
+            var btnVerify = document.getElementById('btnFloxVerify');
+            if (btnVerify) btnVerify.addEventListener('click', handleFloxVerify);
             // v3.1.0: 返回前台后只清桌面未读，小红点保留直到真正阅读
             document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateBottomNavBadge(); } });
             window.addEventListener('beforeunload', async () => { if (presenceChannel) { try { await presenceChannel.untrack(); } catch(e) {} presenceChannel.unsubscribe(); } if (window.chatChannel) { window.chatChannel.unsubscribe(); } });
