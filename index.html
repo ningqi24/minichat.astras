@@ -4415,6 +4415,7 @@ function renderMessageContent(raw) {
     text = text.replace(/\[video\]\(([^)]+)\|([^)]*)\|([^)]*)\|([^)]*)\)/g, (_,u,m,n,s) => { videos.push({url:u,mime:m,name:n,size:s}); return '\x00V'+videos.length+'V\x00'; });
     text = text.replace(/\[file\]\(([^)]+)\|([^)]*)\|([^)]*)\|([^)]*)\)/g, (_,u,m,n,s) => { files.push({url:u,mime:m,name:n,size:s}); return '\x00F'+files.length+'F\x00'; });
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_,l,u) => { links.push({label:l,url:u}); return '\x00L'+links.length+'L\x00'; });
+    text = text.replace(/(?<!["\x00L])(https?:\/\/[^\s<>"')\]]+)/g, (_,u) => { links.push({label:u,url:u}); return '\x00L'+links.length+'L\x00'; });
     text = text.replace(/`([^`]+)`/g, (_,c) => { codes.push(c); return '\x00C'+codes.length+'C\x00'; });
     text = text.replace(/\*\*([^*]+)\*\*/g, (_,s) => { strongs.push(s); return '\x00S'+strongs.length+'S\x00'; });
     text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_,e) => { ems.push(e); return '\x00E'+ems.length+'E\x00'; });
