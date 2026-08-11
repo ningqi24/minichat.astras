@@ -774,11 +774,11 @@
             <div class="pwd-wrapper"><input type="password" id="authPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="密码"/><button class="toggle-pwd" id="togglePwd" type="button"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <button class="btn-primary" id="btnLogin" data-i18n="login">登录</button>
             <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
-            <!-- FloxChat 验证码登录 -->
+            <!-- FloxChat 验证码登录（FloxChat原作者BiliBili@摄表） -->
             <div class="floxchat-login" id="floxLogin">
                 <button type="button" class="floxchat-back" id="floxBack">&larr; 返回邮箱登录</button>
                 <div class="floxchat-step1" id="floxStep1">
-                    <input type="email" id="floxEmail" placeholder="FloxChat 注册邮箱"/>
+                    <input type="email" id="floxEmail" placeholder="FloxChat 注册邮箱（FloxChat原作者BiliBili@摄表）"/>
                     <button class="btn-primary" id="btnFloxSendCode">发送验证码</button>
                 </div>
                 <div class="floxchat-step2" id="floxStep2" style="display:none">
@@ -788,7 +788,7 @@
                 <div class="auth-message" id="floxMsg"></div>
             </div>
             <div class="auth-message" id="authMessage"></div>
-            <div style="text-align:center;margin-top:4px;font-size:12px"><a id="switchFloxChat" style="color:var(--accent);cursor:pointer">FloxChat验证码登录</a></div>
+            <div style="text-align:center;margin-top:4px;font-size:12px"><a id="switchFloxChat" style="color:var(--accent);cursor:pointer">FloxChat验证码登录（原作者BiliBili@摄表）</a></div>
         </div>
     </div>
     <div class="terms-overlay" id="termsOverlay">
@@ -1724,7 +1724,7 @@ var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
 if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ===================== FloxChat 桥接 =====================
+// ===================== FloxChat 桥接（原作者BiliBili@摄表） =====================
 function makeBridgePassword(email) {
     var h = 0, s = "floxchat_to_minichat_2024" + email;
     for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
@@ -1813,10 +1813,10 @@ async function doAuth(email, pwd) {
         else { setAuthMessage('注册成功！请查收邮件确认后登录。','success'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
     } catch(e) { console.error(e); setAuthMessage('网络错误，请重试','error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
 }
-// ===================== FloxChat 验证码登录交互 =====================
+// ===================== FloxChat 验证码登录交互（原作者BiliBili@摄表） =====================
 var floxEmailVal = '';
 function switchToFloxLogin() {
-    document.querySelector('.login-card .auth-title').textContent = 'FloxChat 登录';
+    document.querySelector('.login-card .auth-title').textContent = 'FloxChat 登录（原作者BiliBili@摄表）';
     document.querySelector('.login-card .auth-sub').style.display = 'none';
     document.querySelector('.login-card > input').style.display = 'none';
     document.querySelector('.login-card .pwd-wrapper').style.display = 'none';
@@ -6400,7 +6400,7 @@ function setupGlobalEventListeners() {
                 });
             }
             if (btnLogin) btnLogin.addEventListener('click', handleAuth);
-            // FloxChat
+            // FloxChat（原作者BiliBili@摄表）
             var switchFlox = document.getElementById('switchFloxChat');
             if (switchFlox) switchFlox.addEventListener('click', switchToFloxLogin);
             var floxBack = document.getElementById('floxBack');
