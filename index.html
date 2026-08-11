@@ -1812,12 +1812,13 @@ function switchToFloxLogin() {
     document.querySelector('.login-card .pwd-wrapper').style.display = 'none';
     document.getElementById('btnLogin').style.display = 'none';
     document.querySelector('.auth-toggle').style.display = 'none';
-    document.querySelector('.auth-message').style.display = 'none';
+    document.getElementById('authMessage').style.display = 'none';
     document.getElementById('floxLogin').style.display = 'block';
     document.getElementById('floxStep1').style.display = 'flex';
     document.getElementById('floxStep2').style.display = 'none';
     document.getElementById('switchFloxChat').style.display = 'none';
     document.getElementById('floxMsg').textContent = '';
+    document.getElementById('floxMsg').style.display = '';
 }
 function switchBackFromFlox() {
     document.querySelector('.login-card .auth-title').textContent = isLoginMode ? t('welcome') : t('createAccount');
@@ -1826,7 +1827,7 @@ function switchBackFromFlox() {
     document.querySelector('.login-card .pwd-wrapper').style.display = '';
     document.getElementById('btnLogin').style.display = '';
     document.querySelector('.auth-toggle').style.display = '';
-    document.querySelector('.auth-message').style.display = '';
+    document.getElementById('authMessage').style.display = '';
     document.getElementById('floxLogin').style.display = 'none';
     document.getElementById('switchFloxChat').style.display = '';
 }
@@ -1857,24 +1858,28 @@ async function handleFloxSendCode() {
 async function handleFloxVerify() {
     var code = document.getElementById('floxCode').value.trim();
     if (!code) { document.getElementById('floxMsg').textContent = '请输入验证码'; return; }
-    document.getElementById('btnFloxVerify').disabled = true;
-    document.getElementById('floxMsg').textContent = '验证中…';
+    var btn = document.getElementById('btnFloxVerify');
+    var msgEl = document.getElementById('floxMsg');
+    btn.disabled = true;
+    msgEl.textContent = '验证中…';
     try {
         var verifyResp = await fetch('https://chatear.shebiao.dpdns.org/verify-code', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: floxEmailVal, code: code })
         });
-        var verifyData = await verifyResp.json();
+        var rawText = await verifyResp.text();
+        var verifyData;
+        try { verifyData = JSON.parse(rawText); } catch(e) { verifyData = { ok: false }; }
         if (!verifyData.ok) {
-            document.getElementById('floxMsg').textContent = '验证码错误';
-            document.getElementById('btnFloxVerify').disabled = false;
+            msgEl.textContent = '验证码错误: ' + (verifyData.message || verifyData.error || rawText.slice(0,40));
+            btn.disabled = false;
             return;
         }
-        document.getElementById('floxMsg').textContent = '登录中…';
+        msgEl.textContent = '登录中…';
         await handleFloxChatLogin(floxEmailVal);
     } catch(e) {
-        document.getElementById('floxMsg').textContent = e.message || '登录失败，请重试';
-        document.getElementById('btnFloxVerify').disabled = false;
+        msgEl.textContent = '网络错误: ' + (e.message || '请重试');
+        btn.disabled = false;
     }
 }
 function showTermsModal(callback) {
