@@ -191,51 +191,55 @@
         color2: "#1d4ed8",
         blocks: [
           { opcode: "connect", blockType: Scratch.BlockType.COMMAND,
-            text: "connect to bridge email [EMAIL] name [NAME]",
+            text: "桥接连接 [EMAIL] 邮箱 [NAME] 昵称",
             arguments: {
               EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
               NAME:  { type: Scratch.ArgumentType.STRING, defaultValue: "" }
             }
           },
           { opcode: "send", blockType: Scratch.BlockType.COMMAND,
-            text: "bridge send [MSG]",
+            text: "桥接发送 [MSG]",
             arguments: { MSG: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
           },
           { opcode: "loadMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "bridge load history [LIMIT] messages",
+            text: "桥接加载 [LIMIT] 条历史消息",
             arguments: { LIMIT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 30 } }
           },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
-            text: "bridge history count"
+            text: "桥接历史消息数量"
           },
           { opcode: "historyItem", blockType: Scratch.BlockType.REPORTER,
-            text: "bridge history item [INDEX] field [FIELD]",
+            text: "桥接历史第 [INDEX] 条 [FIELD]",
             arguments: {
               INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
               FIELD: { type: Scratch.ArgumentType.STRING, menu: "fields" }
             }
           },
           { opcode: "whenReceived", blockType: Scratch.BlockType.HAT,
-            text: "bridge message received", isEdgeActivated: false
+            text: "当桥接收到消息时", isEdgeActivated: false
           },
           { opcode: "lastSender", blockType: Scratch.BlockType.REPORTER,
-            text: "bridge last sender"
+            text: "桥接最后发送者"
           },
           { opcode: "lastContent", blockType: Scratch.BlockType.REPORTER,
-            text: "bridge last content"
+            text: "桥接最后内容"
           },
           { opcode: "lastTime", blockType: Scratch.BlockType.REPORTER,
-            text: "bridge last time"
+            text: "桥接最后时间"
           },
           { opcode: "connected", blockType: Scratch.BlockType.BOOLEAN,
-            text: "bridge connected?"
+            text: "桥接已连接？"
           },
           { opcode: "disconnect", blockType: Scratch.BlockType.COMMAND,
-            text: "bridge disconnect"
+            text: "桥接断开连接"
           }
         ],
         menus: {
-          fields: { items: ["sender", "content", "time"] }
+          fields: { items: [
+            { text: "发送者", value: "sender" },
+            { text: "内容", value: "content" },
+            { text: "时间", value: "time" }
+          ] }
         }
       };
     },
