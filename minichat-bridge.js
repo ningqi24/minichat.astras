@@ -104,6 +104,22 @@
       .then(function(d) { return (d || []).reverse(); });
   }
 
+  // ---- 一次性加载全部历史消息（分页拉取，按时间从早到晚） ----
+  function loadAllHistory() {
+    var PAGE = 1000;
+    var all = [];
+    function fetchPage(from) {
+      return api("GET", "/rest/v1/messages?select=*&order=created_at.asc&limit=" + PAGE + "&offset=" + from)
+        .then(function(d) {
+          if (!d || d.length === 0) return all;
+          all = all.concat(d);
+          if (d.length < PAGE) return all;
+          return fetchPage(from + PAGE);
+        });
+    }
+    return fetchPage(0);
+  }
+
   // ---- 提取文件/图片/视频/音频消息中的链接 ----
   function extractUrl(content) {
     if (!content) return "";
@@ -124,7 +140,6 @@
     _lastMsg: null,
 
     connect: function(args) {
-      var self = this;
       return getToken(args.EMAIL, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
@@ -139,19 +154,28 @@
     },
 
     loadMessages: function(args) {
-      var self = this;
       return loadHistory(args.LIMIT || 30).then(function(msgs) {
-        self._historyCache = msgs;
+        ext._historyCache = msgs;
+      }).catch(function(e) {
+        console.error("Bridge load history failed:", e);
+      });
+    },
+
+    loadAllMessages: function() {
+      return loadAllHistory().then(function(msgs) {
+        ext._historyCache = msgs;
+      }).catch(function(e) {
+        console.error("Bridge load all history failed:", e);
       });
     },
 
     historyCount: function() {
-      return this._historyCache ? this._historyCache.length : 0;
+      return ext._historyCache ? ext._historyCache.length : 0;
     },
 
     historyItem: function(args) {
       var i = (args.INDEX || 1) - 1;
-      var msgs = this._historyCache || [];
+      var msgs = ext._historyCache || [];
       if (i < 0 || i >= msgs.length) return "";
       var m = msgs[i];
       if (args.FIELD === "sender") return m.sender_name || "";
@@ -176,8 +200,8 @@
       if (socket) { socket.close(); socket = null; }
       token = null;
       callbacks = [];
-      this._lastMsg = null;
-      this._historyCache = null;
+      ext._lastMsg = null;
+      ext._historyCache = null;
     }
   };
 
@@ -185,52 +209,55 @@
     getInfo: function() {
       return {
         id: "floxchatbridge",
-        name: "FloxChat Bridge",
+        name: "Minichat Bridge",
         color1: "#3b82f6",
         color2: "#1d4ed8",
         blocks: [
           { opcode: "connect", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接连接 [EMAIL] 邮箱 [NAME] 昵称",
+            text: "桥接连接 [EMAIL] 邮箱 [NAME] 昵称（特权创建账户，请勿随意使用）",
             arguments: {
               EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
               NAME:  { type: Scratch.ArgumentType.STRING, defaultValue: "" }
             }
           },
           { opcode: "send", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接发送 [MSG]",
+            text: "桥接发送 [MSG]（需先连接）",
             arguments: { MSG: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
           },
           { opcode: "loadMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接加载 [LIMIT] 条历史消息",
+            text: "桥接加载 [LIMIT] 条历史消息（需先连接）",
             arguments: { LIMIT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 30 } }
           },
+          { opcode: "loadAllMessages", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接加载全部历史消息（需先连接，消息多时较慢）"
+          },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接历史消息数量"
+            text: "桥接历史消息数量（需先加载）"
           },
           { opcode: "historyItem", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接历史第 [INDEX] 条 [FIELD]",
+            text: "桥接历史第 [INDEX] 条 [FIELD]（需先加载）",
             arguments: {
               INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
               FIELD: { type: Scratch.ArgumentType.STRING, menu: "fields" }
             }
           },
           { opcode: "whenReceived", blockType: Scratch.BlockType.HAT,
-            text: "当桥接收到消息时", isEdgeActivated: false
+            text: "当桥接收到消息时（需先连接）", isEdgeActivated: false
           },
           { opcode: "lastSender", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后发送者"
+            text: "桥接最后发送者（配合接收积木用）"
           },
           { opcode: "lastContent", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后内容"
+            text: "桥接最后内容（配合接收积木用）"
           },
           { opcode: "lastTime", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后时间"
+            text: "桥接最后时间（配合接收积木用）"
           },
           { opcode: "connected", blockType: Scratch.BlockType.BOOLEAN,
-            text: "桥接已连接？"
+            text: "桥接已连接？（判断连接状态）"
           },
           { opcode: "disconnect", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接断开连接"
+            text: "桥接断开连接（断开当前连接）"
           }
         ],
         menus: {
@@ -246,6 +273,7 @@
     connect: ext.connect,
     send: ext.send,
     loadMessages: ext.loadMessages,
+    loadAllMessages: ext.loadAllMessages,
     historyCount: ext.historyCount,
     historyItem: ext.historyItem,
     whenReceived: ext.whenReceived,
