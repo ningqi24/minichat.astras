@@ -9,6 +9,8 @@
   var SECRET = "flox-meow-2024";
 
   var token = null;
+  var userEmail = null;
+  var userName = null;
   var socket = null;
   var refId = 0;
   var lastMsg = null;
@@ -21,25 +23,34 @@
     return "fc_" + Math.abs(h).toString(36).slice(0, 16);
   }
 
-  // ---- 通过 Edge Function 拿 JWT ----
-  function getToken(email, name) {
+  // ---- 统一走 Edge Function（不带 Authorization 头，靠 secret 校验，绕开 Electron CORS bug）----
+  function callEdge(action, payload) {
+    var body = Object.assign({ action: action, secret: SECRET }, payload || {});
     return fetch(EDGE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ANON_KEY },
-      body: JSON.stringify({
-        email: email,
-        password: hashPwd(email),
-        display_name: name || email.split("@")[0],
-        secret: SECRET
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.error) throw new Error(d.error);
-      token = d.access_token;
       return d;
     });
   }
 
-  // ---- WebSocket 实时接收 ----
+  // ---- 登录拿 JWT ----
+  function getToken(email, name) {
+    return callEdge("login", {
+      email: email,
+      password: hashPwd(email),
+      display_name: name || email.split("@")[0]
+    }).then(function(d) {
+      token = d.access_token;
+      userEmail = d.email || email;
+      userName = d.display_name || (name || email.split("@")[0]);
+      return d;
+    });
+  }
+
+  // ---- WebSocket 实时接收（走 apikey 参数，不受 CORS 影响）----
   function connectWS() {
     if (socket) { socket.close(); }
     var url = "wss://xgugltiuszrpmbxjmqfv.supabase.co/realtime/v1/websocket?apikey="
@@ -76,60 +87,44 @@
     };
   }
 
-  // ---- REST API ----
-  function api(method, path, body) {
-    var h = {
-      "apikey": ANON_KEY,
-      "Authorization": "Bearer " + token,
-      "Content-Type": "application/json"
-    };
-    if (body) h["Prefer"] = "return=minimal";
-    return fetch(SUPABASE_URL + path, {
-      method: method,
-      headers: h,
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function(r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      if (r.headers.get("content-length") === "0") return null;
-      return r.json();
+  // ---- 发消息（走 Edge Function）----
+  function sendMsg(text) {
+    return callEdge("send_message", {
+      content: text,
+      sender_email: userEmail,
+      sender_name: userName
     });
   }
 
-  function sendMsg(text) {
-    return api("POST", "/rest/v1/messages", { content: text });
-  }
-
+  // ---- 加载最近 N 条历史（新到旧取，再反转为从早到晚）----
   function loadHistory(limit) {
-    return api("GET", "/rest/v1/messages?select=*&order=created_at.desc&limit=" + (limit || 30))
-      .then(function(d) { return (d || []).reverse(); });
+    return callEdge("get_messages", { limit: limit || 30 })
+      .then(function(d) { return (d.messages || []).reverse(); });
   }
 
-  // ---- 一次性加载全部历史消息（分页拉取，按时间从早到晚） ----
+  // ---- 一次性加载全部历史消息（分页拉取，按时间从早到晚）----
   function loadAllHistory() {
     var PAGE = 1000;
     var all = [];
     function fetchPage(from) {
-      return api("GET", "/rest/v1/messages?select=*&order=created_at.asc&limit=" + PAGE + "&offset=" + from)
+      return callEdge("get_messages", { limit: PAGE, offset: from })
         .then(function(d) {
-          if (!d || d.length === 0) return all;
-          all = all.concat(d);
-          if (d.length < PAGE) return all;
+          var msgs = d.messages || [];
+          all = all.concat(msgs);
+          if (msgs.length < PAGE) return all;
           return fetchPage(from + PAGE);
         });
     }
-    return fetchPage(0);
+    return fetchPage(0).then(function(msgs) { return msgs.reverse(); });
   }
 
   // ---- 提取文件/图片/视频/音频消息中的链接 ----
   function extractUrl(content) {
     if (!content) return "";
-    // [file](url|mime|name|size) / [video](url|mime|name|size) / [audio](url|...)
     var m = content.match(/^\[(?:file|video|audio)\]\((.+?)(?:\|.*)?\)$/);
     if (m) return m[1];
-    // ![image](url)
     m = content.match(/^!\[.*?\]\((.+?)\)$/);
     if (m) return m[1];
-    // [label](url)
     m = content.match(/^\[.*?\]\((.+?)\)$/);
     if (m) return m[1];
     return content;
@@ -227,6 +222,8 @@
     disconnect: function() {
       if (socket) { socket.close(); socket = null; }
       token = null;
+      userEmail = null;
+      userName = null;
       callbacks = [];
       ext._lastMsg = null;
       ext._historyCache = null;
