@@ -1,4 +1,4 @@
-// FloxChat Bridge Extension for TurboWarp
+// MiniChat.astras.cc Bridge Extension for TurboWarp
 // 自定义扩展 -> 粘贴此文件，非沙盒模式运行
 (function(Scratch) {
   "use strict";
@@ -135,6 +135,16 @@
     return content;
   }
 
+  // ---- 查找 Scratch 列表 ----
+  function findList(name) {
+    var targets = Scratch.vm.runtime.targets;
+    for (var i = 0; i < targets.length; i++) {
+      var lists = targets[i].lists;
+      if (lists && lists[name]) return lists[name];
+    }
+    return null;
+  }
+
   // ---- Scratch 积木 ----
   var ext = {
     _lastMsg: null,
@@ -184,10 +194,28 @@
       return "";
     },
 
+    setListToMessages: function(args) {
+      var name = args.LIST || "消息列表";
+      var list = findList(name);
+      if (!list) {
+        console.error("Bridge: 找不到列表「" + name + "」，请先在 Scratch 里创建同名列表");
+        return;
+      }
+      var msgs = ext._historyCache || [];
+      var rows = [];
+      for (var i = 0; i < msgs.length; i++) {
+        var m = msgs[i];
+        var sender = m.sender_name || m.sender_email || "";
+        var content = extractUrl(m.content);
+        rows.push(sender ? (sender + "：" + content) : content);
+      }
+      list.replaceAll(rows);
+    },
+
     whenReceived: function() {
       callbacks.push(function(msg) {
         ext._lastMsg = msg;
-        Scratch.vm.runtime.startHats("floxchatbridge_whenReceived");
+        Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
       });
     },
 
@@ -208,7 +236,7 @@
   Scratch.extensions.register({
     getInfo: function() {
       return {
-        id: "floxchatbridge",
+        id: "minichatbridge",
         name: "Minichat Bridge",
         color1: "#3b82f6",
         color2: "#1d4ed8",
@@ -230,6 +258,10 @@
           },
           { opcode: "loadAllMessages", blockType: Scratch.BlockType.COMMAND,
             text: "桥接加载全部历史消息（需先连接，消息多时较慢）"
+          },
+          { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
+            text: "将 [LIST] 设为消息列表（需先加载）",
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, defaultValue: "消息列表" } }
           },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
             text: "桥接历史消息数量（需先加载）"
@@ -274,6 +306,7 @@
     send: ext.send,
     loadMessages: ext.loadMessages,
     loadAllMessages: ext.loadAllMessages,
+    setListToMessages: ext.setListToMessages,
     historyCount: ext.historyCount,
     historyItem: ext.historyItem,
     whenReceived: ext.whenReceived,
