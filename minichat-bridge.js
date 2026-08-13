@@ -1,5 +1,7 @@
-// MiniChat.astras.cc Bridge Extension for TurboWarp
-// 自定义扩展 -> 粘贴此文件，非沙盒模式运行
+// Name: Minichat Bridge
+// ID: minichatbridge
+// Description: MiniChat.astras.cc 桥接扩展：登录、发送、接收、加载历史
+// By: ningqi
 (function(Scratch) {
   "use strict";
 
@@ -130,12 +132,15 @@
     return content;
   }
 
-  // ---- 查找 Scratch 列表 ----
+  // ---- 查找 Scratch 列表（跨所有角色与舞台） ----
   function findList(name) {
     var targets = Scratch.vm.runtime.targets;
     for (var i = 0; i < targets.length; i++) {
-      var lists = targets[i].lists;
-      if (lists && lists[name]) return lists[name];
+      var t = targets[i];
+      if (t && t.lookupVariableByNameAndType) {
+        var v = t.lookupVariableByNameAndType(name, "list");
+        if (v) return v;
+      }
     }
     return null;
   }
@@ -204,7 +209,7 @@
         var content = extractUrl(m.content);
         rows.push(sender ? (sender + "：" + content) : content);
       }
-      list.replaceAll(rows);
+      list.value = rows;
     },
 
     whenReceived: function() {
@@ -258,7 +263,8 @@
           },
           { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
             text: "将 [LIST] 设为消息列表（需先加载）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, defaultValue: "消息列表" } }
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, defaultValue: "消息列表" } },
+            extensions: ["colours_data_lists"]
           },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
             text: "桥接历史消息数量（需先加载）"
