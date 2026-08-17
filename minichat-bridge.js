@@ -175,6 +175,31 @@
     return null;
   }
 
+  // ---- 解析列表条目文本：JSON → 旧格式「名字（邮箱）：内容」→ 原文兜底 ----
+  function parseEntryText(item, field) {
+    var raw = item;
+    if (Array.isArray(raw)) {
+      raw = raw.length > 0 ? raw[0] : "";
+    }
+    var text = Scratch.Cast.toString(raw).trim();
+    var o = null;
+    try { o = JSON.parse(text); } catch(_) {}
+    if (o && typeof o === "object") {
+      if (field === "name") return o.name || "";
+      if (field === "email") return o.email || "";
+      if (field === "content") return o.content || "";
+      return "";
+    }
+    var m = text.match(/^(.+?)（(.+?)）：(.*)$/);
+    if (m) {
+      if (field === "name") return m[1];
+      if (field === "email") return m[2];
+      if (field === "content") return m[3];
+      return "";
+    }
+    return field === "content" ? text : "";
+  }
+
   // ---- Scratch 积木 ----
   var ext = {
     _lastMsg: null,
@@ -265,7 +290,7 @@
       var rows = [];
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
-        // JSON 自转义：名字/邮箱/内容里出现任何字符都不会冲突，用「解析 [ITEM] 的 [FIELD]」拆字段
+        // JSON 自转义：名字/邮箱/内容里出现任何字符都不会冲突，用「解析 [LIST] 的第 [INDEX] 项，取 [FIELD]」拆字段
         rows.push(JSON.stringify({
           name: m.sender_name || "",
           email: m.sender_email || "",
@@ -278,33 +303,15 @@
       clearError();
     },
 
-    // ---- 解析消息列表条目（JSON 自转义；兼容旧格式与误传整个列表/数字）----
+    // ---- 解析列表条目：内置「[LIST] 的第 [INDEX] 项」，自动取列表对应项再解析 ----
     parseItem: function(args) {
-      // 统一转字符串：可能是整列表(数组)、数字、空值
-      var raw = args.ITEM;
-      if (Array.isArray(raw)) {
-        raw = raw.length > 0 ? raw[0] : "";
-      }
-      var item = Scratch.Cast.toString(raw).trim();
-      // 1) JSON 条目（新版「将 [LIST] 设为消息列表」写入的格式）
-      var o = null;
-      try { o = JSON.parse(item); } catch(_) {}
-      if (o && typeof o === "object") {
-        if (args.FIELD === "name") return o.name || "";
-        if (args.FIELD === "email") return o.email || "";
-        if (args.FIELD === "content") return o.content || "";
-        return "";
-      }
-      // 2) 旧格式「名字（邮箱）：内容」尽力拆解（老列表数据兜底）
-      var m = item.match(/^(.+?)（(.+?)）：(.*)$/);
-      if (m) {
-        if (args.FIELD === "name") return m[1];
-        if (args.FIELD === "email") return m[2];
-        if (args.FIELD === "content") return m[3];
-        return "";
-      }
-      // 3) 其他任意文本：内容返回原文，名字/邮箱返回空
-      return args.FIELD === "content" ? item : "";
+      var list = findList(args.LIST);
+      if (!list) return "";
+      var idx = Scratch.Cast.toNumber(args.INDEX);
+      if (!isFinite(idx)) return "";
+      idx = Math.floor(idx);
+      if (idx < 1 || idx > list.value.length) return "";
+      return parseEntryText(list.value[idx - 1], args.FIELD);
     },
 
     // ---- 动态列出当前项目中的所有列表名（参照 List Tools 的 _getLists）----
@@ -372,9 +379,10 @@
             extensions: ["colours_data_lists"]
           },
           { opcode: "parseItem", blockType: Scratch.BlockType.REPORTER,
-            text: "解析 [ITEM] 的 [FIELD]（消息列表条目）",
+            text: "解析 [LIST] 的第 [INDEX] 项，取 [FIELD]（消息列表条目）",
             arguments: {
-              ITEM: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
+              LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
               FIELD: { type: Scratch.ArgumentType.STRING, menu: "itemFields" }
             }
           },
