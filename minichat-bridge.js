@@ -278,19 +278,33 @@
       clearError();
     },
 
-    // ---- 解析消息列表条目（JSON 自转义，无分隔符冲突）----
+    // ---- 解析消息列表条目（JSON 自转义；兼容旧格式与误传整个列表/数字）----
     parseItem: function(args) {
-      var item = args.ITEM;
+      // 统一转字符串：可能是整列表(数组)、数字、空值
+      var raw = args.ITEM;
+      if (Array.isArray(raw)) {
+        raw = raw.length > 0 ? raw[0] : "";
+      }
+      var item = Scratch.Cast.toString(raw).trim();
+      // 1) JSON 条目（新版「将 [LIST] 设为消息列表」写入的格式）
       var o = null;
       try { o = JSON.parse(item); } catch(_) {}
-      if (!o || typeof o !== "object") {
-        // 兼容旧格式（非 JSON）：内容字段直接返回原文
-        return args.FIELD === "content" ? item : "";
+      if (o && typeof o === "object") {
+        if (args.FIELD === "name") return o.name || "";
+        if (args.FIELD === "email") return o.email || "";
+        if (args.FIELD === "content") return o.content || "";
+        return "";
       }
-      if (args.FIELD === "name") return o.name || "";
-      if (args.FIELD === "email") return o.email || "";
-      if (args.FIELD === "content") return o.content || "";
-      return "";
+      // 2) 旧格式「名字（邮箱）：内容」尽力拆解（老列表数据兜底）
+      var m = item.match(/^(.+?)（(.+?)）：(.*)$/);
+      if (m) {
+        if (args.FIELD === "name") return m[1];
+        if (args.FIELD === "email") return m[2];
+        if (args.FIELD === "content") return m[3];
+        return "";
+      }
+      // 3) 其他任意文本：内容返回原文，名字/邮箱返回空
+      return args.FIELD === "content" ? item : "";
     },
 
     // ---- 动态列出当前项目中的所有列表名（参照 List Tools 的 _getLists）----
