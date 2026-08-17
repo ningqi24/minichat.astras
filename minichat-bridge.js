@@ -253,20 +253,32 @@
       var rows = [];
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
-        var name = m.sender_name || "";
-        var email = m.sender_email || "";
-        // 带邮箱展示，防止同名用户分不清：名字（邮箱）：内容
-        var who = "";
-        if (name && email) who = name + "（" + email + "）";
-        else if (email) who = email;
-        else who = name;
-        var content = extractUrl(m.content);
-        rows.push(who ? (who + "：" + content) : content);
+        // JSON 自转义：名字/邮箱/内容里出现任何字符都不会冲突，用「解析 [ITEM] 的 [FIELD]」拆字段
+        rows.push(JSON.stringify({
+          name: m.sender_name || "",
+          email: m.sender_email || "",
+          content: extractUrl(m.content)
+        }));
       }
       list.value = rows;
       // 刷新舞台上的列表监视器
       list._monitorUpToDate = false;
       clearError();
+    },
+
+    // ---- 解析消息列表条目（JSON 自转义，无分隔符冲突）----
+    parseItem: function(args) {
+      var item = args.ITEM;
+      var o = null;
+      try { o = JSON.parse(item); } catch(_) {}
+      if (!o || typeof o !== "object") {
+        // 兼容旧格式（非 JSON）：内容字段直接返回原文
+        return args.FIELD === "content" ? item : "";
+      }
+      if (args.FIELD === "name") return o.name || "";
+      if (args.FIELD === "email") return o.email || "";
+      if (args.FIELD === "content") return o.content || "";
+      return "";
     },
 
     // ---- 动态列出当前项目中的所有列表名（参照 List Tools 的 _getLists）----
@@ -329,9 +341,16 @@
             text: "桥接加载全部历史消息（需先连接，消息多时较慢）"
           },
           { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "将 [LIST] 设为消息列表（需先加载）",
+            text: "将 [LIST] 设为消息列表（JSON 条目，需先加载）",
             arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } },
             extensions: ["colours_data_lists"]
+          },
+          { opcode: "parseItem", blockType: Scratch.BlockType.REPORTER,
+            text: "解析 [ITEM] 的 [FIELD]（消息列表条目）",
+            arguments: {
+              ITEM: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
+              FIELD: { type: Scratch.ArgumentType.STRING, menu: "itemFields" }
+            }
           },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
             text: "桥接历史消息数量（需先加载）"
@@ -377,7 +396,12 @@
           lists: {
             acceptReporters: true,
             items: "_getLists"
-          }
+          },
+          itemFields: { items: [
+            { text: "名字", value: "name" },
+            { text: "邮箱", value: "email" },
+            { text: "内容", value: "content" }
+          ] }
         }
       };
     },
@@ -387,6 +411,7 @@
     loadMessages: ext.loadMessages,
     loadAllMessages: ext.loadAllMessages,
     setListToMessages: ext.setListToMessages,
+    parseItem: ext.parseItem,
     _getLists: ext._getLists,
     historyCount: ext.historyCount,
     historyLoaded: ext.historyLoaded,
