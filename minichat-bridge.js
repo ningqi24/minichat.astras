@@ -242,10 +242,14 @@
       var name = args.LIST || "消息列表";
       var list = findList(name);
       if (!list) {
-        setError("找不到列表「" + name + "」，请先在 Scratch 里创建同名列表");
+        setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表，并在积木下拉菜单里选中它");
         return;
       }
-      var msgs = ext._historyCache || [];
+      if (!ext._historyCache) {
+        setError("尚未加载历史消息：请先执行「桥接加载 [LIMIT] 条历史消息」或「桥接加载全部历史消息」");
+        return;
+      }
+      var msgs = ext._historyCache;
       var rows = [];
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
