@@ -253,9 +253,15 @@
       var rows = [];
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
-        var sender = m.sender_name || m.sender_email || "";
+        var name = m.sender_name || "";
+        var email = m.sender_email || "";
+        // 带邮箱展示，防止同名用户分不清：名字（邮箱）：内容
+        var who = "";
+        if (name && email) who = name + "（" + email + "）";
+        else if (email) who = email;
+        else who = name;
         var content = extractUrl(m.content);
-        rows.push(sender ? (sender + "：" + content) : content);
+        rows.push(who ? (who + "：" + content) : content);
       }
       list.value = rows;
       // 刷新舞台上的列表监视器
