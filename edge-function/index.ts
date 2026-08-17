@@ -48,6 +48,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "get_messages") return await getMessages(body);
     if (action === "send_message") return await sendMessage(body);
+    if (action === "get_users") return await getUsers(body);
     return await login(body);
   } catch (e: any) {
     return json({ error: e.message }, 500);
@@ -171,6 +172,20 @@ async function sendMessage(body: any) {
 
   if (error) throw new Error(error.message);
   return json({ ok: true, message: data });
+}
+
+// ---- 读全部用户（在线+离线，来自 profiles 表；需登录 token） ----
+async function getUsers(body: any) {
+  const user = await getUserFromBody(body);
+  if (!user) return json({ error: "unauthorized" }, 401);
+
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("id, email, display_name, avatar_url, last_login")
+    .order("last_login", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return json({ users: data || [] });
 }
 
 async function ensureProfileAndConversation(

@@ -13,10 +13,13 @@
   var token = null;
   var userEmail = null;
   var userName = null;
+  var userId = null;
   var socket = null;
   var refId = 0;
   var lastMsg = null;
   var lastError = null;
+  var presenceMap = {};     // user_id -> {user_id,email,display_name,avatar_url,online_at}
+  var presenceByEmail = {}; // email -> presence 对象（在线用户）
 
   // ---- 错误记录（让积木里的失败在 Scratch 里可见）----
   function setError(err) {
@@ -35,8 +38,8 @@
   // ---- 统一走 Edge Function（不带 Authorization 头，靠 secret + 登录 token 校验，绕开 Electron CORS bug）----
   function callEdge(action, payload) {
     var body = Object.assign({ action: action, secret: SECRET }, payload || {});
-    // 读历史/发消息时自动携带登录 token（放 body 里，由 Edge 校验身份，防止伪造发送者）
-    if (token && (action === "send_message" || action === "get_messages")) {
+    // 除 login 外都自动携带登录 token（放 body 里，由 Edge 校验身份，防止伪造）
+    if (token && action !== "login") {
       body.access_token = token;
     }
     return fetch(EDGE_URL, {
@@ -59,6 +62,7 @@
       token = d.access_token;
       userEmail = d.email || email;
       userName = d.display_name || (name || email.split("@")[0]);
+      userId = d.user_id || null;
       return d;
     });
   }
@@ -85,10 +89,33 @@
         },
         ref: ref
       }));
+      // 同一连接再加入在线状态(presence)频道
+      joinPresence();
     };
     socket.onmessage = function(e) {
       try {
         var m = JSON.parse(e.data);
+        // 在线状态事件：presence_state / presence_diff
+        if (m.topic === "presence-global") {
+          if (m.event === "presence_state") {
+            presenceMap = {};
+            var st = m.payload || {};
+            for (var k in st) {
+              var p = (st[k] || [])[0];
+              if (p) presenceMap[k] = normalizePresence(k, p);
+            }
+            rebuildPresenceByEmail();
+          } else if (m.event === "presence_diff") {
+            var pl = m.payload || {};
+            for (var jk in (pl.joins || {})) {
+              var pj = (pl.joins[jk] || [])[0];
+              if (pj) presenceMap[jk] = normalizePresence(jk, pj);
+            }
+            for (var lk in (pl.leaves || {})) delete presenceMap[lk];
+            rebuildPresenceByEmail();
+          }
+          return;
+        }
         if (m.payload && m.payload.data && m.payload.data.record) {
           onBridgeMessage(m.payload.data.record);
         }
@@ -105,6 +132,36 @@
     if (Scratch.vm && Scratch.vm.runtime) {
       Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
     }
+  }
+
+  // ---- 在线状态(presence)：加入 presence-global 频道并维护在线用户表 ----
+  function normalizePresence(key, p) {
+    return {
+      user_id: p.user_id || key,
+      email: p.email || "",
+      display_name: p.display_name || "",
+      avatar_url: p.avatar_url || "",
+      online_at: p.online_at || ""
+    };
+  }
+  function rebuildPresenceByEmail() {
+    presenceByEmail = {};
+    for (var k in presenceMap) {
+      var p = presenceMap[k];
+      if (p && p.email) presenceByEmail[p.email] = p;
+    }
+  }
+  function joinPresence() {
+    if (!socket || !userId) return;
+    socket.send(JSON.stringify({
+      topic: "presence-global",
+      event: "phx_join",
+      payload: {
+        access_token: token,
+        config: { presence: { key: userId } }
+      },
+      ref: String(++refId)
+    }));
   }
 
   // ---- 发消息（走 Edge Function）----
@@ -150,6 +207,13 @@
     return content;
   }
 
+  // ---- 默认头像（与前端 index.html 同款兜底算法）----
+  function getDefaultAvatar(email) {
+    return "https://ui-avatars.com/api/?name=" +
+      encodeURIComponent(email ? email.split("@")[0] : "用户") +
+      "&background=3b82f6&color=fff&size=128&bold=true";
+  }
+
   // ---- 查找 Scratch 列表（跨所有角色与舞台，数字等特殊命名也能识别） ----
   function findList(name) {
     // 统一转成字符串并去空格：防止纯数字等特殊命名在类型转换后匹配失败
@@ -185,10 +249,9 @@
     var o = null;
     try { o = JSON.parse(text); } catch(_) {}
     if (o && typeof o === "object") {
-      if (field === "name") return o.name || "";
-      if (field === "email") return o.email || "";
-      if (field === "content") return o.content || "";
-      return "";
+      // 通用取字段：name/email/content/avatar/online/last_login 均可
+      var v = o[field];
+      return (v === undefined || v === null) ? "" : v;
     }
     var m = text.match(/^(.+?)（(.+?)）：(.*)$/);
     if (m) {
@@ -204,6 +267,7 @@
   var ext = {
     _lastMsg: null,
     _historyCache: null,
+    _usersCache: null,
 
     connect: function(args) {
       var email = String(args.EMAIL || "").trim();
@@ -303,6 +367,80 @@
       clearError();
     },
 
+    loadUsers: function() {
+      if (!token) {
+        setError("未连接，请先「桥接连接」");
+        return;
+      }
+      clearError();
+      return callEdge("get_users").then(function(d) {
+        ext._usersCache = d.users || [];
+      }).catch(function(e) {
+        setError(e);
+      });
+    },
+
+    userCount: function() {
+      return ext._usersCache ? ext._usersCache.length : 0;
+    },
+
+    userLoaded: function() {
+      return !!ext._usersCache;
+    },
+
+    setListToUsers: function(args) {
+      var name = Scratch.Cast.toString(args.LIST).trim() || "用户列表";
+      var list = findList(name);
+      if (!list) {
+        setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表，并在积木下拉菜单里选中它");
+        return;
+      }
+      if (!ext._usersCache) {
+        setError("尚未加载用户：请先执行「桥接加载全部用户」");
+        return;
+      }
+      var rows = [];
+      for (var i = 0; i < ext._usersCache.length; i++) {
+        var u = ext._usersCache[i];
+        var email = u.email || "";
+        rows.push(JSON.stringify({
+          name: u.display_name || (email ? email.split("@")[0] : ""),
+          email: email,
+          avatar: u.avatar_url || "",
+          online: presenceByEmail[email] ? "在线" : "离线",
+          last_login: u.last_login || ""
+        }));
+      }
+      list.value = rows;
+      // 刷新舞台上的列表监视器
+      list._monitorUpToDate = false;
+      clearError();
+    },
+
+    onlineCount: function() {
+      var c = 0;
+      for (var k in presenceMap) c++;
+      return c;
+    },
+
+    userIsOnline: function(args) {
+      var email = Scratch.Cast.toString(args.EMAIL).trim();
+      if (!email) return false;
+      return !!presenceByEmail[email];
+    },
+
+    userAvatar: function(args) {
+      var email = Scratch.Cast.toString(args.EMAIL).trim();
+      if (!email) return "";
+      var p = presenceByEmail[email];
+      if (p && p.avatar_url) return p.avatar_url;
+      var users = ext._usersCache || [];
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].email === email && users[i].avatar_url) return users[i].avatar_url;
+      }
+      return getDefaultAvatar(email);
+    },
+
     // ---- 解析列表条目：内置「[LIST] 的第 [INDEX] 项」，自动取列表对应项再解析 ----
     parseItem: function(args) {
       var list = findList(args.LIST);
@@ -340,8 +478,12 @@
       token = null;
       userEmail = null;
       userName = null;
+      userId = null;
+      presenceMap = {};
+      presenceByEmail = {};
       ext._lastMsg = null;
       ext._historyCache = null;
+      ext._usersCache = null;
       lastMsg = null;
       lastError = null;
     }
@@ -424,6 +566,32 @@
             }
           },
           "---",
+          // ===== 用户 =====
+          { opcode: "loadUsers", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接加载全部用户（在线+离线，需先连接）"
+          },
+          { opcode: "userCount", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接用户总数（需先加载）"
+          },
+          { opcode: "userLoaded", blockType: Scratch.BlockType.BOOLEAN,
+            text: "桥接用户已加载？（判断加载状态）"
+          },
+          { opcode: "setListToUsers", blockType: Scratch.BlockType.COMMAND,
+            text: "将 [LIST] 设为用户列表（JSON 条目，需先加载）",
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
+          },
+          { opcode: "onlineCount", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接在线用户数量（需先连接）"
+          },
+          { opcode: "userIsOnline", blockType: Scratch.BlockType.BOOLEAN,
+            text: "桥接 [EMAIL] 是否在线？（需先连接）",
+            arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
+          },
+          { opcode: "userAvatar", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接 [EMAIL] 的头像",
+            arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
+          },
+          "---",
           // ===== 排障 =====
           { opcode: "bridgeError", blockType: Scratch.BlockType.REPORTER,
             text: "桥接最后错误（无则空，配合排障用）"
@@ -442,7 +610,10 @@
           itemFields: { items: [
             { text: "名字", value: "name" },
             { text: "邮箱", value: "email" },
-            { text: "内容", value: "content" }
+            { text: "内容", value: "content" },
+            { text: "头像", value: "avatar" },
+            { text: "在线", value: "online" },
+            { text: "最后登录", value: "last_login" }
           ] }
         }
       };
@@ -464,6 +635,13 @@
     lastTime: ext.lastTime,
     connected: ext.connected,
     bridgeError: ext.bridgeError,
-    disconnect: ext.disconnect
+    disconnect: ext.disconnect,
+    loadUsers: ext.loadUsers,
+    userCount: ext.userCount,
+    userLoaded: ext.userLoaded,
+    setListToUsers: ext.setListToUsers,
+    onlineCount: ext.onlineCount,
+    userIsOnline: ext.userIsOnline,
+    userAvatar: ext.userAvatar
   });
 })(Scratch);
