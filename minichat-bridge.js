@@ -150,14 +150,26 @@
     return content;
   }
 
-  // ---- 查找 Scratch 列表（跨所有角色与舞台） ----
+  // ---- 查找 Scratch 列表（跨所有角色与舞台，数字等特殊命名也能识别） ----
   function findList(name) {
+    // 统一转成字符串并去空格：防止纯数字等特殊命名在类型转换后匹配失败
+    name = Scratch.Cast.toString(name).trim();
     var targets = Scratch.vm.runtime.targets;
     for (var i = 0; i < targets.length; i++) {
       var t = targets[i];
-      if (t && t.lookupVariableByNameAndType) {
+      if (!t) continue;
+      if (t.lookupVariableByNameAndType) {
         var v = t.lookupVariableByNameAndType(name, "list");
         if (v) return v;
+      }
+      // 兜底：直接遍历变量表做宽松匹配
+      if (t.variables) {
+        for (var id in t.variables) {
+          var varObj = t.variables[id];
+          if (varObj && varObj.type === "list" && String(varObj.name).trim() === name) {
+            return varObj;
+          }
+        }
       }
     }
     return null;
@@ -239,7 +251,7 @@
     },
 
     setListToMessages: function(args) {
-      var name = args.LIST || "消息列表";
+      var name = Scratch.Cast.toString(args.LIST).trim() || "消息列表";
       var list = findList(name);
       if (!list) {
         setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表，并在积木下拉菜单里选中它");
@@ -289,7 +301,7 @@
           : Blockly.getMainWorkspace()
               .getVariableMap()
               .getVariablesOfType("list")
-              .map(function(model) { return model.name; });
+              .map(function(model) { return String(model.name); });
       return lists.length > 0 ? lists : [""];
     },
 
