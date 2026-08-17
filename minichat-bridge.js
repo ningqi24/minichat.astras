@@ -355,6 +355,7 @@
         color1: "#3b82f6",
         color2: "#1d4ed8",
         blocks: [
+          // ===== 连接 =====
           { opcode: "connect", blockType: Scratch.BlockType.COMMAND,
             text: "桥接连接 [EMAIL] 邮箱 [NAME] 昵称（特权创建账户，请勿随意使用）",
             arguments: {
@@ -362,29 +363,38 @@
               NAME:  { type: Scratch.ArgumentType.STRING, defaultValue: "" }
             }
           },
+          { opcode: "connected", blockType: Scratch.BlockType.BOOLEAN,
+            text: "桥接已连接？（判断连接状态）"
+          },
+          { opcode: "disconnect", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接断开连接（断开当前连接）"
+          },
+          "---",
+          // ===== 发送 / 接收 =====
           { opcode: "send", blockType: Scratch.BlockType.COMMAND,
             text: "桥接发送 [MSG]（需先连接）",
             arguments: { MSG: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
           },
+          { opcode: "whenReceived", blockType: Scratch.BlockType.HAT,
+            text: "当桥接收到消息时（需先连接）", isEdgeActivated: false
+          },
+          { opcode: "lastSender", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接最后发送者（配合接收积木用）"
+          },
+          { opcode: "lastContent", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接最后内容（配合接收积木用）"
+          },
+          { opcode: "lastTime", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接最后时间（配合接收积木用）"
+          },
+          "---",
+          // ===== 历史 =====
           { opcode: "loadMessages", blockType: Scratch.BlockType.COMMAND,
             text: "桥接加载 [LIMIT] 条历史消息（需先连接）",
             arguments: { LIMIT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 30 } }
           },
           { opcode: "loadAllMessages", blockType: Scratch.BlockType.COMMAND,
             text: "桥接加载全部历史消息（需先连接，消息多时较慢）"
-          },
-          { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "将 [LIST] 设为消息列表（JSON 条目，需先加载）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } },
-            extensions: ["colours_data_lists"]
-          },
-          { opcode: "parseItem", blockType: Scratch.BlockType.REPORTER,
-            text: "解析 [LIST] 的第 [INDEX] 项，取 [FIELD]（消息列表条目）",
-            arguments: {
-              LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" },
-              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
-              FIELD: { type: Scratch.ArgumentType.STRING, menu: "itemFields" }
-            }
           },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
             text: "桥接历史消息数量（需先加载）"
@@ -399,26 +409,24 @@
               FIELD: { type: Scratch.ArgumentType.STRING, menu: "fields" }
             }
           },
-          { opcode: "whenReceived", blockType: Scratch.BlockType.HAT,
-            text: "当桥接收到消息时（需先连接）", isEdgeActivated: false
+          "---",
+          // ===== 列表 =====
+          { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
+            text: "将 [LIST] 设为消息列表（JSON 条目，需先加载）",
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
           },
-          { opcode: "lastSender", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后发送者（配合接收积木用）"
+          { opcode: "parseItem", blockType: Scratch.BlockType.REPORTER,
+            text: "解析 [LIST] 的第 [INDEX] 项，取 [FIELD]（消息列表条目）",
+            arguments: {
+              LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+              FIELD: { type: Scratch.ArgumentType.STRING, menu: "itemFields" }
+            }
           },
-          { opcode: "lastContent", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后内容（配合接收积木用）"
-          },
-          { opcode: "lastTime", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后时间（配合接收积木用）"
-          },
-          { opcode: "connected", blockType: Scratch.BlockType.BOOLEAN,
-            text: "桥接已连接？（判断连接状态）"
-          },
+          "---",
+          // ===== 排障 =====
           { opcode: "bridgeError", blockType: Scratch.BlockType.REPORTER,
             text: "桥接最后错误（无则空，配合排障用）"
-          },
-          { opcode: "disconnect", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接断开连接（断开当前连接）"
           }
         ],
         menus: {
