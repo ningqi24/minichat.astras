@@ -17,6 +17,15 @@ const supabaseAnon = createClient(SUPABASE_URL, ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+// ---- 从 body 中的 access_token 校验并取回用户（token 放 body，不走 Authorization 头，绕开 Electron CORS bug）----
+async function getUserFromBody(body: any) {
+  const token = body?.access_token;
+  if (!token || typeof token !== "string") return null;
+  const { data, error } = await supabaseAnon.auth.getUser(token);
+  if (error || !data?.user) return null;
+  return data.user;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -117,8 +126,11 @@ async function login(body: any) {
   });
 }
 
-// ---- 读历史消息（service_role，绕过 RLS，按时间新到旧） ----
+// ---- 读历史消息（service_role，绕过 RLS，按时间新到旧；需登录 token） ----
 async function getMessages(body: any) {
+  const user = await getUserFromBody(body);
+  if (!user) return json({ error: "unauthorized" }, 401);
+
   const limit = Math.min(parseInt(body.limit) || 30, 1000);
   const offset = parseInt(body.offset) || 0;
 
@@ -132,17 +144,25 @@ async function getMessages(body: any) {
   return json({ messages: data || [] });
 }
 
-// ---- 发消息（service_role，显式写 sender） ----
+// ---- 发消息（service_role；需登录 token，发送者身份由 token 推导，防止伪造） ----
 async function sendMessage(body: any) {
-  const { content, sender_email, sender_name } = body;
+  const user = await getUserFromBody(body);
+  if (!user) return json({ error: "unauthorized" }, 401);
 
-  if (!content || !String(content).trim()) return json({ error: "empty content" }, 400);
+  const content = String(body.content || "");
+  if (!content.trim()) return json({ error: "empty content" }, 400);
+
+  const sender_email = user.email;
   if (!sender_email) return json({ error: "missing sender_email" }, 400);
+
+  const sender_name = body.sender_name
+    ? String(body.sender_name).slice(0, 64)
+    : sender_email.split("@")[0];
 
   const { data, error } = await supabaseAdmin
     .from("messages")
     .insert({
-      content: String(content),
+      content,
       sender_email,
       sender_name: sender_name || null,
     })

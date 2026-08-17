@@ -16,7 +16,14 @@
   var socket = null;
   var refId = 0;
   var lastMsg = null;
-  var callbacks = [];
+  var lastError = null;
+
+  // ---- 错误记录（让积木里的失败在 Scratch 里可见）----
+  function setError(err) {
+    lastError = (err && err.message) ? err.message : String(err);
+    console.error("Bridge:", lastError);
+  }
+  function clearError() { lastError = null; }
 
   // ---- 自动密码 ----
   function hashPwd(email) {
@@ -25,9 +32,13 @@
     return "fc_" + Math.abs(h).toString(36).slice(0, 16);
   }
 
-  // ---- 统一走 Edge Function（不带 Authorization 头，靠 secret 校验，绕开 Electron CORS bug）----
+  // ---- 统一走 Edge Function（不带 Authorization 头，靠 secret + 登录 token 校验，绕开 Electron CORS bug）----
   function callEdge(action, payload) {
     var body = Object.assign({ action: action, secret: SECRET }, payload || {});
+    // 读历史/发消息时自动携带登录 token（放 body 里，由 Edge 校验身份，防止伪造发送者）
+    if (token && (action === "send_message" || action === "get_messages")) {
+      body.access_token = token;
+    }
     return fetch(EDGE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -79,14 +90,21 @@
       try {
         var m = JSON.parse(e.data);
         if (m.payload && m.payload.data && m.payload.data.record) {
-          lastMsg = m.payload.data.record;
-          for (var i = 0; i < callbacks.length; i++) { callbacks[i](lastMsg); }
+          onBridgeMessage(m.payload.data.record);
         }
       } catch(_) {}
     };
     socket.onclose = function() {
       if (token) { setTimeout(connectWS, 5000); }
     };
+  }
+
+  // ---- 收到新消息的统一入口（扩展加载时只注册一次，避免回调无限增长）----
+  function onBridgeMessage(msg) {
+    lastMsg = msg;
+    if (Scratch.vm && Scratch.vm.runtime) {
+      Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
+    }
   }
 
   // ---- 发消息（走 Edge Function）----
@@ -148,39 +166,65 @@
   // ---- Scratch 积木 ----
   var ext = {
     _lastMsg: null,
+    _historyCache: null,
 
     connect: function(args) {
-      return getToken(args.EMAIL, args.NAME).then(function() {
+      var email = String(args.EMAIL || "").trim();
+      if (!email) {
+        setError("请输入邮箱后再「桥接连接」");
+        return;
+      }
+      clearError();
+      return getToken(email, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
-        console.error("Bridge connect failed:", e);
+        setError(e);
       });
     },
 
     send: function(args) {
-      sendMsg(args.MSG).catch(function(e) {
-        console.error("Bridge send failed:", e);
+      if (!token || !userEmail) {
+        setError("未连接，请先「桥接连接」");
+        return;
+      }
+      clearError();
+      sendMsg(String(args.MSG || "")).catch(function(e) {
+        setError(e);
       });
     },
 
     loadMessages: function(args) {
+      if (!token) {
+        setError("未连接，请先「桥接连接」");
+        return;
+      }
+      clearError();
       return loadHistory(args.LIMIT || 30).then(function(msgs) {
         ext._historyCache = msgs;
       }).catch(function(e) {
-        console.error("Bridge load history failed:", e);
+        setError(e);
       });
     },
 
     loadAllMessages: function() {
+      if (!token) {
+        setError("未连接，请先「桥接连接」");
+        return;
+      }
+      clearError();
       return loadAllHistory().then(function(msgs) {
         ext._historyCache = msgs;
       }).catch(function(e) {
-        console.error("Bridge load all history failed:", e);
+        setError(e);
       });
     },
 
     historyCount: function() {
       return ext._historyCache ? ext._historyCache.length : 0;
+    },
+
+    historyLoaded: function() {
+      return !!ext._historyCache;
     },
 
     historyItem: function(args) {
@@ -198,7 +242,7 @@
       var name = args.LIST || "消息列表";
       var list = findList(name);
       if (!list) {
-        console.error("Bridge: 找不到列表「" + name + "」，请先在 Scratch 里创建同名列表");
+        setError("找不到列表「" + name + "」，请先在 Scratch 里创建同名列表");
         return;
       }
       var msgs = ext._historyCache || [];
@@ -210,18 +254,30 @@
         rows.push(sender ? (sender + "：" + content) : content);
       }
       list.value = rows;
+      // 刷新舞台上的列表监视器
+      list._monitorUpToDate = false;
+      clearError();
     },
 
-    whenReceived: function() {
-      callbacks.push(function(msg) {
-        ext._lastMsg = msg;
-        Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
-      });
+    // ---- 动态列出当前项目中的所有列表名（参照 List Tools 的 _getLists）----
+    _getLists: function() {
+      var lists =
+        typeof Blockly === "undefined"
+          ? []
+          : Blockly.getMainWorkspace()
+              .getVariableMap()
+              .getVariablesOfType("list")
+              .map(function(model) { return model.name; });
+      return lists.length > 0 ? lists : [""];
     },
 
-    lastSender: function() { return ext._lastMsg ? (ext._lastMsg.sender_name || "") : ""; },
-    lastContent: function() { return ext._lastMsg ? extractUrl(ext._lastMsg.content) : ""; },
-    lastTime: function() { return ext._lastMsg ? (ext._lastMsg.created_at || "") : ""; },
+    // 触发由 onBridgeMessage 的 startHats 完成，此处无需任何操作
+    whenReceived: function() {},
+
+    lastSender: function() { return lastMsg ? (lastMsg.sender_name || "") : ""; },
+    lastContent: function() { return lastMsg ? extractUrl(lastMsg.content) : ""; },
+    lastTime: function() { return lastMsg ? (lastMsg.created_at || "") : ""; },
+    bridgeError: function() { return lastError || ""; },
     connected: function() { return socket && socket.readyState === WebSocket.OPEN; },
 
     disconnect: function() {
@@ -229,9 +285,10 @@
       token = null;
       userEmail = null;
       userName = null;
-      callbacks = [];
       ext._lastMsg = null;
       ext._historyCache = null;
+      lastMsg = null;
+      lastError = null;
     }
   };
 
@@ -263,11 +320,14 @@
           },
           { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
             text: "将 [LIST] 设为消息列表（需先加载）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, defaultValue: "消息列表" } },
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } },
             extensions: ["colours_data_lists"]
           },
           { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
             text: "桥接历史消息数量（需先加载）"
+          },
+          { opcode: "historyLoaded", blockType: Scratch.BlockType.BOOLEAN,
+            text: "桥接历史已加载？（判断加载状态）"
           },
           { opcode: "historyItem", blockType: Scratch.BlockType.REPORTER,
             text: "桥接历史第 [INDEX] 条 [FIELD]（需先加载）",
@@ -291,6 +351,9 @@
           { opcode: "connected", blockType: Scratch.BlockType.BOOLEAN,
             text: "桥接已连接？（判断连接状态）"
           },
+          { opcode: "bridgeError", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接最后错误（无则空，配合排障用）"
+          },
           { opcode: "disconnect", blockType: Scratch.BlockType.COMMAND,
             text: "桥接断开连接（断开当前连接）"
           }
@@ -300,7 +363,11 @@
             { text: "发送者", value: "sender" },
             { text: "内容", value: "content" },
             { text: "时间", value: "time" }
-          ] }
+          ] },
+          lists: {
+            acceptReporters: true,
+            items: "_getLists"
+          }
         }
       };
     },
@@ -310,13 +377,16 @@
     loadMessages: ext.loadMessages,
     loadAllMessages: ext.loadAllMessages,
     setListToMessages: ext.setListToMessages,
+    _getLists: ext._getLists,
     historyCount: ext.historyCount,
+    historyLoaded: ext.historyLoaded,
     historyItem: ext.historyItem,
     whenReceived: ext.whenReceived,
     lastSender: ext.lastSender,
     lastContent: ext.lastContent,
     lastTime: ext.lastTime,
     connected: ext.connected,
+    bridgeError: ext.bridgeError,
     disconnect: ext.disconnect
   });
 })(Scratch);
