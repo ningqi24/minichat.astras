@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MiniChat - 快！基于Supabase的简易聊天！</title>
+    <title>MiniChat - 开源 Supabase 聊天 Demo | 快速集成与部署</title>
+    <meta name="description" content="MiniChat 是一个开源的 Supabase 聊天应用示例，提供完整的前后端代码，助你快速学习和集成实时聊天功能。">
+    <meta property="og:title" content="MiniChat - 开源 Supabase 聊天 Demo" />
+    <meta property="og:description" content="一个开源的 Supabase 聊天应用示例，提供完整代码，助你快速学习和集成实时聊天功能。" />
+    <meta property="og:image" content="https://minichat.astras.cc/images/og-share.png" />
+    <meta property="og:url" content="https://minichat.astras.cc/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MiniChat - 开源 Supabase 聊天 Demo" />
+    <meta name="twitter:description" content="一个开源的 Supabase 聊天应用示例，提供完整代码，助你快速学习和集成实时聊天功能。" />
+    <link rel="canonical" href="https://minichat.astras.cc/" />
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
@@ -14,6 +24,20 @@
     <meta http-equiv="Expires" content="0">
     <meta name="version" content="4.0.0" />
     <script src="lib/supabase.min.js"></script>
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "MiniChat",
+          "description": "一个基于 Supabase 的开源实时聊天应用示例，提供完整前后端代码",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "All",
+          "url": "https://minichat.astras.cc/",
+          "applicationSubCategory": "Chat Application",
+          "downloadUrl": "https://github.com/ningqi24/minichat.astras", 
+          "codeRepository": "https://github.com/ningqi24/minichat.astras"
+        }
+    </script>
     <style>
         :root{--bg-primary:#0a0a0a;--bg-secondary:#111111;--bg-sidebar:#0d0d0d;--bg-card:#161616;--bg-input:#1c1c1c;--bg-hover:#202020;--bg-overlay:rgba(0,0,0,0.8);--text-primary:#f1f1f1;--text-secondary:#a5a5a5;--text-muted:#6a6a6a;--accent:#3b82f6;--accent-hover:#2563eb;--accent-light:rgba(59,130,246,0.15);--border-color:#262626;--shadow:0 8px 32px rgba(0,0,0,0.4);--shadow-sm:0 2px 8px rgba(0,0,0,0.25);--radius:16px;--radius-sm:10px;--radius-lg:20px;--transition:0.25s cubic-bezier(0.4,0,0.2,1);--transition-fast:0.15s cubic-bezier(0.4,0,0.2,1);--avatar-size:24px;--mention-color:#fbbf24;--bubble-me:#1e1e1e;--bubble-me-border:#2e2e2e;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.08);--code-border:rgba(128,128,128,0.15);--link-color:#60a5fa;--success:#4ade80;--error:#f87171;--scrollbar-thumb:#4a4a4a;--scrollbar-thumb-hover:#5a5a5a;--modal-overlay:rgba(0,0,0,0.75)}
         body.light-theme{--bg-primary:#fafafa;--bg-secondary:#ffffff;--bg-sidebar:#f8f9fa;--bg-card:#ffffff;--bg-input:#f1f3f5;--bg-hover:#e9ecef;--bg-overlay:rgba(255,255,255,0.85);--text-primary:#1a1a1a;--text-secondary:#5c636a;--text-muted:#9da4ab;--border-color:#e9ecef;--shadow:0 8px 32px rgba(0,0,0,0.06);--shadow-sm:0 2px 8px rgba(0,0,0,0.04);--bubble-me:#f0f0f0;--bubble-me-border:#e0e0e0;--quote-bg:rgba(59,130,246,0.05);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.05);--code-border:rgba(0,0,0,0.08);--link-color:#2563eb;--success:#16a34a;--error:#dc2626;--scrollbar-thumb:#cbd5e1;--scrollbar-thumb-hover:#94a3b8;--modal-overlay:rgba(0,0,0,0.5)}
