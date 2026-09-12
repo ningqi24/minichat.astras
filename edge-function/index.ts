@@ -7,9 +7,18 @@
 //   MINICHAT_BRIDGE_PEPPER  建议设置：独立随机串，用于派生 MiniChat 账号口令，勿与其它密钥复用
 //   FLOXCHAT_VERIFY_URL     可选，FloxChat 验证码校验地址（默认 https://shebiao.dpdns.org/ces/verify-code）
 //
-// 动作：
-//   flox_code_login  { email, code }  在服务端校验 FloxChat 邮箱验证码后签发 MiniChat 会话
-// 说明：本函数不读取 FloxChat 用户表、不提供密码登录，也绝不在 FloxChat 侧创建/修改/删除账号。
+// 动作（全部需要请求体里的 secret）：
+//   flox_code_login  { email, code }              服务端校验 FloxChat 验证码后签发 MiniChat 会话
+//   get_messages     { access_token, limit, ... } 读历史消息（身份由 token 推导）
+//   send_message     { access_token, content, ...} 发消息（身份由 token 推导，不可伪造）
+//   get_users        { access_token }             读用户列表（供 TurboWarp 扩展使用）
+//   login            { email }                   兼容旧扩展：口令由服务端密钥派生，忽略客户端 password
+//
+// 安全约束：
+//   1. 绝不调用 updateUserById({ password }) 去覆盖既有账号的口令。
+//   2. login 不接受客户端指定的口令，账号已存在且派生口令不匹配时直接返回 401。
+//   3. flox_code_login 对验证码做了严格校验与限流。
+//   4. 本函数不读取 FloxChat 用户表，也绝不在 FloxChat 侧创建/修改/删除任何账号。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -22,6 +31,12 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://shebiao.dpdns.org/ces/verify-code";
 // MiniChat 侧账号口令由服务端密钥派生，客户端无法推算（部署时请设置独立随机值）
 const MINICHAT_BRIDGE_PEPPER = Deno.env.get("MINICHAT_BRIDGE_PEPPER") ?? SHARED_SECRET;
+if (!Deno.env.get("MINICHAT_BRIDGE_PEPPER")) {
+  console.warn(
+    "[clever-task] 警告：MINICHAT_BRIDGE_PEPPER 未设置，正回退到公开的桥接密钥，" +
+      "派生口令可被任何人推算，请立即在 Supabase 设置独立随机串。",
+  );
+}
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -30,6 +45,40 @@ const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 const supabaseAnon = createClient(SUPABASE_URL, ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+// ---- 轻量限流（best-effort：按 Edge 实例内存计数，多实例部署时不是全局配额）----
+const RATE_BUCKETS = new Map<string, number[]>();
+function rateLimit(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  const hits = (RATE_BUCKETS.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (hits.length >= max) {
+    RATE_BUCKETS.set(key, hits);
+    return false;
+  }
+  hits.push(now);
+  RATE_BUCKETS.set(key, hits);
+  if (RATE_BUCKETS.size > 5000) {
+    for (const [k, v] of RATE_BUCKETS) {
+      if (!v.some((t) => now - t < windowMs)) RATE_BUCKETS.delete(k);
+    }
+  }
+  return true;
+}
+function clientIp(req: Request): string {
+  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+}
+function sessionPayload(session: any, email: string, displayName: string) {
+  return json({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    user_id: session.user!.id,
+    email,
+    display_name: displayName,
+  });
+}
 
 // ---- 从 body 中的 access_token 校验并取回用户（token 放 body，不走 Authorization 头，绕开 Electron CORS bug）----
 async function getUserFromBody(body: any) {
@@ -60,36 +109,36 @@ Deno.serve(async (req: Request) => {
       return json({ error: "unauthorized" }, 403);
     }
 
-    if (action === "flox_code_login") return await floxCodeLogin(body);
+    if (action === "flox_code_login") return await floxCodeLogin(req, body);
     if (action === "get_messages") return await getMessages(body);
     if (action === "send_message") return await sendMessage(body);
     if (action === "get_users") return await getUsers(body);
-    return await login(body);
+    return await login(req, body);
   } catch (e: any) {
     return json({ error: e.message }, 500);
   }
 });
 
-// ---- 登录（已存在用户直接登录，新用户自动注册） ----
-async function login(body: any) {
-  const { email, password, display_name } = body;
+// ---- 兼容旧扩展的登录：口令由服务端派生；账号已存在且口令不符时拒绝，绝不重置密码 ----
+async function login(req: Request, body: any) {
+  const email = String(body?.email ?? "").trim().toLowerCase();
+  const display_name =
+    String(body?.display_name ?? "").trim().slice(0, 64) || email.split("@")[0];
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "invalid_email", code: "INVALID_EMAIL" }, 400);
+  }
+  if (!rateLimit(`login:${clientIp(req)}`, 20, 60_000)) {
+    return json({ error: "too_many_requests", code: "RATE_LIMITED" }, 429);
+  }
+  // 客户端传来的 password 一律忽略：口令只由服务端密钥派生
+  const password = await bridgePassword(email);
 
-  const { data: signInData, error: signInError } =
+  const { data: signInData } =
     await supabaseAnon.auth.signInWithPassword({ email, password });
 
   if (signInData?.session) {
     await ensureProfileAndConversation(signInData.user!.id, email, display_name);
-    return json({
-      access_token: signInData.session.access_token,
-      refresh_token: signInData.session.refresh_token,
-      user_id: signInData.user!.id,
-      email,
-      display_name: display_name || email.split("@")[0],
-    });
-  }
-
-  if (signInError && signInError.message !== "Invalid login credentials") {
-    throw new Error(`登录检查失败: ${signInError.message}`);
+    return sessionPayload(signInData.session, email, display_name);
   }
 
   const { data: newUser, error: createError } =
@@ -100,24 +149,14 @@ async function login(body: any) {
       user_metadata: { source: "floxchat", display_name },
     });
 
-  if (createError && createError.message.includes("already been registered")) {
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-    const existing = users?.users?.find((u: any) => u.email === email);
-    if (!existing) throw new Error("用户查询失败");
-
-    await supabaseAdmin.auth.admin.updateUserById(existing.id, { password });
-    await ensureProfileAndConversation(existing.id, email, display_name);
-
-    const { data: relogin } = await supabaseAnon.auth.signInWithPassword({ email, password });
-    if (!relogin?.session) throw new Error("重置密码后登录失败");
-
+  // 账号已存在但服务端派生口令不正确：直接拒绝。
+  // 注意：这里绝不能调用 updateUserById 重置密码——旧实现在这里会把既有账号的
+  // 密码改成调用方指定的值，等于凭邮箱地址就能接管任意 MiniChat 账号。
+  if (createError && /already/i.test(createError.message)) {
     return json({
-      access_token: relogin.session.access_token,
-      refresh_token: relogin.session.refresh_token,
-      user_id: relogin.user!.id,
-      email,
-      display_name: display_name || email.split("@")[0],
-    });
+      error: "该邮箱已有 MiniChat 账号，请改用 FloxChat 验证码登录",
+      code: "ACCOUNT_EXISTS",
+    }, 401);
   }
 
   if (createError) throw new Error(`创建用户失败: ${createError.message}`);
@@ -133,13 +172,7 @@ async function login(body: any) {
 
   if (!finalSignIn?.session) throw new Error("新用户登录失败");
 
-  return json({
-    access_token: finalSignIn.session.access_token,
-    refresh_token: finalSignIn.session.refresh_token,
-    user_id: finalSignIn.user!.id,
-    email,
-    display_name: display_name || email.split("@")[0],
-  });
+  return sessionPayload(finalSignIn.session, email, display_name);
 }
 
 // ============================================================================
@@ -149,11 +182,21 @@ async function login(body: any) {
 // ============================================================================
 
 // 验证码登录（兼容旧流程）：验证码在服务端向 FloxChat 校验，客户端不再自行判定
-async function floxCodeLogin(body: any) {
-  const email = String(body?.email ?? "").trim();
+async function floxCodeLogin(req: Request, body: any) {
+  const email = String(body?.email ?? "").trim().toLowerCase();
   const code = String(body?.code ?? "").trim();
   if (!email || !code) {
     return json({ error: "missing_credentials", code: "MISSING_CREDENTIALS" }, 400);
+  }
+  if (!/^[A-Za-z0-9]{4,12}$/.test(code)) {
+    return json({ error: "invalid_code", code: "INVALID_CODE" }, 401);
+  }
+  // 限流：验证码只有 6 位，不限流可被离线爆破
+  if (
+    !rateLimit(`code:email:${email}`, 5, 10 * 60_000) ||
+    !rateLimit(`code:ip:${clientIp(req)}`, 20, 10 * 60_000)
+  ) {
+    return json({ error: "尝试过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
   }
 
   let text = "";
@@ -173,9 +216,11 @@ async function floxCodeLogin(body: any) {
     const parsed = JSON.parse(text);
     ok = parsed?.success === true || parsed?.verified === true;
   } catch (_) {
-    // 非 JSON 响应时退化为关键字判断
+    // 非 JSON 响应时只接受「整段就是 true/verified/ok/success」这种纯文本，
+    // 不再做子串匹配——旧实现只要响应里出现 verified 这个词就放行，
+    // 一段含有 "not verified" 的报错页也会被当成校验通过。
+    ok = /^\s*"?(true|verified|ok|success)"?\s*$/i.test(text);
   }
-  if (!ok && /"verified"\s*:\s*true|verified/i.test(text)) ok = true;
   if (!ok) return json({ error: "invalid_code", code: "INVALID_CODE" }, 401);
 
   return await issueSession(email, email.split("@")[0], "");

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minichat-v5';
+const CACHE_NAME = 'minichat-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

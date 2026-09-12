@@ -104,6 +104,12 @@ ALTER TABLE messages REPLICA IDENTITY FULL;
 ALTER TABLE profiles REPLICA IDENTITY FULL;
 ```
 
+> ⚠️ **上面的建表语句没有开启 RLS。** anon key 是公开的，未开 RLS 时任何人都能读写整张表。
+> 生产环境请务必执行 [`supabase/security-hardening.sql`](supabase/security-hardening.sql)（含体检、RLS 策略与存储桶策略）。
+>
+> The SQL above does **not** enable RLS. The anon key is public, so without RLS anyone can read and write these tables.
+> For production, run [`supabase/security-hardening.sql`](supabase/security-hardening.sql).
+
 3. 在 Supabase Storage 中创建一个名为 `chat-images` 的 bucket，并设置为公开（Public），用于存放聊天图片。  
    Create a public bucket named `chat-images` in Supabase Storage for chat images.
 
@@ -188,6 +194,8 @@ minichat.astras/
 ├── minichat-bridge.js  # TurboWarp 扩展（FloxChat 互通）| TurboWarp extension for FloxChat interop
 ├── edge-function/      # Supabase Edge Function | Supabase Edge Function
 │   └── index.ts        # clever-task：验证码登录 / 消息代理 | code login & message proxy
+├── supabase/           # 数据库安全配置 | Database security
+│   └── security-hardening.sql  # RLS 与存储桶策略 | RLS & storage policies
 ├── LICENSE
 ├── README.md
 ├── assets/             # 图标资源 | Icon assets

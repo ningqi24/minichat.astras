@@ -28,12 +28,10 @@
   }
   function clearError() { lastError = null; }
 
-  // ---- 自动密码 ----
-  function hashPwd(email) {
-    var h = 0, s = "floxchat_to_minichat_2024" + email;
-    for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
-    return "fc_" + Math.abs(h).toString(36).slice(0, 16);
-  }
+  // ---- 口令说明 ----
+  // 旧版本这里用 hashPwd(email) 在本地算口令并上送，属于"任何人都能凭邮箱推出密码"的设计，
+  // 已废弃。现在口令完全由 Edge Function 用服务端密钥（MINICHAT_BRIDGE_PEPPER）派生，
+  // 客户端不再发送也不再持有任何 password。
 
   // ---- 统一走 Edge Function（不带 Authorization 头，靠 secret + 登录 token 校验，绕开 Electron CORS bug）----
   function callEdge(action, payload) {
@@ -56,7 +54,6 @@
   function getToken(email, name) {
     return callEdge("login", {
       email: email,
-      password: hashPwd(email),
       display_name: name || email.split("@")[0]
     }).then(function(d) {
       token = d.access_token;

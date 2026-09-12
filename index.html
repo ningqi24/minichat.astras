@@ -139,6 +139,7 @@
         .bridge-cross{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border-color);color:var(--accent);box-shadow:var(--flox-mask-shadow)}
         .bridge-title{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:.2px;margin-bottom:6px}
         .bridge-title em{font-style:normal;font-weight:400;color:var(--accent);margin:0 5px}
+        .rt-link-blocked{color:var(--text-muted);text-decoration:line-through;cursor:not-allowed}
         .bridge-sub{font-size:12px;line-height:1.6;color:var(--text-secondary);text-align:center}
 
         /* ==================== 全局动效层 ====================
@@ -1539,6 +1540,13 @@ function handleAvatarError(img, email) {
 
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 function escJs(s) { return s ? s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,'\\r') : ''; }
+// 链接协议白名单：挡掉 javascript: / data: / vbscript: 等可执行协议，避免存储型 XSS
+function safeLinkUrl(u) {
+    var s = String(u == null ? '' : u).trim();
+    if (/^https?:\/\//i.test(s) || /^mailto:/i.test(s)) return s;
+    if (/^\/(?!\/)/.test(s) || /^#/.test(s)) return s;
+    return '';
+}
 function getTimeLocale() { var lang = getCurrentLang(); return lang === 'zh' ? 'zh-CN' : 'en-US'; }
 function formatTime(iso) { return new Date(iso).toLocaleString(getTimeLocale(),{hour12:false}); }
 function formatTimeShort(iso) { return new Date(iso).toLocaleTimeString(getTimeLocale(),{hour:'2-digit',minute:'2-digit'}); }
@@ -4524,7 +4532,12 @@ function renderMessageContent(raw) {
     text = text.replace(/@(\S+)/g, (_,m) => { mentions.push(m); return '\x00M'+mentions.length+'M\x00'; });
     text = esc(text);
     text = text.replace(/\x00M(\d+)M\x00/g, (_,i) => renderMentionHtml(mentions[parseInt(i)-1] || ''));
-    text = text.replace(/\x00L(\d+)L\x00/g, (_,i) => { var l = links[parseInt(i)-1]; return '<a class="rt-link" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>'; });
+    text = text.replace(/\x00L(\d+)L\x00/g, (_,i) => {
+        var l = links[parseInt(i)-1];
+        var safeUrl = safeLinkUrl(l.url);
+        if (!safeUrl) return '<span class="rt-link rt-link-blocked" title="该链接协议不受支持">'+esc(l.label)+'</span>';
+        return '<a class="rt-link" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(l.label)+'</a>';
+    });
     text = text.replace(/\x00C(\d+)C\x00/g, (_,i) => '<code>'+esc(codes[parseInt(i)-1])+'</code>');
     text = text.replace(/\x00S(\d+)S\x00/g, (_,i) => '<strong>'+esc(strongs[parseInt(i)-1])+'</strong>');
     text = text.replace(/\x00E(\d+)E\x00/g, (_,i) => '<em>'+esc(ems[parseInt(i)-1])+'</em>');
@@ -4538,9 +4551,10 @@ function renderMessageContent(raw) {
             }
         } catch(e) {}
         var escapedU = esc(u);
-        var jsEscapedU = escJs(u);
+        // 不再把 URL 拼进 onclick（escJs 不做 HTML 属性转义，容易被引号逃逸），
+        // 改为从 data-full 读取，彻底消除该注入面
         text = text.replace('\x00I'+(i+1)+'I\x00',
-            '<img class="msg-img-thumb" data-full="'+escapedU+'" src="'+esc(thumbUrl)+'" alt="图片" loading="lazy" decoding="async" onclick="window.previewImage(\''+jsEscapedU+'\')"/>');
+            '<img class="msg-img-thumb" data-full="'+escapedU+'" src="'+esc(thumbUrl)+'" alt="图片" loading="lazy" decoding="async" onclick="window.previewImage(this.getAttribute(\'data-full\'))"/>');
     });
     audios.forEach((u,i) => { text = text.replace('\x00A'+(i+1)+'A\x00', '<audio controls src="'+esc(u)+'" preload="metadata"></audio>'); });
     videos.forEach((v,i) => {
