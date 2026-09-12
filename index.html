@@ -39,8 +39,8 @@
         }
     </script>
     <style>
-        :root{--bg-primary:#0a0a0a;--bg-secondary:#111111;--bg-sidebar:#0d0d0d;--bg-card:#161616;--bg-input:#1c1c1c;--bg-hover:#202020;--bg-overlay:rgba(0,0,0,0.8);--text-primary:#f1f1f1;--text-secondary:#a5a5a5;--text-muted:#6a6a6a;--accent:#3b82f6;--accent-hover:#2563eb;--accent-light:rgba(59,130,246,0.15);--border-color:#262626;--shadow:0 8px 32px rgba(0,0,0,0.4);--shadow-sm:0 2px 8px rgba(0,0,0,0.25);--radius:16px;--radius-sm:10px;--radius-lg:20px;--transition:0.25s cubic-bezier(0.4,0,0.2,1);--transition-fast:0.15s cubic-bezier(0.4,0,0.2,1);--avatar-size:24px;--mention-color:#fbbf24;--bubble-me:#1e1e1e;--bubble-me-border:#2e2e2e;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.08);--code-border:rgba(128,128,128,0.15);--link-color:#60a5fa;--success:#4ade80;--error:#f87171;--scrollbar-thumb:#4a4a4a;--scrollbar-thumb-hover:#5a5a5a;--modal-overlay:rgba(0,0,0,0.75)}
-        body.light-theme{--bg-primary:#fafafa;--bg-secondary:#ffffff;--bg-sidebar:#f8f9fa;--bg-card:#ffffff;--bg-input:#f1f3f5;--bg-hover:#e9ecef;--bg-overlay:rgba(255,255,255,0.85);--text-primary:#1a1a1a;--text-secondary:#5c636a;--text-muted:#9da4ab;--border-color:#e9ecef;--shadow:0 8px 32px rgba(0,0,0,0.06);--shadow-sm:0 2px 8px rgba(0,0,0,0.04);--bubble-me:#f0f0f0;--bubble-me-border:#e0e0e0;--quote-bg:rgba(59,130,246,0.05);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.05);--code-border:rgba(0,0,0,0.08);--link-color:#2563eb;--success:#16a34a;--error:#dc2626;--scrollbar-thumb:#cbd5e1;--scrollbar-thumb-hover:#94a3b8;--modal-overlay:rgba(0,0,0,0.5)}
+        :root{--bg-primary:#0a0a0a;--bg-secondary:#111111;--bg-sidebar:#0d0d0d;--bg-card:#161616;--bg-input:#1c1c1c;--bg-hover:#202020;--bg-overlay:rgba(0,0,0,0.8);--text-primary:#f1f1f1;--text-secondary:#a5a5a5;--text-muted:#6a6a6a;--accent:#3b82f6;--accent-hover:#2563eb;--accent-light:rgba(59,130,246,0.15);--border-color:#262626;--shadow:0 8px 32px rgba(0,0,0,0.4);--shadow-sm:0 2px 8px rgba(0,0,0,0.25);--radius:16px;--radius-sm:10px;--radius-lg:20px;--transition:0.25s cubic-bezier(0.4,0,0.2,1);--transition-fast:0.15s cubic-bezier(0.4,0,0.2,1);--avatar-size:24px;--mention-color:#fbbf24;--bubble-me:#1e1e1e;--bubble-me-border:#2e2e2e;--quote-bg:rgba(59,130,246,0.1);--quote-border:#3b82f6;--quote-author:#60a5fa;--code-bg:rgba(255,255,255,0.08);--code-border:rgba(128,128,128,0.15);--link-color:#60a5fa;--success:#4ade80;--error:#f87171;--scrollbar-thumb:#4a4a4a;--scrollbar-thumb-hover:#5a5a5a;--modal-overlay:rgba(0,0,0,0.75);--flox-mask-bg:rgba(255,255,255,0.06);--flox-mask-border:rgba(255,255,255,0.10);--flox-mask-shadow:0 2px 10px rgba(0,0,0,0.35);--flox-mask-shadow-hover:0 6px 18px rgba(0,0,0,0.45)}
+        body.light-theme{--bg-primary:#fafafa;--bg-secondary:#ffffff;--bg-sidebar:#f8f9fa;--bg-card:#ffffff;--bg-input:#f1f3f5;--bg-hover:#e9ecef;--bg-overlay:rgba(255,255,255,0.85);--text-primary:#1a1a1a;--text-secondary:#5c636a;--text-muted:#9da4ab;--border-color:#e9ecef;--shadow:0 8px 32px rgba(0,0,0,0.06);--shadow-sm:0 2px 8px rgba(0,0,0,0.04);--bubble-me:#f0f0f0;--bubble-me-border:#e0e0e0;--quote-bg:rgba(59,130,246,0.05);--quote-border:#3b82f6;--quote-author:#2563eb;--code-bg:rgba(0,0,0,0.05);--code-border:rgba(0,0,0,0.08);--link-color:#2563eb;--success:#16a34a;--error:#dc2626;--scrollbar-thumb:#cbd5e1;--scrollbar-thumb-hover:#94a3b8;--modal-overlay:rgba(0,0,0,0.5);--flox-mask-bg:rgba(0,0,0,0.04);--flox-mask-border:rgba(0,0,0,0.08);--flox-mask-shadow:0 2px 10px rgba(0,0,0,0.08);--flox-mask-shadow-hover:0 6px 18px rgba(0,0,0,0.12)}
         ::-webkit-scrollbar{width:6px;height:6px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;border:none;transition:background .2s}
@@ -121,6 +121,13 @@
         .floxchat-login .floxchat-step1,.floxchat-login .floxchat-step2{display:flex;flex-direction:column;gap:10px}
         .floxchat-login .floxchat-back{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:4px 0;text-align:left;margin-bottom:4px}
         .floxchat-login .floxchat-back:hover{color:var(--accent-hover)}
+        .floxchat-entry{display:flex;margin:12px auto 0;padding:0;background:none;border:none;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent}
+        .floxchat-entry-mask{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--flox-mask-bg);border:1px solid var(--flox-mask-border);box-shadow:var(--flox-mask-shadow);transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition),border-color var(--transition)}
+        .floxchat-entry:hover .floxchat-entry-mask{transform:translateY(-1px) scale(1.05);background:var(--accent-light);border-color:var(--accent);box-shadow:var(--flox-mask-shadow-hover)}
+        .floxchat-entry:active .floxchat-entry-mask{transform:scale(0.95)}
+        .floxchat-entry:focus{outline:none}
+        .floxchat-entry:focus-visible .floxchat-entry-mask{outline:2px solid var(--accent);outline-offset:2px}
+        .floxchat-entry-mask img{display:block;width:26px;height:26px;pointer-events:none}
         .sidebar .logo-area .logo-text{font-size:18px;font-weight:700;color:var(--text-primary);margin-left:4px}
         .sidebar .version-tag{font-size:10px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}
@@ -812,7 +819,9 @@
                 <div class="auth-message" id="floxMsg"></div>
             </div>
             <div class="auth-message" id="authMessage"></div>
-            <div style="text-align:center;margin-top:4px;font-size:12px"><a id="switchFloxChat" style="color:var(--accent);cursor:pointer">FloxChat验证码登录（B站@摄表）</a></div>
+            <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat验证码登录（B站@摄表）" aria-label="FloxChat验证码登录（B站@摄表）">
+                <span class="floxchat-entry-mask"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
+            </button>
         </div>
     </div>
     <div class="terms-overlay" id="termsOverlay">

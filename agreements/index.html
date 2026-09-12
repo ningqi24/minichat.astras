@@ -129,7 +129,7 @@
             <div class="doc-header">
                 <h1 id="docTitle">服务协议</h1>
                 <div class="doc-meta">
-                    <span class="version-tag" id="versionBadge">v4.0.0</span>
+                    <span class="version-tag" id="versionBadge">v4.1.0</span>
                     <span id="lastUpdated">更新于 2026-07-13</span>
                 </div>
             </div>
@@ -148,7 +148,8 @@
     </footer>
 
 <script>
-var APP_VERSION = '4.0.0';
+// 内置兜底版本号；页面加载后会用 ../data/vision.json 覆盖（相对路径，避免版本认知错乱）
+var APP_VERSION = '4.1.0';
 var LAST_UPDATED = '2026-07-13';
 
 var I18N = {
@@ -446,6 +447,24 @@ function setupLang() {
     };
 }
 
+// 版本号统一取自 data/vision.json（相对路径），保证与服务协议页面之外的站点版本一致
+function loadVersion() {
+    var badge = document.getElementById('versionBadge');
+    if (badge) badge.textContent = 'v' + APP_VERSION;
+    fetch('../data/vision.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function(data) {
+            if (data && data.version) {
+                APP_VERSION = String(data.version);
+                if (badge) badge.textContent = 'v' + APP_VERSION;
+            }
+        })
+        .catch(function(e) { console.warn('版本号读取失败，沿用内置版本 v' + APP_VERSION + ':', e.message); });
+}
+
 function setLang(lang) {
     document.body.dataset.lang = lang;
     localStorage.setItem('minichat_lang', lang);
@@ -468,8 +487,9 @@ function init() {
         setupBackToTop();
         setupScrollSpy();
         setupLang();
+        loadVersion();
     } catch (e) {
-        console.error('agreements.html init error:', e);
+        console.error('agreements/index.html init error:', e);
     }
 }
 
