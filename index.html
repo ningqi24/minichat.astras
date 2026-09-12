@@ -2023,6 +2023,10 @@ function switchToFloxLogin() {
     document.getElementById('btnLogin').style.display = 'none';
     document.querySelector('.auth-toggle').style.display = 'none';
     document.getElementById('authMessage').style.display = 'none';
+    // FloxChat 登录走 Edge Function 的 service_role，GoTrue 会跳过 CAPTCHA，
+    // 所以这里不需要人机验证，直接把它藏起来
+    var capBoxFlox = document.getElementById('captchaBoxLogin');
+    if (capBoxFlox) capBoxFlox.style.display = 'none';
     document.getElementById('floxLogin').style.display = 'block';
     document.getElementById('floxStep1').style.display = 'flex';
     document.getElementById('floxStep2').style.display = 'none';
@@ -2040,6 +2044,8 @@ function switchBackFromFlox() {
     document.getElementById('btnLogin').style.display = '';
     document.querySelector('.auth-toggle').style.display = '';
     document.getElementById('authMessage').style.display = '';
+    var capBoxBack = document.getElementById('captchaBoxLogin');
+    if (capBoxBack) capBoxBack.style.display = '';
     document.getElementById('floxLogin').style.display = 'none';
     document.getElementById('switchFloxChat').style.display = '';
 }
