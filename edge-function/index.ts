@@ -1,4 +1,4 @@
-// Edge Function: clever-task
+﻿// Edge Function: clever-task
 // 部署到 MiniChat 的 Supabase 项目
 // 用法: supabase functions deploy clever-task
 //
@@ -44,6 +44,19 @@ const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 const supabaseAnon = createClient(SUPABASE_URL, ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
+});
+
+// 专门用来做 signInWithPassword 的客户端。
+// 原因：GoTrue 在开启 CAPTCHA 后会给 /token?grant_type=password 强制校验 captcha_token
+// （见 supabase/auth internal/api/api.go 的 r.With(api.verifyCaptcha).Post("/token", ...)），
+// 但它同时有一条例外（internal/api/middleware.go）：
+//     if _, err := a.requireAdminCredentials(w, req); err == nil { return ctx, nil }
+// 也就是 Authorization 头里带 service_role 时跳过 CAPTCHA。
+// 所以服务端用 service_role 登录，客户端侧才需要真的过验证码。
+// 单独建一个客户端是为了避免 supabaseAdmin 被 signInWithPassword 挂上用户会话，
+// 那样后续 .from() 查询就会以用户身份（受 RLS 限制）而不是 service_role 执行。
+const supabaseAdminAuth = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
 });
 
 // ---- 轻量限流（best-effort：按 Edge 实例内存计数，多实例部署时不是全局配额）----
@@ -134,7 +147,7 @@ async function login(req: Request, body: any) {
   const password = await bridgePassword(email);
 
   const { data: signInData } =
-    await supabaseAnon.auth.signInWithPassword({ email, password });
+    await supabaseAdminAuth.auth.signInWithPassword({ email, password });
 
   if (signInData?.session) {
     await ensureProfileAndConversation(signInData.user!.id, email, display_name);
@@ -165,7 +178,7 @@ async function login(req: Request, body: any) {
     await ensureProfileAndConversation(newUser.user.id, email, display_name);
   }
 
-  const { data: finalSignIn } = await supabaseAnon.auth.signInWithPassword({
+  const { data: finalSignIn } = await supabaseAdminAuth.auth.signInWithPassword({
     email,
     password,
   });
@@ -245,7 +258,7 @@ async function issueSession(email: string, displayName: string, floxUid: string)
   const password = await bridgePassword(email);
 
   let session =
-    (await supabaseAnon.auth.signInWithPassword({ email, password })).data?.session ?? null;
+    (await supabaseAdminAuth.auth.signInWithPassword({ email, password })).data?.session ?? null;
 
   if (!session) {
     const created = await supabaseAdmin.auth.admin.createUser({
@@ -268,7 +281,7 @@ async function issueSession(email: string, displayName: string, floxUid: string)
       throw new Error(`开通 MiniChat 账号失败: ${created.error.message}`);
     }
 
-    session = (await supabaseAnon.auth.signInWithPassword({ email, password })).data?.session ?? null;
+    session = (await supabaseAdminAuth.auth.signInWithPassword({ email, password })).data?.session ?? null;
   }
 
   if (!session) throw new Error("建立会话失败");
@@ -387,3 +400,4 @@ function json(body: object, status = 200) {
     },
   });
 }
+

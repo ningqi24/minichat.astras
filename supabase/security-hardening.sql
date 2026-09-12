@@ -83,6 +83,37 @@ create policy conversations_insert on public.conversations for insert to authent
 create policy cp_select on public.conversation_participants for select to authenticated using (user_id = auth.uid());
 create policy cp_insert on public.conversation_participants for insert to authenticated with check (user_id = auth.uid());
 
+-- ----------------------------------------------------------------------------
+-- 第 3.5 步：邮箱比较改成大小写不敏感 + 把资料里的邮箱对齐
+-- 原因：JWT 里的 email 由 GoTrue 规范化成小写，而前端写入的 profiles.email /
+--       messages.sender_email 可能保留用户输入的大小写，两边都 lower() 更稳。
+--       顺带堵住"把自己的 profiles.email 改成别人的邮箱"来在成员列表里冒名。
+-- ----------------------------------------------------------------------------
+-- 3.5.1 先对齐历史数据，避免下面的 WITH CHECK 卡住老数据
+update public.profiles p
+   set email = u.email
+  from auth.users u
+ where u.id = p.id
+   and lower(p.email) is distinct from lower(u.email);
+
+-- 3.5.2 重建 messages 的两条策略
+drop policy if exists messages_insert on public.messages;
+drop policy if exists messages_update on public.messages;
+create policy messages_insert on public.messages for insert to authenticated
+  with check (lower(sender_email) = lower(auth.jwt() ->> 'email'));
+create policy messages_update on public.messages for update to authenticated
+  using (lower(sender_email) = lower(auth.jwt() ->> 'email'))
+  with check (lower(sender_email) = lower(auth.jwt() ->> 'email'));
+
+-- 3.5.3 重建 profiles 的两条策略（email 必须是自己 JWT 里的邮箱）
+drop policy if exists profiles_insert on public.profiles;
+drop policy if exists profiles_update on public.profiles;
+create policy profiles_insert on public.profiles for insert to authenticated
+  with check (id = auth.uid() and lower(email) = lower(auth.jwt() ->> 'email'));
+create policy profiles_update on public.profiles for update to authenticated
+  using (id = auth.uid())
+  with check (id = auth.uid() and lower(email) = lower(auth.jwt() ->> 'email'));
+
 -- 兜底：显式回收匿名角色对这四张表的表级权限
 revoke all on public.profiles, public.messages, public.conversations, public.conversation_participants from anon;
 
