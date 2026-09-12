@@ -140,6 +140,49 @@
         .bridge-title{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:.2px;margin-bottom:6px}
         .bridge-title em{font-style:normal;font-weight:400;color:var(--accent);margin:0 5px}
         .bridge-sub{font-size:12px;line-height:1.6;color:var(--text-secondary);text-align:center}
+
+        /* ==================== 全局动效层 ====================
+           只使用 opacity / transform，避免触发重排；时长 0.14s–0.3s，
+           全部走 GPU 合成，并在 prefers-reduced-motion 下自动关闭。 */
+        @keyframes mcOverlayIn{from{opacity:0}to{opacity:1}}
+        @keyframes mcDialogIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+        @keyframes mcDropIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+        @keyframes mcRiseIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+        @keyframes mcBadgeIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+
+        /* 遮罩：淡入 */
+        .terms-overlay.active,.custom-modal.active,.quote-jump-modal.active,.version-update-modal.active,.online-modal.active,.mobile-action-sheet.active{animation:mcOverlayIn .2s ease both}
+        /* 对话框：轻微上浮 */
+        .terms-overlay.active .terms-modal,.custom-modal.active .modal-content,.quote-jump-modal.active .modal-box,.version-update-modal.active .modal-box,.profile-card.active .card{animation:mcDialogIn .28s cubic-bezier(.22,1,.36,1) both}
+        /* 浮层/下拉：自上而下 */
+        .context-menu.active,.language-dropdown-menu.open{animation:mcDropIn .18s cubic-bezier(.22,1,.36,1) both}
+        .new-messages-btn.show{animation:mcRiseIn .22s cubic-bezier(.22,1,.36,1) both}
+        .typing-indicator.active{animation:mcOverlayIn .18s ease both}
+        .search-bar.open{animation:searchBarIn .24s cubic-bezier(.22,1,.36,1) both}
+        /* 角标：弹出 */
+        .online-badge.show,.sidebar-badge.show,.bottom-nav .nav-item .badge.show{animation:mcBadgeIn .22s cubic-bezier(.22,1,.36,1) both}
+        /* 登录 → 聊天：与登录层淡出交叉溶解 */
+        .main-interface:not(.hidden){animation:mcOverlayIn .3s ease both}
+        /* FloxChat 登录面板切换 */
+        .floxchat-login{animation:mcOverlayIn .26s ease both}
+        .floxchat-login .floxchat-step2{animation:mcDropIn .22s ease both}
+
+        /* 可点元素：按下轻微回弹 */
+        .btn-primary,.btn-icon,.send-btn,.icon-btn,.nav-item,.settings-tab,.action-btn,.emoji-item,.search-nav-btn,.menu-item,.terms-close,.settings-close-btn,.toggle-pwd,.emoji-tab,.member-item,.file-btn{transition:transform .14s cubic-bezier(.4,0,.2,1),background-color .18s ease,color .18s ease,border-color .18s ease,opacity .18s ease,box-shadow .18s ease}
+        .btn-primary:active,.btn-icon:active,.send-btn:active,.icon-btn:active,.action-btn:active,.emoji-item:active,.search-nav-btn:active,.menu-item:active,.terms-close:active,.settings-close-btn:active,.toggle-pwd:active,.emoji-tab:active,.member-item:active,.file-btn:active{transform:scale(.96)}
+        .nav-item:active,.settings-tab:active{transform:translateY(1px)}
+        .msg-img-thumb{transition:transform .18s cubic-bezier(.22,1,.36,1),opacity .18s ease}
+        .msg-img-thumb:hover{transform:scale(1.015)}
+
+        /* 跨文档页面切换（index ↔ 服务协议），不支持的浏览器自动忽略 */
+        @view-transition{navigation:auto}
+        ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s}
+
+        /* 无障碍：跟随系统"减少动态效果" */
+        @media (prefers-reduced-motion: reduce){
+            *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+            ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none !important}
+        }
         .sidebar .logo-area .logo-text{font-size:18px;font-weight:700;color:var(--text-primary);margin-left:4px}
         .sidebar .version-tag{font-size:10px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}

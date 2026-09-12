@@ -96,6 +96,29 @@
             .content{padding:16px 14px}
             .footer{font-size:11px;flex-direction:column}
         }
+
+        /* ==================== 动效层（只动 opacity / transform） ==================== */
+        @keyframes agFadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes agFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+        .topbar{animation:agFadeIn .28s ease both}
+        .progress-bar{animation:agFadeIn .3s ease both}
+        .layout>*{animation:agFadeUp .36s cubic-bezier(.22,1,.36,1) both}
+        .content{animation-delay:.06s}
+        .back-to-top{animation:agFadeIn .24s ease}
+        .back-to-top{transition:transform .16s cubic-bezier(.4,0,.2,1),opacity .16s ease,background-color .18s ease}
+        .back-to-top:active{transform:scale(.94)}
+        .lang-opt,.icon-btn,.toc a{transition:transform .14s cubic-bezier(.4,0,.2,1),background-color .18s ease,color .18s ease,border-color .18s ease,opacity .18s ease}
+        .lang-opt:active,.icon-btn:active,.toc a:active{transform:scale(.97)}
+
+        /* 跨文档页面切换（与服务协议 ↔ 主站） */
+        @view-transition{navigation:auto}
+        ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s}
+
+        /* 无障碍：跟随系统"减少动态效果" */
+        @media (prefers-reduced-motion: reduce){
+            *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+            ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none !important}
+        }
     </style>
 </head>
 <body>
