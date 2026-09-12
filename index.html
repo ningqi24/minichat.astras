@@ -1844,8 +1844,10 @@ var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 // 注意：Edge Function 侧用的是 service_role，GoTrue 对 service_role 会跳过 CAPTCHA
 //      校验（internal/api/middleware.go 的 requireAdminCredentials 例外），
 //      所以 FloxChat 验证码登录这条路径不需要人机验证。
-var CAPTCHA_PROVIDER = '';    // 'turnstile'（推荐，多数情况无感）或 'hcaptcha'
-var CAPTCHA_SITE_KEY = '';    // 在 Supabase 填的必须是同一个提供商的 secret
+var CAPTCHA_PROVIDER = 'turnstile';              // 'turnstile' 或 'hcaptcha'
+var CAPTCHA_SITE_KEY = '0x4AAAAAAExcrClTSiZHfYTp'; // Turnstile Site Key（公开值，放前端没问题）
+// ⚠️ Secret Key 只填在 Supabase → Authentication → Attack Protection，
+//    绝不要写进前端、仓库或任何公开位置。
 
 // 统一调用 Edge Function；失败时抛出带 code 的错误，便于区分“账号密码错误”和网络故障
 async function callFloxEdge(payload) {
@@ -1943,9 +1945,9 @@ function renderCaptcha(slotId) {
             theme: document.body.classList.contains('light-theme') ? 'light' : 'dark',
             callback: function(t) { captchaSlots[slotId].token = t; },
             'expired-callback': function() { captchaSlots[slotId].token = null; },
-            'error-callback': function() { captchaSlots[slotId].token = null; }
+            'error-callback': function() { captchaSlots[slotId].token = null; captchaSlots[slotId].error = true; }
         };
-        var slot = captchaSlots[slotId] = captchaSlots[slotId] || { widgetId: null, token: null };
+        var slot = captchaSlots[slotId] = captchaSlots[slotId] || { widgetId: null, token: null, error: false };
         if (CAPTCHA_PROVIDER === 'turnstile' && window.turnstile) {
             slot.widgetId = window.turnstile.render(box, opts);
         } else if (CAPTCHA_PROVIDER === 'hcaptcha' && window.hcaptcha) {
@@ -1975,7 +1977,8 @@ async function doAuth(email, pwd) {
     // 开启 CAPTCHA 后，登录/注册请求必须带 captchaToken，否则 GoTrue 直接拒绝
     if (captchaEnabled() && !captchaTokenOf('captchaBoxLogin')) {
         renderCaptcha('captchaBoxLogin');
-        setAuthMessage('请先完成下方的人机验证', 'error');
+        var capSlot = captchaSlots['captchaBoxLogin'];
+        setAuthMessage(capSlot && capSlot.error ? '人机验证组件加载失败，请刷新页面重试' : '请先完成下方的人机验证', 'error');
         return;
     }
     if (btnLogin) { btnLogin.disabled = true; btnLogin.style.opacity = '0.6'; }
