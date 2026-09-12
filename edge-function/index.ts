@@ -1,6 +1,15 @@
 // Edge Function: clever-task
 // 部署到 MiniChat 的 Supabase 项目
 // 用法: supabase functions deploy clever-task
+//
+// 环境变量：
+//   FLOXCHAT_BRIDGE_SECRET  必填，前端/扩展的桥接密钥（沿用现有）
+//   MINICHAT_BRIDGE_PEPPER  建议设置：独立随机串，用于派生 MiniChat 账号口令，勿与其它密钥复用
+//   FLOXCHAT_VERIFY_URL     可选，FloxChat 验证码校验地址（默认 https://shebiao.dpdns.org/ces/verify-code）
+//
+// 动作：
+//   flox_code_login  { email, code }  在服务端校验 FloxChat 邮箱验证码后签发 MiniChat 会话
+// 说明：本函数不读取 FloxChat 用户表、不提供密码登录，也绝不在 FloxChat 侧创建/修改/删除账号。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,6 +17,11 @@ const SHARED_SECRET = Deno.env.get("FLOXCHAT_BRIDGE_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+// ---- FloxChat 验证码校验地址（服务端专用）----
+const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://shebiao.dpdns.org/ces/verify-code";
+// MiniChat 侧账号口令由服务端密钥派生，客户端无法推算（部署时请设置独立随机值）
+const MINICHAT_BRIDGE_PEPPER = Deno.env.get("MINICHAT_BRIDGE_PEPPER") ?? SHARED_SECRET;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -46,6 +60,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "unauthorized" }, 403);
     }
 
+    if (action === "flox_code_login") return await floxCodeLogin(body);
     if (action === "get_messages") return await getMessages(body);
     if (action === "send_message") return await sendMessage(body);
     if (action === "get_users") return await getUsers(body);
@@ -124,6 +139,102 @@ async function login(body: any) {
     user_id: finalSignIn.user!.id,
     email,
     display_name: display_name || email.split("@")[0],
+  });
+}
+
+// ============================================================================
+// FloxChat 账号校验（服务端代理）
+// 约束：只负责“邮箱验证码 → MiniChat 会话”的换发，不读取 FloxChat 用户表、
+//       不提供密码登录，也绝不在 FloxChat 侧创建/修改/删除任何账号。
+// ============================================================================
+
+// 验证码登录（兼容旧流程）：验证码在服务端向 FloxChat 校验，客户端不再自行判定
+async function floxCodeLogin(body: any) {
+  const email = String(body?.email ?? "").trim();
+  const code = String(body?.code ?? "").trim();
+  if (!email || !code) {
+    return json({ error: "missing_credentials", code: "MISSING_CREDENTIALS" }, 400);
+  }
+
+  let text = "";
+  try {
+    const resp = await fetch(FLOXCHAT_VERIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    text = await resp.text();
+  } catch (e: any) {
+    return json({ error: `FloxChat 校验服务暂不可用: ${e.message}`, code: "FLOX_UNAVAILABLE" }, 502);
+  }
+
+  let ok = false;
+  try {
+    const parsed = JSON.parse(text);
+    ok = parsed?.success === true || parsed?.verified === true;
+  } catch (_) {
+    // 非 JSON 响应时退化为关键字判断
+  }
+  if (!ok && /"verified"\s*:\s*true|verified/i.test(text)) ok = true;
+  if (!ok) return json({ error: "invalid_code", code: "INVALID_CODE" }, 401);
+
+  return await issueSession(email, email.split("@")[0], "");
+}
+
+// 由服务端密钥推导 MiniChat 账号口令（每次现算，不落库、不下发）
+async function bridgePassword(email: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(MINICHAT_BRIDGE_PEPPER),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode("minichat:" + email.toLowerCase())));
+  return "fp_" + Array.from(sig).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// 仅处理 MiniChat(Supabase) 侧的账号开通与会话签发，不触碰 FloxChat 数据
+async function issueSession(email: string, displayName: string, floxUid: string) {
+  const password = await bridgePassword(email);
+
+  let session =
+    (await supabaseAnon.auth.signInWithPassword({ email, password })).data?.session ?? null;
+
+  if (!session) {
+    const created = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { source: "floxchat", display_name: displayName, flox_uid: floxUid },
+    });
+
+    if (created.error && /already been registered|already registered|exists/i.test(created.error.message)) {
+      const { data: list, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) throw new Error(`用户查询失败: ${listError.message}`);
+      const existing = list?.users?.find(
+        (u: any) => String(u.email ?? "").toLowerCase() === email.toLowerCase(),
+      );
+      if (!existing) throw new Error("用户查询失败");
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existing.id, { password });
+      if (updateError) throw new Error(`更新账号失败: ${updateError.message}`);
+    } else if (created.error) {
+      throw new Error(`开通 MiniChat 账号失败: ${created.error.message}`);
+    }
+
+    session = (await supabaseAnon.auth.signInWithPassword({ email, password })).data?.session ?? null;
+  }
+
+  if (!session) throw new Error("建立会话失败");
+  await ensureProfileAndConversation(session.user!.id, email, displayName);
+
+  return json({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    user_id: session.user!.id,
+    email,
+    display_name: displayName,
   });
 }
 

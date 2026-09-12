@@ -16,6 +16,9 @@
 - **用户认证**：邮箱注册/登录，支持密码显示切换。  
   **User authentication** – Email sign-up / sign-in with password visibility toggle.
 
+- **FloxChat 验证码登录**：使用 FloxChat 账号邮箱获取验证码即可登录 MiniChat，无需在 MiniChat 单独注册（首次登录会自动创建本地账号）。验证码校验**完全交给 FloxChat 官方接口**，MiniChat 不读取、不存储 FloxChat 的任何账号数据，也不提供注册功能。  
+  **FloxChat code login** – Sign in with your FloxChat email and a verification code, no separate MiniChat registration needed. Verification is delegated **entirely to FloxChat's official endpoint** — MiniChat never reads or stores FloxChat account data and offers no registration.
+
 - **个性昵称**：每个用户可设置显示昵称，**修改后自动同步所有历史消息**，告别显示混乱。  
   **Custom display name** – Each user can set a nickname, and **all historical messages are automatically updated** after change, eliminating display inconsistency.
 
@@ -107,7 +110,30 @@ ALTER TABLE profiles REPLICA IDENTITY FULL;
 4. 在 Authentication → Providers 中启用 Email 登录（默认已启用）。  
    Enable Email login under Authentication → Providers (enabled by default).
 
-### 2. 获取 Supabase 配置 | Get Supabase Configuration
+### 2. 部署 Edge Function（FloxChat 验证码登录用，可选）| Deploy the Edge Function (optional)
+
+> 仅在使用 FloxChat 验证码登录时需要；只做邮箱注册/登录可跳过。  
+> Only required for FloxChat code login; skip it if you only use email sign-up / sign-in.
+
+源码位于 `edge-function/index.ts`，部署为名为 `clever-task` 的函数，并关闭 JWT 校验（鉴权改用请求体中的 `secret`）：  
+The source lives in `edge-function/index.ts`. Deploy it as a function named `clever-task` with JWT verification disabled (auth is done with the `secret` field in the request body):
+
+```bash
+supabase functions deploy clever-task --no-verify-jwt
+supabase secrets set FLOXCHAT_BRIDGE_SECRET=<与前端 MINICHAT_BRIDGE_SECRET 保持一致>
+supabase secrets set MINICHAT_BRIDGE_PEPPER=<一段独立的随机串>
+```
+
+| 环境变量 | 必填 | 说明 | Description |
+|----------|------|------|-------------|
+| `FLOXCHAT_BRIDGE_SECRET` | 是 | 桥接密钥，必须与 `index.html` 中的 `MINICHAT_BRIDGE_SECRET` 完全一致 | Bridge secret; must match `MINICHAT_BRIDGE_SECRET` in `index.html` |
+| `MINICHAT_BRIDGE_PEPPER` | 建议 | 独立随机串，用于派生自动创建的 MiniChat 账号口令；未设置时回退为 `FLOXCHAT_BRIDGE_SECRET` | Independent random string used to derive the auto-created MiniChat account password |
+| `FLOXCHAT_VERIFY_URL` | 否 | 验证码校验接口地址，默认使用 FloxChat 官方接口 | Endpoint used to verify the code; defaults to the official FloxChat endpoint |
+
+**部署顺序：先 Edge Function，后前端**，否则验证码登录会直接报错。  
+**Deploy order: Edge Function first, frontend second**, otherwise code login fails.
+
+### 3. 获取 Supabase 配置 | Get Supabase Configuration
 
 在项目设置中找到：  
 Find the following in your project settings:
@@ -115,7 +141,7 @@ Find the following in your project settings:
 - **Project URL**（`SUPABASE_URL`）
 - **anon public key**（`SUPABASE_ANON_KEY`）
 
-### 3. 部署前端 | Deploy Frontend
+### 4. 部署前端 | Deploy Frontend
 
 **方式一：直接部署（推荐）**  
 **Option 1: Direct deployment (recommended)**
@@ -152,10 +178,16 @@ Simply open `index.html` (but you must modify Supabase config) or use any static
 ```
 minichat.astras/
 ├── index.html          # 主应用（HTML + CSS + JS）| Main application
-├── agreements.html     # 服务协议页面 | Service agreement page
+├── agreements/         # 服务协议页面 | Service agreement page
+│   └── index.html
 ├── manifest.json       # PWA 配置 | PWA manifest
 ├── sw.js               # Service Worker（离线缓存）| Service Worker
 ├── CNAME               # DNS 配置 | DNS configuration
+├── favicon.ico         # 站点图标 | Favicon
+├── sitemap.xml         # 站点地图 | Sitemap
+├── minichat-bridge.js  # TurboWarp 扩展（FloxChat 互通）| TurboWarp extension for FloxChat interop
+├── edge-function/      # Supabase Edge Function | Supabase Edge Function
+│   └── index.ts        # clever-task：验证码登录 / 消息代理 | code login & message proxy
 ├── LICENSE
 ├── README.md
 ├── assets/             # 图标资源 | Icon assets
@@ -164,7 +196,7 @@ minichat.astras/
 │   ├── Inspired.svg    # 灵感标识
 │   └── basied.svg      # 基础标识
 ├── data/               # 数据文件 | Data files
-│   ├── vision.json     # Vision 数据
+│   ├── vision.json     # 版本检测数据（需与 APP_VERSION 一致）| Version check data (must match APP_VERSION)
 │   ├── kaomoji.json    # 颜文字数据
 │   └── emojihub-all.json # Emoji 数据
 ├── lib/                # 第三方库 | Third-party libraries
@@ -183,6 +215,8 @@ minichat.astras/
 |--------|------|-------------|
 | `SUPABASE_URL` | Supabase 项目 URL | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase 匿名密钥（公开） | Supabase anon public key |
+| `MINICHAT_EDGE_URL` | Edge Function 地址（`.../functions/v1/clever-task`），FloxChat 验证码登录用 | Edge Function URL used by FloxChat code login |
+| `MINICHAT_BRIDGE_SECRET` | 桥接密钥，必须与 Edge Function 的 `FLOXCHAT_BRIDGE_SECRET` 一致 | Bridge secret; must match the Edge Function's `FLOXCHAT_BRIDGE_SECRET` |
 | `PAGE_SIZE` | 历史消息每页加载数量（默认 20） | Number of historical messages per page (default 20) |
 | `SPLASH_DURATION` | 启动页展示时间（毫秒，默认 2600） | Splash screen duration (ms, default 2600) |
 
@@ -255,6 +289,8 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 
 - [Supabase](https://supabase.com) - 强大的 BaaS 平台 | Powerful BaaS platform
 - [Lucide](https://lucide.dev) - 图标库（内联 SVG）| Icon library (inline SVG)
+- **FloxChat**（B站 @摄表）- 验证码登录能力来源于 FloxChat。MiniChat 仅调用其验证码接口完成身份核验，不读取、不存储 FloxChat 账号数据，不提供任何形式的注册，也不代表或代替 FloxChat 官方。  
+  **FloxChat** (Bilibili @摄表) – The verification-code login capability comes from FloxChat. MiniChat only calls its code endpoint to verify identity; it never reads or stores FloxChat account data, offers no registration of any kind, and is not affiliated with or acting on behalf of FloxChat.
 
 ---
 
