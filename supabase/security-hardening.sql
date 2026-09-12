@@ -5,6 +5,12 @@
 -- 执行顺序建议：
 --   第 0 步（只读体检）→ 看清现状 → 第 1~4 步（加固）→ 第 5 步（复核）
 --
+-- 本脚本针对的体检结论（2026-XX 实际跑出来的状态）：
+--   ✅ profiles / messages / conversation_participants 的 RLS 已开启，策略本身是合理的
+--   ❌ conversations 的 RLS 是关闭的 → 匿名可直接读写整张表
+--   ❌ storage.objects 上存在多条 {public} 策略：匿名可列举桶内容、匿名可上传、
+--      任何人可覆盖任何人的头像（permissive 策略是 OR 关系，旧的宽松策略会完全抵消新的严格策略）
+--
 -- ⚠️ 第 2 步会删除 public 下这四张表的全部既有策略，请先执行并保存第 0 步的输出，
 --    以便出问题时对照恢复。执行后请立刻用网站完整走一遍：登录 → 发消息 → 改昵称 →
 --    撤回消息 → 上传头像 → 发图片/文件 → 换设备看历史消息。
@@ -67,8 +73,11 @@ create policy messages_update on public.messages for update to authenticated
   with check (sender_email = (auth.jwt() ->> 'email'));
 -- 不建 delete 策略：网站没有删除消息的功能，任何人都不该能直接删
 
--- conversations：只读
+-- conversations：登录用户可读；首次进入时网站会补建"全局聊天"那一行，所以需要 insert
 create policy conversations_select on public.conversations for select to authenticated using (true);
+create policy conversations_insert on public.conversations for insert to authenticated
+  with check (auth.uid() is not null);
+-- 不建 update/delete 策略：会话元数据不该被客户端改动
 
 -- conversation_participants：只能看到/写入自己的参与记录
 create policy cp_select on public.conversation_participants for select to authenticated using (user_id = auth.uid());
@@ -77,19 +86,36 @@ create policy cp_insert on public.conversation_participants for insert to authen
 -- 兜底：显式回收匿名角色对这四张表的表级权限
 revoke all on public.profiles, public.messages, public.conversations, public.conversation_participants from anon;
 
+-- ----------------------------------------------------------------------------
+-- 关于 public.wake_up_supabase（体检发现的额外表）
+-- 它有一条 {anon} INSERT + with_check = true 的策略，用来让外部定时任务给项目"续命"。
+-- 保留即可，但要意识到：任何人都能无限往里插行。建议二选一：
+--   a) 定期清理：delete from public.wake_up_supabase where created_at < now() - interval '1 day';
+--   b) 改成只保留一行的 upsert 模式（需要一个唯一键），从根上杜绝增长。
+-- 若这张表已经不用了，直接 drop table public.wake_up_supabase;
+-- ----------------------------------------------------------------------------
+
 -- ============================================================================
 -- 第 4 步：存储桶
 -- 现状问题：anon 可以直接 list 桶内文件（等于能枚举所有人的图片/附件）。
 -- 目标：公开桶继续通过 /object/public/... 免登录直读，但匿名不能再列举目录。
 -- 上传路径是 public/<文件名>（见 index.html），策略按此收紧。
 -- ============================================================================
--- 4.1 删掉把读取权限发给 anon / public 的策略
+-- 4.1 清空 storage.objects 上的全部既有策略（⚠️ 先存好第 0.2 步输出）
+-- 体检发现的问题策略举例：
+--   allow_public_view            SELECT  {public}  bucket_id='chat-images'      → 匿名可列举图片
+--   chat-audios 30gmsy_1         SELECT  {public}  bucket_id='chat-audios'      → 匿名可列举音频
+--   Allow public read access on chat-files / chat-videos / avatars             → 匿名可列举
+--   allow_upload_chat_images     INSERT  {public}  仅校验桶名                    → ⚠️ 匿名也能上传
+--   chat-audios 30gmsy_0         INSERT  {public}  仅校验桶名                    → ⚠️ 匿名也能上传
+--   avatars 1oj01fe_1            INSERT  {public}  仅校验桶名                    → ⚠️ 匿名也能上传
+--   avatars 1oj01fe_2            UPDATE  {public}  仅校验桶名                    → ⚠️ 任何人可覆盖任何人的头像
+--   Give all users access to read files  bucket_id='bucket_name'               → 无效残留
 do $$
 declare r record;
 begin
   for r in select policyname from pg_policies
            where schemaname = 'storage' and tablename = 'objects'
-             and (roles && array['anon','public']::name[])
   loop
     execute format('drop policy if exists %I on storage.objects', r.policyname);
   end loop;
@@ -99,10 +125,14 @@ end $$;
 create policy storage_read_auth on storage.objects for select to authenticated
   using (bucket_id in ('chat-images','chat-audios','chat-videos','chat-files','avatars'));
 
--- 4.3 登录用户只能往 public/ 前缀上传
+-- 4.3 登录用户只能往 public/ 前缀上传；头像还必须带上自己的 uid 前缀
 create policy storage_insert_auth on storage.objects for insert to authenticated
-  with check (bucket_id in ('chat-images','chat-audios','chat-videos','chat-files','avatars')
-              and (storage.foldername(name))[1] = 'public');
+  with check (
+    bucket_id in ('chat-images','chat-audios','chat-videos','chat-files','avatars')
+    and (storage.foldername(name))[1] = 'public'
+    and (bucket_id <> 'avatars'
+         or storage.filename(name) like ('avatar_' || auth.uid()::text || '_%'))
+  );
 
 -- 4.4 只能覆盖/删除自己上传的文件
 create policy storage_update_own on storage.objects for update to authenticated
