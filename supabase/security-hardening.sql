@@ -109,6 +109,41 @@ create policy storage_update_own on storage.objects for update to authenticated
   using (owner = auth.uid()) with check (owner = auth.uid());
 create policy storage_delete_own on storage.objects for delete to authenticated using (owner = auth.uid());
 
+-- ----------------------------------------------------------------------------
+-- 第 4.5 步（可选，建议）：给没有上限的桶补上体积与类型限制
+-- 体检结果：chat-files / chat-videos 的 file_size_limit 为 NULL（= 不限体积），
+--           五个桶的 allowed_mime_types 全为 NULL（= 任意类型可传）。
+-- 注意：限制过窄会拒掉正常附件，请对照网站 accept 列表（image/*,audio/*,video/*,
+--       .pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip）。
+-- ----------------------------------------------------------------------------
+update storage.buckets
+   set file_size_limit = 20971520,
+       allowed_mime_types = array[
+         'application/pdf',
+         'application/msword',
+         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+         'application/vnd.ms-excel',
+         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+         'application/vnd.ms-powerpoint',
+         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+         'text/plain',
+         'application/zip',
+         'application/x-zip-compressed',
+         'application/octet-stream'
+       ]
+ where id = 'chat-files';
+
+update storage.buckets
+   set file_size_limit = 52428800,
+       allowed_mime_types = array[
+         'video/mp4','video/webm','video/quicktime','video/x-matroska','video/ogg'
+       ]
+ where id = 'chat-videos';
+
+-- 说明：octet-stream 保留是为了兼容浏览器识别不出类型的附件；它会被强制当附件下载
+--       而不会内联渲染，所以不构成 XSS 载体。allowed_mime_types 只挡正常客户端，
+--       直连 Storage API 仍可伪造 Content-Type，属于纵深防御而非唯一防线。
+
 -- ============================================================================
 -- 第 5 步：复核（应为：四张表 rls_enabled = true，且没有任何 anon/public 策略）
 -- ============================================================================
