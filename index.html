@@ -1265,7 +1265,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '4.0.0';
+var APP_VERSION = '4.1.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -1749,20 +1749,31 @@ var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===================== FloxChat 桥接 =====================
-function makeBridgePassword(email) {
-    var h = 0, s = "floxchat_to_minichat_2024" + email;
-    for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
-    return "fc_" + Math.abs(h).toString(36).slice(0, 16);
+// 安全约定：FloxChat 的共享密钥与用户表只存在于 Edge Function 服务端；
+// 浏览器端既不接触密钥，也拿不到 FloxChat 用户数据，更不会注册 FloxChat 账号。
+var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
+var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
+
+// 统一调用 Edge Function；失败时抛出带 code 的错误，便于区分“账号密码错误”和网络故障
+async function callFloxEdge(payload) {
+    var resp = await fetch(MINICHAT_EDGE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.assign({ secret: MINICHAT_BRIDGE_SECRET }, payload))
+    });
+    var data = {};
+    try { data = await resp.json(); } catch (e) {}
+    if (!resp.ok || data.error) {
+        var err = new Error(data.error || ('HTTP ' + resp.status));
+        err.code = data.code || '';
+        throw err;
+    }
+    return data;
 }
-async function handleFloxChatLogin(email) {
-    var edgeResp = await fetch(
-        "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task",
-        { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + SUPABASE_ANON_KEY },
-          body: JSON.stringify({ email: email, password: makeBridgePassword(email), display_name: email.split("@")[0], secret: "flox-meow-2024" }) }
-    );
-    var edgeData = await edgeResp.json();
-    if (edgeData.error) throw new Error(edgeData.error);
-    if (!edgeData.access_token || !edgeData.refresh_token) throw new Error('边缘函数未返回有效令牌');
+
+// Edge 已签发会话：落地 Supabase 会话并进入聊天
+async function applyFloxSession(edgeData, email) {
+    if (!edgeData || !edgeData.access_token || !edgeData.refresh_token) throw new Error('边缘函数未返回有效令牌');
     var setRes = await supabase.auth.setSession({ access_token: edgeData.access_token, refresh_token: edgeData.refresh_token });
     if (setRes.error) throw new Error('设置会话失败: ' + setRes.error.message);
     // 验证会话已生效
@@ -1872,7 +1883,7 @@ async function handleFloxSendCode() {
     document.getElementById('btnFloxSendCode').disabled = true;
     document.getElementById('floxMsg').textContent = '发送中…';
     try {
-        var resp = await fetch('https://chatear.shebiao.dpdns.org/send-code', {
+        var resp = await fetch('https://shebiao.dpdns.org/ces/send-code', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email })
         });
@@ -1897,21 +1908,12 @@ async function handleFloxVerify() {
     btn.disabled = true;
     msgEl.textContent = '验证中…';
     try {
-        var verifyResp = await fetch('https://chatear.shebiao.dpdns.org/verify-code', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: floxEmailVal, code: code })
-        });
-        var rawText = await verifyResp.text();
-        var isOk = rawText.toLowerCase().indexOf('verified') !== -1;
-        if (!isOk) {
-            msgEl.textContent = '验证码错误: ' + rawText.slice(0,40);
-            btn.disabled = false;
-            return;
-        }
+        // 验证码同样交给 Edge Function 在服务端校验，避免前端伪造邮箱直接换会话
+        var data = await callFloxEdge({ action: 'flox_code_login', email: floxEmailVal, code: code });
         msgEl.textContent = '登录中…';
-        await handleFloxChatLogin(floxEmailVal);
+        await applyFloxSession(data, data.email);
     } catch(e) {
-        msgEl.textContent = '网络错误: ' + (e.message || '请重试');
+        msgEl.textContent = (e.code === 'INVALID_CODE') ? '验证码错误或已过期' : ('网络错误: ' + (e.message || '请重试'));
         btn.disabled = false;
     }
 }
