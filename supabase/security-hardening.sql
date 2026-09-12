@@ -140,9 +140,14 @@ create policy storage_update_own on storage.objects for update to authenticated
 create policy storage_delete_own on storage.objects for delete to authenticated using (owner = auth.uid());
 
 -- ----------------------------------------------------------------------------
--- 第 4.5 步（可选，建议）：给没有上限的桶补上体积与类型限制
--- 体检结果：chat-files / chat-videos 的 file_size_limit 为 NULL（= 不限体积），
---           五个桶的 allowed_mime_types 全为 NULL（= 任意类型可传）。
+-- 第 4.5 步（可选）：给桶补上更严的体积与类型限制
+-- 体检结果：chat-files / chat-videos 的 file_size_limit 为 NULL，
+--           五个桶的 allowed_mime_types 全为 NULL。
+-- ⚠️ 修正：Supabase 里 file_size_limit = NULL 并不是"无限大"，而是继承
+--    Project Settings → Storage → "Upload file size limit" 的全局上限
+--    （免费版该上限为 50MB）。所以这里并不是在堵"无限上传"，
+--    只是把 chat-files 收到 20MB、并给附件桶加上类型白名单。
+--    MIME 白名单才是这一步的主要价值。
 -- 注意：限制过窄会拒掉正常附件，请对照网站 accept 列表（image/*,audio/*,video/*,
 --       .pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip）。
 -- ----------------------------------------------------------------------------
@@ -175,7 +180,81 @@ update storage.buckets
 --       直连 Storage API 仍可伪造 Content-Type，属于纵深防御而非唯一防线。
 
 -- ============================================================================
--- 第 5 步：复核（应为：四张表 rls_enabled = true，且没有任何 anon/public 策略）
+-- 第 6 步：发消息限流（数据库层强制，客户端无法绕过）
+-- 说明：网站是直接用 anon key 往 messages 表 insert 的，不走 Edge Function，
+--       所以限流必须放在数据库里才有意义。下面这个触发器让同一邮箱
+--       每分钟最多插入 20 条，超了直接报错。
+-- ============================================================================
+create or replace function public.messages_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  recent int;
+begin
+  select count(*) into recent
+    from public.messages
+   where sender_email = new.sender_email
+     and created_at > now() - interval '1 minute';
+  if recent >= 20 then
+    raise exception '发送过于频繁，请稍后再试' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists messages_rate_limit on public.messages;
+create trigger messages_rate_limit
+  before insert on public.messages
+  for each row execute function public.messages_rate_limit();
+
+-- 想放宽/收紧就改上面那个 20。临时停用：alter table public.messages disable trigger messages_rate_limit;
+
+-- ============================================================================
+-- 第 7 步：清理 public.wake_up_supabase（续命表）
+-- 现状：有一条 {anon} INSERT + with_check = true 的策略，任何人都能无限往里插行。
+-- 目标：保留续命能力，但每天自动清掉旧行，避免无限增长。
+-- 若 create extension 报权限错误，请先到 Dashboard → Database → Extensions 启用 pg_cron。
+-- ============================================================================
+create extension if not exists pg_cron;
+
+do $$
+declare
+  tcol text;
+begin
+  select column_name into tcol
+    from information_schema.columns
+   where table_schema = 'public'
+     and table_name = 'wake_up_supabase'
+     and data_type like 'timestamp%'
+   order by ordinal_position
+   limit 1;
+
+  if tcol is null then
+    raise notice 'wake_up_supabase 里没有时间列，跳过自动清理：请手动确认表结构。';
+    return;
+  end if;
+
+  perform cron.unschedule(jobid) from cron.job where jobname = 'cleanup-wake-up-supabase';
+
+  perform cron.schedule(
+    'cleanup-wake-up-supabase',
+    '17 4 * * *',
+    format('delete from public.wake_up_supabase where %I < now() - interval ''2 days''', tcol)
+  );
+
+  raise notice '已按列 % 创建每日清理任务 cleanup-wake-up-supabase', tcol;
+end $$;
+
+-- 查看/管理：
+--   select jobid, jobname, schedule, command from cron.job;
+--   select * from cron.job_run_details order by start_time desc limit 10;
+-- 如果这张表已经不用了，可以直接：drop table public.wake_up_supabase;
+
+-- ============================================================================
+-- 最后一步：复核（在跑完第 1~7 步之后执行）
+-- 期望结果：四张表 rls_enabled = true，且没有任何 anon/public 策略
 -- ============================================================================
 select c.relname as table_name, c.relrowsecurity as rls_enabled
 from pg_class c join pg_namespace n on n.oid = c.relnamespace

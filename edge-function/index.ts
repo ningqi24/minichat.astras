@@ -306,6 +306,11 @@ async function sendMessage(body: any) {
   const user = await getUserFromBody(body);
   if (!user) return json({ error: "unauthorized" }, 401);
 
+  // 限流：每个账号每分钟最多 20 条，防止脚本刷屏
+  if (!rateLimit(`send:${user.id}`, 20, 60_000)) {
+    return json({ error: "发送过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
+  }
+
   const content = String(body.content || "");
   if (!content.trim()) return json({ error: "empty content" }, 400);
 

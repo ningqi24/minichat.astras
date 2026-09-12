@@ -5470,6 +5470,11 @@ function refreshAllAvatars(email, newUrl) {
                     if (img.getAttribute('src')) img.src = bustCache(url);
                     img.onerror = function() { handleAvatarError(this, email); };
                 });
+                // 关键：getAvatarUrl 会优先取 onlineUsers 里的 avatar_url，
+                // 不同步这里的话，资料卡等"重新计算头像"的地方会一直拿到旧头像
+                Object.keys(onlineUsers).forEach(function(id){
+                    if (onlineUsers[id] && onlineUsers[id].email === email) onlineUsers[id].avatar_url = url;
+                });
                 if (email === currentEmail) {
                     if (sidebarUserAvatar) {
                         sidebarUserAvatar.src = bustCache(url);
