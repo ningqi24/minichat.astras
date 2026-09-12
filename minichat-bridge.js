@@ -50,17 +50,34 @@
     });
   }
 
-  // ---- 登录拿 JWT ----
+  // ---- 把 Edge 返回的会话落到本地状态 ----
+  function applySession(d, fallbackEmail, fallbackName) {
+    token = d.access_token;
+    userEmail = d.email || fallbackEmail;
+    userName = d.display_name || (fallbackName || (fallbackEmail || "").split("@")[0]);
+    userId = d.user_id || null;
+    return d;
+  }
+
+  // ---- 登录拿 JWT（仅对已有 MiniChat 账号；账号不存在会返回 ACCOUNT_NOT_FOUND）----
   function getToken(email, name) {
     return callEdge("login", {
       email: email,
       display_name: name || email.split("@")[0]
     }).then(function(d) {
-      token = d.access_token;
-      userEmail = d.email || email;
-      userName = d.display_name || (name || email.split("@")[0]);
-      userId = d.user_id || null;
-      return d;
+      return applySession(d, email, name);
+    });
+  }
+
+  // ---- 发送 FloxChat 验证码（走 Edge Function 代理，避免 TurboWarp 里的 CORS 拦截）----
+  function sendFloxCode(email) {
+    return callEdge("flox_send_code", { email: email });
+  }
+
+  // ---- 用 FloxChat 验证码登录；首次会自动开通 MiniChat 账号 ----
+  function loginWithFloxCode(email, code) {
+    return callEdge("flox_code_login", { email: email, code: code }).then(function(d) {
+      return applySession(d, email, "");
     });
   }
 
@@ -265,6 +282,7 @@
     _lastMsg: null,
     _historyCache: null,
     _usersCache: null,
+    _lastCodeEmail: "",
 
     connect: function(args) {
       var email = String(args.EMAIL || "").trim();
@@ -274,6 +292,33 @@
       }
       clearError();
       return getToken(email, args.NAME).then(function() {
+        connectWS();
+      }).catch(function(e) {
+        setError(e);
+      });
+    },
+
+    // 给指定邮箱发一封 FloxChat 验证码（首次开通账号用）
+    sendFloxCode: function(args) {
+      var email = String(args.EMAIL || "").trim();
+      if (!email) { setError("请先填写邮箱"); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("邮箱格式不正确：" + email); return; }
+      clearError();
+      return sendFloxCode(email).then(function() {
+        ext._lastCodeEmail = email;
+      }).catch(function(e) {
+        setError(e);
+      });
+    },
+
+    // 用验证码登录；账号不存在时由服务端自动开通
+    connectByCode: function(args) {
+      var email = String(args.EMAIL || "").trim() || ext._lastCodeEmail || "";
+      var code = String(args.CODE || "").trim();
+      if (!email) { setError("请先填写邮箱"); return; }
+      if (!code) { setError("请填写收到的验证码"); return; }
+      clearError();
+      return loginWithFloxCode(email, code).then(function() {
         connectWS();
       }).catch(function(e) {
         setError(e);
@@ -481,6 +526,7 @@
       ext._lastMsg = null;
       ext._historyCache = null;
       ext._usersCache = null;
+      ext._lastCodeEmail = "";
       lastMsg = null;
       lastError = null;
     }
@@ -495,8 +541,19 @@
         color2: "#1d4ed8",
         blocks: [
           // ===== 连接 =====
+          { opcode: "sendFloxCode", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接发送 FloxChat 验证码到邮箱 [EMAIL]",
+            arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
+          },
+          { opcode: "connectByCode", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接用验证码 [CODE] 登录邮箱 [EMAIL]（没账号会自动开通）",
+            arguments: {
+              CODE:  { type: Scratch.ArgumentType.STRING, defaultValue: "" },
+              EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" }
+            }
+          },
           { opcode: "connect", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接连接 [EMAIL] 邮箱 [NAME] 昵称（特权创建账户，请勿随意使用）",
+            text: "桥接直接连接 [EMAIL] 邮箱 [NAME] 昵称（仅限已开通账号）",
             arguments: {
               EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
               NAME:  { type: Scratch.ArgumentType.STRING, defaultValue: "" }
@@ -617,6 +674,8 @@
     },
 
     connect: ext.connect,
+    sendFloxCode: ext.sendFloxCode,
+    connectByCode: ext.connectByCode,
     send: ext.send,
     loadMessages: ext.loadMessages,
     loadAllMessages: ext.loadAllMessages,

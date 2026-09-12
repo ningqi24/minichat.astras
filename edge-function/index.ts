@@ -18,8 +18,10 @@
 // 安全约束：
 //   1. 绝不调用 updateUserById({ password }) 去覆盖既有账号的口令。
 //   2. login 不接受客户端指定的口令，账号已存在且派生口令不匹配时直接返回 401。
-//   3. flox_code_login 对验证码做了严格校验与限流。
-//   4. 本函数不读取 FloxChat 用户表，也绝不在 FloxChat 侧创建/修改/删除任何账号。
+//   3. flox_code_login 对验证码做了严格校验与限流；账号只在验证码校验通过后才开通。
+//   4. flox_send_code 只是把「发送验证码」这一请求代理到 FloxChat，方便 TurboWarp 扩展
+//      调用（扩展直接 fetch 会被 CORS 拦截）。
+//   5. 本函数不读取 FloxChat 用户表，也绝不在 FloxChat 侧创建/修改/删除任何账号。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -30,6 +32,8 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 // ---- FloxChat 验证码校验地址（服务端专用）----
 const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://shebiao.dpdns.org/ces/verify-code";
+// ---- FloxChat 发送验证码地址（服务端代理，扩展端不直接请求，避免 CORS）----
+const FLOXCHAT_SEND_URL = Deno.env.get("FLOXCHAT_SEND_URL") ?? "https://shebiao.dpdns.org/ces/send-code";
 // MiniChat 侧账号口令由服务端密钥派生，客户端无法推算（部署时请设置独立随机值）
 const MINICHAT_BRIDGE_PEPPER = Deno.env.get("MINICHAT_BRIDGE_PEPPER") ?? SHARED_SECRET;
 if (!Deno.env.get("MINICHAT_BRIDGE_PEPPER")) {
@@ -123,6 +127,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "unauthorized" }, 403);
     }
 
+    if (action === "flox_send_code") return await floxSendCode(req, body);
     if (action === "flox_code_login") return await floxCodeLogin(req, body);
     if (action === "get_messages") return await getMessages(body);
     if (action === "send_message") return await sendMessage(body);
@@ -189,7 +194,42 @@ async function login(req: Request, body: any) {
 //       不提供密码登录，也绝不在 FloxChat 侧创建/修改/删除任何账号。
 // ============================================================================
 
+// 发送 FloxChat 验证码（服务端代理）。
+// 扩展在 TurboWarp/Electron 里直接 fetch shebiao.dpdns.org 会被 CORS 拦住，
+// 所以绕一层服务端。同时做限流，避免被人拿来给别人的邮箱刷验证码。
+async function floxSendCode(req: Request, body: any) {
+  const email = String(body?.email ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "invalid_email", code: "INVALID_EMAIL" }, 400);
+  }
+  if (
+    !rateLimit(`sendcode:email:${email}`, 3, 10 * 60_000) ||
+    !rateLimit(`sendcode:ip:${clientIp(req)}`, 10, 10 * 60_000)
+  ) {
+    return json({ error: "发送过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
+  }
+
+  try {
+    const resp = await fetch(FLOXCHAT_SEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const text = await resp.text();
+    if (!resp.ok) {
+      return json({
+        error: `FloxChat 发送验证码失败（HTTP ${resp.status}）`,
+        code: "FLOX_SEND_FAILED",
+      }, 502);
+    }
+    return json({ ok: true });
+  } catch (e: any) {
+    return json({ error: `FloxChat 发送服务暂不可用: ${e.message}`, code: "FLOX_UNAVAILABLE" }, 502);
+  }
+}
+
 // 验证码登录（兼容旧流程）：验证码在服务端向 FloxChat 校验，客户端不再自行判定
+// 校验通过后由 issueSession 开通 MiniChat 账号（首次）或直接签发会话（已有）
 async function floxCodeLogin(req: Request, body: any) {
   const email = String(body?.email ?? "").trim().toLowerCase();
   const code = String(body?.code ?? "").trim();
