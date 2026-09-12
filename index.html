@@ -4135,6 +4135,17 @@ function setupProfilesRealtime() {
     }, function(payload) {
         if (!currentEmail) return;
         if (payload.new && payload.new.email === currentEmail) return;
+        // 别人的头像换了：同步到本地缓存并刷新所有显示该用户头像的位置
+        if (payload.eventType === 'UPDATE' && payload.new && payload.old &&
+            payload.new.avatar_url && payload.new.avatar_url !== payload.old.avatar_url) {
+            var changedEmail = payload.new.email;
+            if (changedEmail) {
+                currentUserMap[changedEmail] = Object.assign({}, currentUserMap[changedEmail] || {}, { avatar_url: payload.new.avatar_url });
+                delete failedAvatars[changedEmail];
+                avatarCache = {};
+                refreshAllAvatars(changedEmail, payload.new.avatar_url);
+            }
+        }
         if (payload.eventType === 'UPDATE' && payload.old && payload.new && payload.old.display_name !== payload.new.display_name) {
             var oldName = payload.old.display_name;
             var newName = payload.new.display_name;
@@ -5441,23 +5452,48 @@ async function saveDisplayName() {
 }
 
 // ===================== 头像上传 =====================
+// 把 email 安全地放进 CSS 属性选择器
+function avatarSelectorValue(v) {
+    return String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
 function refreshAllAvatars(email, newUrl) {
             // v3.1.1：先清除失败标记，保证后续 bustCache 能正确生成新 URL
             delete failedAvatars[email];
-            // 预加载新头像，避免 NS_BINDING_ABORTED
-            var preloadImg = new Image();
-            preloadImg.onload = function() {
-                document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(function(img){
+            // 所有渲染头像的地方都会写 data-sender-email（消息列表、在线/全部成员列表、
+            // @提及下拉……），统一按这个属性刷新，避免只更新消息列表、其他地方要刷新页面才变
+            var sel = 'img[data-sender-email="' + avatarSelectorValue(email) + '"]';
+            function applyAvatar(url) {
+                document.querySelectorAll(sel).forEach(function(img){
                     if (img.dataset.avatarErrorHandled === 'true') return;
-                    img.src = bustCache(newUrl);
+                    // 在线列表是懒加载：src 为空时只等进入视口后再取 originalSrc
+                    if (img.dataset.originalSrc !== undefined) img.dataset.originalSrc = url;
+                    if (img.getAttribute('src')) img.src = bustCache(url);
                     img.onerror = function() { handleAvatarError(this, email); };
                 });
-            };
+                if (email === currentEmail) {
+                    if (sidebarUserAvatar) {
+                        sidebarUserAvatar.src = bustCache(url);
+                        sidebarUserAvatar.onerror = function() { handleAvatarError(this, email); };
+                    }
+                    if (avatarPreview) {
+                        avatarPreview.src = bustCache(url);
+                        avatarPreview.onerror = function() { handleAvatarError(this, email); };
+                    }
+                }
+                if (profileCard && profileCard.classList.contains('active') && profileCardEmail &&
+                    profileCardEmail.textContent === email && profileCardAvatar) {
+                    profileCardAvatar.src = bustCache(url);
+                    profileCardAvatar.onerror = function() { handleAvatarError(this, email); };
+                }
+            }
+            // 预加载新头像，避免 NS_BINDING_ABORTED
+            var preloadImg = new Image();
+            preloadImg.onload = function() { applyAvatar(newUrl); };
             preloadImg.onerror = function() {
                 failedAvatars[email] = true;
-                document.querySelectorAll('.message[data-sender-email="'+email+'"] .avatar-wrapper img').forEach(function(img){
+                document.querySelectorAll(sel).forEach(function(img){
                     if (img.dataset.avatarErrorHandled === 'true') return;
-                    img.src = getDefaultAvatar(email);
+                    if (img.getAttribute('src')) img.src = getDefaultAvatar(email);
                     img.onerror = null;
                 });
             };
