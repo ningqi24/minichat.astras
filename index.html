@@ -128,6 +128,18 @@
         .floxchat-entry:focus{outline:none}
         .floxchat-entry:focus-visible .floxchat-entry-mask{outline:2px solid var(--accent);outline-offset:2px}
         .floxchat-entry-mask img{display:block;width:26px;height:26px;pointer-events:none}
+        .floxchat-login .floxchat-back{color:var(--text-secondary);transition:color var(--transition-fast);margin-bottom:16px}
+        .floxchat-login .floxchat-back:hover{color:var(--accent)}
+        .bridge-header{display:flex;flex-direction:column;align-items:center;margin:0 0 22px}
+        .bridge-logos{position:relative;isolation:isolate;display:flex;align-items:center;gap:16px;margin-bottom:14px}
+        .bridge-logos::before{content:"";position:absolute;left:26px;right:26px;top:50%;height:1px;transform:translateY(-50%);background:linear-gradient(90deg,transparent,var(--border-color) 22%,var(--border-color) 78%,transparent);z-index:0}
+        .bridge-logos::after{content:"";position:absolute;left:50%;top:50%;width:180px;height:84px;transform:translate(-50%,-50%);background:radial-gradient(ellipse at center,var(--accent-light),transparent 70%);z-index:0;pointer-events:none}
+        .bridge-tile{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:52px;height:52px;padding:11px;box-sizing:border-box;border-radius:16px;background:var(--bg-input);border:1px solid var(--border-color);box-shadow:var(--flox-mask-shadow)}
+        .bridge-tile img{display:block;width:100%;height:100%;object-fit:contain}
+        .bridge-cross{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border-color);color:var(--accent);box-shadow:var(--flox-mask-shadow)}
+        .bridge-title{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:.2px;margin-bottom:6px}
+        .bridge-title em{font-style:normal;font-weight:400;color:var(--accent);margin:0 5px}
+        .bridge-sub{font-size:12px;line-height:1.6;color:var(--text-secondary);text-align:center}
         .sidebar .logo-area .logo-text{font-size:18px;font-weight:700;color:var(--text-primary);margin-left:4px}
         .sidebar .version-tag{font-size:10px;color:var(--text-muted);margin-left:auto;white-space:nowrap}
         @media(max-width:480px){.sidebar .logo-area .logo-text,.sidebar .version-tag{display:none}}
@@ -808,6 +820,15 @@
             <!-- FloxChat 验证码登录 -->
             <div class="floxchat-login" id="floxLogin">
                 <button type="button" class="floxchat-back" id="floxBack">&larr; 返回邮箱登录</button>
+                <div class="bridge-header">
+                    <div class="bridge-logos">
+                        <span class="bridge-tile"><img src="assets/logo.svg" alt="MiniChat"/></span>
+                        <span class="bridge-cross" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+                        <span class="bridge-tile"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
+                    </div>
+                    <div class="bridge-title">MiniChat <em>×</em> FloxChat</div>
+                    <div class="bridge-sub">使用 FloxChat 账号验证码安全登录</div>
+                </div>
                 <div class="floxchat-step1" id="floxStep1">
                     <input type="email" id="floxEmail" placeholder="FloxChat 注册邮箱"/>
                     <button class="btn-primary" id="btnFloxSendCode">发送验证码</button>
@@ -1860,7 +1881,8 @@ async function doAuth(email, pwd) {
 // ===================== FloxChat 验证码登录交互 =====================
 var floxEmailVal = '';
 function switchToFloxLogin() {
-    document.querySelector('.login-card .auth-title').textContent = 'FloxChat 登录';
+    document.querySelector('.login-card .logo-area').style.display = 'none';
+    document.querySelector('.login-card .auth-title').style.display = 'none';
     document.querySelector('.login-card .auth-sub').style.display = 'none';
     document.querySelector('.login-card > input').style.display = 'none';
     document.querySelector('.login-card .pwd-wrapper').style.display = 'none';
@@ -1875,6 +1897,8 @@ function switchToFloxLogin() {
     document.getElementById('floxMsg').style.display = '';
 }
 function switchBackFromFlox() {
+    document.querySelector('.login-card .logo-area').style.display = '';
+    document.querySelector('.login-card .auth-title').style.display = '';
     document.querySelector('.login-card .auth-title').textContent = isLoginMode ? t('welcome') : t('createAccount');
     document.querySelector('.login-card .auth-sub').style.display = '';
     document.querySelector('.login-card > input').style.display = '';
