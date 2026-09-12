@@ -1,4 +1,4 @@
-﻿// Edge Function: clever-task
+// Edge Function: clever-task
 // 部署到 MiniChat 的 Supabase 项目
 // 用法: supabase functions deploy clever-task
 //
@@ -12,7 +12,8 @@
 //   get_messages     { access_token, limit, ... } 读历史消息（身份由 token 推导）
 //   send_message     { access_token, content, ...} 发消息（身份由 token 推导，不可伪造）
 //   get_users        { access_token }             读用户列表（供 TurboWarp 扩展使用）
-//   login            { email }                   兼容旧扩展：口令由服务端密钥派生，忽略客户端 password
+//   login            { email }                   兼容旧扩展：口令由服务端密钥派生，忽略客户端 password；
+//                                                仅对已存在账号签发会话，不自动建号（防绕过 CAPTCHA 注册）
 //
 // 安全约束：
 //   1. 绝不调用 updateUserById({ password }) 去覆盖既有账号的口令。
@@ -132,7 +133,7 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-// ---- 兼容旧扩展的登录：口令由服务端派生；账号已存在且口令不符时拒绝，绝不重置密码 ----
+// ---- 兼容旧扩展的登录：口令由服务端派生；只给已存在的账号签发会话，不再自动建号 ----
 async function login(req: Request, body: any) {
   const email = String(body?.email ?? "").trim().toLowerCase();
   const display_name =
@@ -154,38 +155,32 @@ async function login(req: Request, body: any) {
     return sessionPayload(signInData.session, email, display_name);
   }
 
-  const { data: newUser, error: createError } =
-    await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { source: "floxchat", display_name },
-    });
+  // 登录失败：账号不存在，或者口令不是服务端派生值。
+  //
+  // ⚠️ 这里刻意【不再】调用 admin.createUser 自动建号：
+  //    桥接密钥是公开的（写在前端/扩展里），自动建号等于留了一个绕过网站
+  //    Turnstile 的注册后门——任何人 POST {action:"login", email:"任意邮箱"} 就能
+  //    拿到一个 email_confirm=true 的账号，进而读取全站消息和用户资料。
+  //    注册必须回到带 CAPTCHA 的网站入口。
+  //    扩展用户的路径：先到网站用 FloxChat 验证码登录一次（账号会以服务端
+  //    派生口令开通），之后本扩展即可正常连接。
+  const { data: existingProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
 
-  // 账号已存在但服务端派生口令不正确：直接拒绝。
-  // 注意：这里绝不能调用 updateUserById 重置密码——旧实现在这里会把既有账号的
-  // 密码改成调用方指定的值，等于凭邮箱地址就能接管任意 MiniChat 账号。
-  if (createError && /already/i.test(createError.message)) {
+  if (existingProfile) {
     return json({
-      error: "该邮箱已有 MiniChat 账号，请改用 FloxChat 验证码登录",
+      error: "该邮箱已有 MiniChat 账号，但口令与桥接不匹配。请先到网站用 FloxChat 验证码登录一次。",
       code: "ACCOUNT_EXISTS",
     }, 401);
   }
 
-  if (createError) throw new Error(`创建用户失败: ${createError.message}`);
-
-  if (newUser.user) {
-    await ensureProfileAndConversation(newUser.user.id, email, display_name);
-  }
-
-  const { data: finalSignIn } = await supabaseAdminAuth.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (!finalSignIn?.session) throw new Error("新用户登录失败");
-
-  return sessionPayload(finalSignIn.session, email, display_name);
+  return json({
+    error: "账号不存在。请先到网站用 FloxChat 验证码登录一次，扩展即可正常连接。",
+    code: "ACCOUNT_NOT_FOUND",
+  }, 404);
 }
 
 // ============================================================================
