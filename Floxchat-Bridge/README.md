@@ -19,7 +19,7 @@ FloxChat 的群头像克隆体用的是 `set size to N%`，**N% 是相对图片�
 
 实测下来 **136px 高** 和 FloxChat 其他群头像大小相当。想再调就改两处：
 
-- `minichat-avatar.svg` 里的 `height` 和 `viewBox` 的后两位、以及 `scale()` 的倍数
+- `minichat-avatar-150.svg` 里的圆半径和图形 `scale()` 倍数
 - `floxchat-patch.js` 里的 `GAVATAR` 常量
 
 ⚠️ 两个坑（都踩过了）：
@@ -28,6 +28,18 @@ FloxChat 的群头像克隆体用的是 `set size to N%`，**N% 是相对图片�
    `<g transform="scale(S)">`，只改 `width`/`height` 会让 `scratch-svg-renderer`
    按新画布建皮肤、却仍按旧坐标画图形，结果只显示左上角一小块。
 2. `rotationCenter` 注释也要按同一倍数缩放。
+
+## 群聊 ID 规范
+
+FloxChat 的群聊 ID **统一 7 位**（`GID`+4 位数字，以及 `FLOXGRP` / `SAYLINK` 这两个特例）。
+
+MiniChat 这个群是纯本地哨兵（不经过 FloxChat 服务器），但照样按 7 位取：
+
+```
+MINCHAT
+```
+
+要改就在 `floxchat-patch.js` 的 `GID` 和 `minichat-bridge.js` 的 `FLOX_GID` 两处一起改。
 
 ## 扩展地址
 

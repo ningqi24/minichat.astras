@@ -4,7 +4,8 @@ const src = process.argv[2];
 const dst = process.argv[3];
 const j = JSON.parse(fs.readFileSync(src, 'utf8'));
 const EXT = 'minichatbridge';
-const GID = 'MINICHAT';
+// FloxChat 的群聊 ID 规范：统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK 都是 7 位）
+const GID = 'MINCHAT';
 const GNAME = 'MiniChat 群聊';
 // 150x150 圆形：FloxChat 的群头像/用户头像规格（原作者确认）。
 // FloxChat 用「set size to N%」缩放头像，N% 相对图片自然尺寸，
@@ -90,7 +91,7 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   const mine = ['已登录用户所在群聊', listId('已登录用户所在群聊')];
 
   // 克隆体的 Y 坐标是用 data_itemnumoflist(群聊克隆体ID, 已登录用户所在群聊) 算行号的，
-  // 找不到会返回 0，整行就会被顶到搜索框那一行。所以必须把 MINICHAT 也登记进「我所在的群聊」。
+  // 找不到会返回 0，整行就会被顶到搜索框那一行。所以必须把 MINCHAT 也登记进「我所在的群聊」。
   // 注意：这必须发生在过滤循环之后（本注入点正好在「阶段 = 群聊获取完毕」之前），
   // 否则循环会多跑一轮，还可能因为 contains 匹配空串而多出一个空行。
   const a0 = mkBlock(t, 'data_addtolist', { ITEM: lit(GID) }, { LIST: mine });
