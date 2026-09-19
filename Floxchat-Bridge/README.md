@@ -127,7 +127,7 @@ node floxchat-validate.js <输出目录>
 > ⚠️ `build-floxchat.ps1` **必须保持纯 ASCII**。PowerShell 5.1 在没有 BOM 时按
 > ANSI（中文系统是 GBK）读取 .ps1，文件里的中文会变乱码并可能直接把语法搞崩。
 
-补丁清单写在 `floxchat-patch.js` 里每一段的上面，共 10 处。
+补丁清单写在 `floxchat-patch.js` 里每一段的上面，共 11 处。
 已在 **FloxChat P2.4** 与 **FloxChat P2.5.1** 上验证通过。
 
 ### 为什么迁移成本低
