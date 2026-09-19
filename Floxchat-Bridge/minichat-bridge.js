@@ -101,6 +101,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
+  var BRIDGE_VERSION = "v3";
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
   var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
@@ -292,6 +293,20 @@
       // 只规范化这次真的要渲染的那几条消息的发送者头像
       return normalizeAvatarsFor(avatars, senderEmails(msgs.slice(start))).then(function() {
         var added = 0;
+        // 首次回填时先放一条状态气泡：既是给用户的提示，
+        // 也是「扩展版本」的可见标记（看这行就知道浏览器有没有拿到新版 JS）
+        if (backfill) {
+          list.value.push(JSON.stringify({
+            username: "MiniChat",
+            uid: "",
+            avatar_url: "",
+            content: floxBase64("[MiniChat 桥接 " + BRIDGE_VERSION + "] 已连接，正在加载消息…"),
+            time: floxTime(new Date().toISOString()),
+            mid: "bridge-boot"
+          }));
+          ext._floxSeen["bridge-boot"] = 1;
+          added++;
+        }
         for (var i = start; i < msgs.length; i++) {
           var m = msgs[i];
           var id = String(m.id || "");
