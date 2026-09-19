@@ -153,6 +153,24 @@
     });
   }
 
+  // ---- 自动推送：新消息一到就直接追加进目标列表，FloxChat 下一秒的刷新循环自会渲染 ----
+  // 这样完全不需要轮询 MiniChat，也不会消耗 Edge Function 的调用额度。
+  var floxAutoList = null;
+
+  function floxAutoPushToList(msg) {
+    if (!floxAutoList || !msg) return;
+    var list = findList(floxAutoList);
+    if (!list) return;
+    ext._floxSeen = ext._floxSeen || {};
+    var id = String(msg.id || "");
+    if (id) {
+      if (ext._floxSeen[id]) return;
+      ext._floxSeen[id] = 1;
+    }
+    list.value.push(toFloxMessage(msg, avatarByEmail()));
+    if (msg.created_at) ext._floxLastTs = String(msg.created_at);
+  }
+
   // 往 FloxChat 的群聊列表里塞一个「MiniChat」条目（幂等）
   function injectFloxGroup(listName) {
     var list = findList(listName);
@@ -232,6 +250,8 @@
   // ---- 收到新消息的统一入口（扩展加载时只注册一次，避免回调无限增长）----
   function onBridgeMessage(msg) {
     lastMsg = msg;
+    // 先推进列表，再触发 HAT，保证 FloxChat 渲染时数据已经就位
+    try { floxAutoPushToList(msg); } catch (_) {}
     if (Scratch.vm && Scratch.vm.runtime) {
       Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
     }
@@ -446,6 +466,24 @@
 
     floxGroupId: function() { return FLOX_GID; },
 
+    floxAutoPush: function(args) {
+      clearError();
+      var name = Scratch.Cast.toString(args.LIST || "").trim();
+      if (!name) { setError("请先在积木下拉里选择列表"); return; }
+      if (!findList(name)) { setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表"); return; }
+      floxAutoList = name;
+      ext._floxSeen = ext._floxSeen || {};
+      // 首次开启先回填一次，避免刚进聊天页是空的
+      if (!ext._floxLastTs && token && userEmail) {
+        return appendFloxMessages(name).catch(function(e) { setError(e); });
+      }
+    },
+
+    floxAutoPushOff: function() {
+      floxAutoList = null;
+      clearError();
+    },
+
     floxResetCursor: function() {
       ext._floxSeen = {};
       ext._floxLastTs = "";
@@ -645,6 +683,7 @@
       ext._lastCodeEmail = "";
       ext._floxSeen = {};
       ext._floxLastTs = "";
+      floxAutoList = null;
       lastMsg = null;
       lastError = null;
     }
@@ -773,6 +812,13 @@
             text: "桥接刷新 MiniChat 消息到列表 [LIST]（FloxChat 消息格式，需先连接）",
             arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
           },
+          { opcode: "floxAutoPush", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接开启 MiniChat 自动推送（新消息直接写入 [LIST]，不轮询）",
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
+          },
+          { opcode: "floxAutoPushOff", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接关闭 MiniChat 自动推送"
+          },
           { opcode: "floxGroupId", blockType: Scratch.BlockType.REPORTER,
             text: "桥接 MiniChat 群聊ID（和「当前显示的群聊ID」比较用）"
           },
@@ -812,6 +858,8 @@
     connectByCode: ext.connectByCode,
     floxInjectGroup: ext.floxInjectGroup,
     floxRefreshMessages: ext.floxRefreshMessages,
+    floxAutoPush: ext.floxAutoPush,
+    floxAutoPushOff: ext.floxAutoPushOff,
     floxGroupId: ext.floxGroupId,
     floxResetCursor: ext.floxResetCursor,
     send: ext.send,
