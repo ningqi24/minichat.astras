@@ -191,7 +191,11 @@ minichat.astras/
 ├── CNAME               # DNS 配置 | DNS configuration
 ├── favicon.ico         # 站点图标 | Favicon
 ├── sitemap.xml         # 站点地图 | Sitemap
-├── minichat-bridge.js  # TurboWarp 扩展（FloxChat 互通）| TurboWarp extension for FloxChat interop
+├── Floxchat-Bridge/    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop (extension + patch scripts)
+│   ├── minichat-bridge.js      # TurboWarp 扩展 | TurboWarp extension
+│   ├── minichat-logo.svg       # 群聊列表头像（300px）| Group avatar (300px)
+│   ├── floxchat-patch.js       # FloxChat 工程补丁脚本 | FloxChat project patcher
+│   └── floxchat-validate.js    # 补丁后校验 | Post-patch validator
 ├── edge-function/      # Supabase Edge Function | Supabase Edge Function
 │   └── index.ts        # clever-task：验证码登录 / 消息代理 | code login & message proxy
 ├── supabase/           # 数据库安全配置 | Database security
