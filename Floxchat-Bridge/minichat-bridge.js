@@ -40,13 +40,26 @@
     if (token && action !== "login") {
       body.access_token = token;
     }
-    return fetch(EDGE_URL, {
+    // 加超时：Edge 冷启动 / 网络卡住时，绝不能让积木链永远挂在那里
+    var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    var tid = ctl ? setTimeout(function() { ctl.abort(); }, 12000) : null;
+    var opts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
-    }).then(function(r) { return r.json(); }).then(function(d) {
+    };
+    if (ctl) opts.signal = ctl.signal;
+    var stopTimer = function() { if (tid) { clearTimeout(tid); tid = null; } };
+    return fetch(EDGE_URL, opts).then(function(r) {
+      stopTimer();
+      return r.json();
+    }).then(function(d) {
       if (d.error) throw new Error(d.error);
       return d;
+    }).catch(function(e) {
+      stopTimer();
+      if (e && e.name === "AbortError") throw new Error("请求超时（12 秒无响应），请检查网络");
+      throw e;
     });
   }
 
@@ -107,8 +120,37 @@
   //（包括历史上传的、尺寸各异的）统一裁成 150x150 再交给 FloxChat，
   // 存量头像完全不用重新上传。
   var FLOX_AVATAR_SIZE = 150;
+  // 头像规范化「最长等多久」。超时就用原图先顶上 —— 绝不能让某张图下载慢
+  // 把整条消息链路堵死（之前就是这么卡住的）。
+  var FLOX_AVATAR_TIMEOUT = 2000;
+  var FLOX_AVATAR_CACHE_KEY = "minichat_bridge_avatars_v1";
   var floxAvatarCache = {};     // 原地址 -> 150x150 的 data URI
   var floxAvatarPending = {};
+
+  // 结果持久化：同一张头像只需要下载+处理一次，之后再打开工程是秒出
+  try {
+    var cachedRaw = localStorage.getItem(FLOX_AVATAR_CACHE_KEY);
+    if (cachedRaw) floxAvatarCache = JSON.parse(cachedRaw) || {};
+  } catch (e) {}
+
+  var floxAvatarSaveTimer = null;
+  function saveAvatarCache() {
+    if (floxAvatarSaveTimer) return;
+    floxAvatarSaveTimer = setTimeout(function() {
+      floxAvatarSaveTimer = null;
+      try {
+        var keys = Object.keys(floxAvatarCache);
+        if (keys.length > 300) keys = keys.slice(-300);
+        var out = {}, bytes = 0;
+        for (var i = keys.length - 1; i >= 0; i--) {
+          var v = floxAvatarCache[keys[i]];
+          if (!v || bytes + v.length > 2000000) break;   // 上限 2MB，别撑爆 localStorage
+          out[keys[i]] = v; bytes += v.length;
+        }
+        localStorage.setItem(FLOX_AVATAR_CACHE_KEY, JSON.stringify(out));
+      } catch (e) {}
+    }, 800);
+  }
 
   function normalizeAvatar(url) {
     url = String(url == null ? "" : url);
@@ -141,14 +183,33 @@
     return floxAvatarPending[url];
   }
 
-  // 把这张「邮箱 -> 头像地址」表里的所有头像先规范化，结果落到 floxAvatarCache
-  function normalizeAvatarMap(avatars) {
-    var uniq = {};
-    Object.keys(avatars).forEach(function(e) {
-      var u = avatars[e];
-      if (u && !uniq[u]) uniq[u] = 1;
+  // 只规范化「这批消息真正用到」的头像，并且限时等待。
+  // 注意别写成「把整张用户表的头像全下一遍」——用户一多就会卡到消息都出不来。
+  function normalizeAvatarsFor(avatars, emails) {
+    var seen = {}, list = [];
+    for (var i = 0; i < emails.length; i++) {
+      var u = avatars[String(emails[i] == null ? "" : emails[i]).toLowerCase()];
+      if (u && !floxAvatarCache[u] && !seen[u]) { seen[u] = 1; list.push(u); }
+    }
+    if (!list.length) return Promise.resolve();
+    var all = Promise.all(list.map(function(u) { return normalizeAvatar(u); }));
+    return new Promise(function(resolve) {
+      var done = false;
+      var finish = function() {
+        if (done) return;
+        done = true;
+        saveAvatarCache();
+        resolve();
+      };
+      setTimeout(finish, FLOX_AVATAR_TIMEOUT);   // 兜底：到点就走，不等了
+      all.then(finish, finish);
     });
-    return Promise.all(Object.keys(uniq).map(function(u) { return normalizeAvatar(u); }));
+  }
+
+  function senderEmails(msgs) {
+    var out = [];
+    for (var i = 0; i < msgs.length; i++) out.push(msgs[i] && msgs[i].sender_email);
+    return out;
   }
 
   function floxAvatarOf(avatars, email) {
@@ -188,11 +249,12 @@
     var backfill = !ext._floxLastTs;
     var prep = ext._usersCache ? Promise.resolve() : (ext.loadUsers() || Promise.resolve());
     return prep.then(function() {
-      return loadHistory(200);   // 最旧 → 最新
+      return loadHistory(60);    // 最旧 → 最新（实时推送兜底，60 条足够补差）
     }).then(function(msgs) {
       var avatars = avatarByEmail();
-      return normalizeAvatarMap(avatars).then(function() {
-        var start = backfill ? Math.max(0, msgs.length - 30) : 0;
+      var start = backfill ? Math.max(0, msgs.length - 30) : 0;
+      // 只规范化这次真的要渲染的那几条消息的发送者头像
+      return normalizeAvatarsFor(avatars, senderEmails(msgs.slice(start))).then(function() {
         var added = 0;
         for (var i = start; i < msgs.length; i++) {
           var m = msgs[i];
@@ -225,7 +287,8 @@
       ext._floxSeen[id] = 1;
     }
     var avatars = avatarByEmail();
-    return normalizeAvatarMap(avatars).then(function() {
+    // 实时推送这条：只等它的发送者头像，且限时；超时就先用原图，不耽误出消息
+    return normalizeAvatarsFor(avatars, [msg.sender_email]).then(function() {
       list.value.push(toFloxMessage(msg, avatars));
       if (msg.created_at) ext._floxLastTs = String(msg.created_at);
     });
@@ -539,9 +602,11 @@
       if (!findList(name)) { setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表"); return; }
       floxAutoList = name;
       ext._floxSeen = ext._floxSeen || {};
-      // 首次开启先回填一次，避免刚进聊天页是空的
+      // 首次开启先回填一次，避免刚进聊天页是空的。
+      // 注意这里是「发射后不管」：不回传 promise，FloxChat 的脚本不会卡在这一步，
+      // 消息由它每秒的刷新循环自然渲染出来。
       if (!ext._floxLastTs && token && userEmail) {
-        return appendFloxMessages(name).catch(function(e) { setError(e); });
+        appendFloxMessages(name).catch(function(e) { setError(e); });
       }
     },
 
