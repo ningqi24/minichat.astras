@@ -41,6 +41,21 @@ MINCHAT
 
 要改就在 `floxchat-patch.js` 的 `GID` 和 `minichat-bridge.js` 的 `FLOX_GID` 两处一起改。
 
+## ⚠️ 改扩展后必须重新打包 sb3
+
+GitHub Pages 给 JS 的缓存头是 `cache-control: max-age=3600`（一小时）。
+如果 `extensionURLs` 只是一个不带参数的地址，改完扩展后用户重开工程，
+浏览器会直接用缓存里的旧 JS —— **改动看起来「没生效」**。
+
+所以 `floxchat-patch.js` 里有个 `EXT_VER`，地址会拼成 `.../minichat-bridge.js?v=N`。
+**每次改 `minichat-bridge.js` 就把 `EXT_VER` +1，并重新打包 sb3。**
+
+> 另：探测新地址一定要等部署完成再探，否则「还没更新完」的响应会被 CDN 按那个
+> 新 URL 缓存一小时 —— 我就这么把 `v=3` 探废过一次。
+
+扩展连上时会在聊天里插一条 `[MiniChat 桥接 vN] 已连接…` 气泡，
+看到它就知道浏览器拿到的是哪一版（也用来判断 sb3 有没有换成新的）。
+
 ## 扩展地址
 
 ```
