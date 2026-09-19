@@ -16,6 +16,12 @@
     "之后回到 FloxChat 就能直接进 MiniChat 群了。" +
     "如果你现在用的是游客账号，请先在 FloxChat 里登录你自己的账号再试。";
 
+  // FloxChat 登录后传给桥接的邮箱是空的 / 格式不对（游客账号就是这样）
+  var FLOX_BAD_EMAIL_HINT =
+    "FloxChat 没有给出有效的邮箱，桥接无法登录 MiniChat。" +
+    "如果你现在用的是游客账号，它本来就没有邮箱 —— 请先在 FloxChat 里注册或登录你自己的账号，" +
+    "再到 minichat.astras.cc 用同一个邮箱 + FloxChat 验证码登录一次，之后就能直接进 MiniChat 群了。";
+
   var token = null;
   var userEmail = null;
   var userName = null;
@@ -153,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v17";
+  var BRIDGE_VERSION = "v18";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -567,6 +573,7 @@
   var floxExhausted = false;      // 已经拉到头了（没有更早的消息）
   var floxPageBusy = false;
   var floxLastLoadAt = 0;        // 上次取页的时间（给「渲染慢」兜底用）
+  var floxLastErrBubbleAt = 0;   // 上次弹错误气泡的时间（避免重复报错）
 
   // 控制台日志（排查用：Ctrl+Shift+I 打开控制台，过滤 minichatbridge）
   function floxLog() {
@@ -592,6 +599,7 @@
       if (!list) return;
       var t = String(text || lastError || "");
       if (!t) return;
+      floxLastErrBubbleAt = Date.now();
       list.value.push(JSON.stringify({
         username: "MiniChat 桥接",
         uid: "",
@@ -670,6 +678,17 @@
       var avatars = avatarByEmail();
       return normalizeAvatarsFor(avatars, senderEmails(all)).then(function() {
         list.value.length = 0;                            // 整表替换成「已加载的全部」
+        // 最顶上放一条操作提示，告诉用户怎么往前翻（FloxChat 的界面插不了按钮）
+        list.value.push(JSON.stringify({
+          username: "MiniChat",
+          uid: "",
+          avatar_url: "",
+          content: floxBase64(floxExhausted
+            ? "已到最早的一条，没有更多聊天记录了"
+            : "输入 /more 获取更多聊天内容"),
+          time: "",
+          mid: "bridge-hint"
+        }));
         for (var i = 0; i < all.length; i++) list.value.push(toFloxMessage(all[i], avatars));
         ext._floxSeen = {};
         ext._floxLastTs = "";
@@ -880,6 +899,8 @@
         // 把服务端的英文错误码换成能直接看懂的中文说明
         if (/ACCOUNT_NOT_FOUND|账号不存在/.test(raw)) {
           raw = "您正在使用的账号（" + email + "）" + FLOX_NEED_OPEN_HINT;
+        } else if (/invalid_email|INVALID_EMAIL|invalid email/i.test(raw)) {
+          raw = (email ? "邮箱「" + email + "」格式不对。\n" : "") + FLOX_BAD_EMAIL_HINT;
         }
         setError(raw);
         // 想登的账号和当前会话不是同一个 -> 必须清掉旧会话，
@@ -916,6 +937,8 @@
         floxLog("connectByCode 失败:", raw2);
         if (/ACCOUNT_NOT_FOUND|账号不存在/.test(raw2)) {
           raw2 = "您正在使用的账号（" + email + "）" + FLOX_NEED_OPEN_HINT;
+        } else if (/invalid_email|INVALID_EMAIL|invalid email/i.test(raw2)) {
+          raw2 = (email ? "邮箱「" + email + "」格式不对。\n" : "") + FLOX_BAD_EMAIL_HINT;
         }
         setError(raw2);
         if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
@@ -982,7 +1005,8 @@
           var msg = lastError || ("等待连接超时（12 秒）。当前会话：token=" + (token ? "有" : "无") +
             " email=" + (userEmail || "无") + "。多半是「桥接直接连接」没成功，请看控制台 minichatbridge 日志。");
           setError(msg);
-          floxAppendErrorBubble(msg);
+          // 刚才已经弹过具体错误（比如 invalid_email）就别再弹一遍超时了
+          if (Date.now() - floxLastErrBubbleAt > 20000) floxAppendErrorBubble(msg);
           return;
         }
         floxLog("会话就绪，开始取第一页");
