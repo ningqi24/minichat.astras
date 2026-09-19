@@ -158,8 +158,14 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   const errRepB = mkBlock(t, EXT + '_bridgeError', {}, {});
   const HALF1 = '{"username":"MiniChat 桥接","uid":"","avatar_url":"","content":"';
   const HALF2 = '","time":"","mid":"bridge"}';
-  const j2 = mkBlock(t, 'operator_join', { STRING1: [3, errRepB, [10, '']], STRING2: [1, [10, HALF2]] }, {});
-  t.blocks[errRepB].parent = j2;
+  // ⚠️ FloxChat 渲染时是 Encoding_decode(Base64, content)，所以 content 必须是 Base64。
+  // 这里直接复用工程自带的 Encoding 扩展把错误文本编码一遍。
+  const encMenu = mkBlock(t, 'Encoding_menu_encode', {}, { encode: ['Base64', null] }, true);
+  const encBlk = mkBlock(t, 'Encoding_encode', { code: [1, encMenu], string: [3, errRepB, [10, '']] }, {});
+  t.blocks[encMenu].parent = encBlk;
+  t.blocks[errRepB].parent = encBlk;
+  const j2 = mkBlock(t, 'operator_join', { STRING1: [3, encBlk, [10, '']], STRING2: [1, [10, HALF2]] }, {});
+  t.blocks[encBlk].parent = j2;
   const j1 = mkBlock(t, 'operator_join', { STRING1: [1, [10, HALF1]], STRING2: [3, j2, [10, '']] }, {});
   t.blocks[j2].parent = j1;
   const addErr = mkBlock(t, 'data_addtolist', { ITEM: [3, j1, [10, '']] }, { LIST: ['当前显示的群聊', listId('当前显示的群聊')] });
@@ -408,7 +414,11 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   if (!guardIf) throw new Error('补丁10: 没找到 CommunicationUI13 分支');
   const head = t.blocks[guardIf].inputs.SUBSTACK[1];
   const ln = '当前显示的群聊';
-  const notice = '{"username":"MiniChat","uid":"","avatar_url":"","content":"[MiniChat 群] 这里发不了文件/图片：附件上传走的是 FloxChat 服务器。文字消息可以直接发。","time":"","mid":"attach"}';
+  // content 必须是 Base64（FloxChat 会 Encoding_decode 它），静态文案直接在这里编好
+  const noticeText = '[MiniChat 群] 这里发不了文件/图片：附件上传走的是 FloxChat 服务器。文字消息可以直接发。';
+  const notice = '{"username":"MiniChat","uid":"","avatar_url":"","content":"'
+    + Buffer.from(noticeText, 'utf8').toString('base64')
+    + '","time":"","mid":"attach"}';
   const note = mkBlock(t, 'data_addtolist', { ITEM: lit(notice) }, { LIST: [ln, listId(ln)] });
   const cond = eqConst(t, '当前显示的群聊ID', GID);
   const g = mkBlock(t, 'control_if_else', { CONDITION: [2, cond], SUBSTACK: [2, note], SUBSTACK2: [2, head] }, {});

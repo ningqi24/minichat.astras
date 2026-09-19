@@ -124,7 +124,8 @@
   // 头像规范化「最长等多久」。超时就用原图先顶上 —— 绝不能让某张图下载慢
   // 把整条消息链路堵死（之前就是这么卡住的）。
   var FLOX_AVATAR_TIMEOUT = 2000;
-  var FLOX_AVATAR_CACHE_KEY = "minichat_bridge_avatars_v1";
+  // v2：v1 把透明头像压成了 JPEG 白底，必须作废旧缓存
+  var FLOX_AVATAR_CACHE_KEY = "minichat_bridge_avatars_v2";
   var floxAvatarCache = {};     // 原地址 -> 150x150 的 data URI
   var floxAvatarPending = {};
 
@@ -171,8 +172,11 @@
             var s = Math.min(iw, ih);                 // 居中正方形裁剪
             var c = document.createElement("canvas");
             c.width = n; c.height = n;
-            c.getContext("2d").drawImage(img, (iw - s) / 2, (ih - s) / 2, s, s, 0, 0, n, n);
-            done(c.toDataURL("image/jpeg", 0.85));
+            var ctx = c.getContext("2d");
+            ctx.drawImage(img, (iw - s) / 2, (ih - s) / 2, s, s, 0, 0, n, n);
+            // 有透明像素就必须用 PNG：JPEG 会把透明区域拍成白底，
+            // 默认头像那种透明图会变成一块白方块。
+            done(canvasHasAlpha(ctx, n) ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.85));
           } catch (e) {
             done(url);                                // 画布被污染（跨域）等 -> 退回原图
           }
@@ -228,14 +232,45 @@
       .replace(/\[quote:[^\]]*\]/g, "[引用]");
   }
 
+  // FloxChat 渲染时是 Encoding_decode(Base64, content) —— 它把 content 当 Base64 解。
+  // 所以写进去之前必须先编码，否则明文会被解成乱码。
+  function floxBase64(str) {
+    try {
+      var bytes = new TextEncoder().encode(String(str == null ? "" : str));
+      var bin = "";
+      for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    } catch (e) { return ""; }
+  }
+
+  // FloxChat 直接把 time 当字符串显示（它自己的消息是「09:01」这种短格式），
+  // 不做任何格式化，所以要在这里把 ISO 时间转成本地 HH:MM。
+  function floxTime(iso) {
+    var d = new Date(String(iso == null ? "" : iso));
+    if (isNaN(d.getTime())) return String(iso || "");
+    var hh = d.getHours(), mm = d.getMinutes();
+    return (hh < 10 ? "0" : "") + hh + ":" + (mm < 10 ? "0" : "") + mm;
+  }
+
+  // 抽样判断画布有没有透明像素
+  function canvasHasAlpha(ctx, n) {
+    try {
+      var d = ctx.getImageData(0, 0, n, n).data;
+      for (var i = 3; i < d.length; i += 4 * 31) {   // 每 31 个像素抽一个
+        if (d[i] < 250) return true;
+      }
+      return false;
+    } catch (e) { return true; }
+  }
+
   function toFloxMessage(m, avatars) {
     var email = String(m.sender_email || "");
     return JSON.stringify({
       username: m.sender_name || (email ? email.split("@")[0] : ""),
       uid: email,
       avatar_url: floxAvatarOf(avatars, email),
-      content: floxText(m.content),
-      time: m.created_at || "",
+      content: floxBase64(floxText(m.content)),
+      time: floxTime(m.created_at),
       mid: m.id || ""
     });
   }
