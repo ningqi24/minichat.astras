@@ -55,9 +55,11 @@
       return r.json();
     }).then(function(d) {
       if (d.error) throw new Error(d.error);
+      floxLog("edge ok:", action);
       return d;
     }).catch(function(e) {
       stopTimer();
+      floxLog("edge FAIL:", action, e && e.message ? e.message : e);
       if (e && e.name === "AbortError") throw new Error("请求超时（12 秒无响应），请检查网络");
       throw e;
     });
@@ -69,6 +71,7 @@
     userEmail = d.email || fallbackEmail;
     userName = d.display_name || (fallbackName || (fallbackEmail || "").split("@")[0]);
     userId = d.user_id || null;
+    floxLog("会话就绪 email=" + userEmail + " token=" + (token ? "有" : "无"));
     return d;
   }
 
@@ -126,7 +129,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v12";
+  var BRIDGE_VERSION = "v13";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -607,10 +610,12 @@
   //   mode = "reset"：从最新开始（进群 / 回最新）
   //   mode = "more" ：往更早累积一页
   function floxLoadPage(offset, mode) {
-    if (!token || !userEmail) { setError("未连接，请先「桥接连接」"); return Promise.resolve(-1); }
-    if (floxPageBusy) return Promise.resolve(-1);
+    floxLog("loadPage offset=" + offset + " mode=" + mode + " token=" + (token ? "有" : "无") +
+            " email=" + (userEmail || "-") + " list=" + (floxAutoList || "-"));
+    if (!token || !userEmail) { setError("未连接，请先「桥接连接」"); floxLog("loadPage 中止：无会话"); return Promise.resolve(-1); }
+    if (floxPageBusy) { floxLog("loadPage 中止：上一页还在取"); return Promise.resolve(-1); }
     var list = floxTargetList();
-    if (!list) { setError("还没进入 MiniChat 群（自动推送未开启）"); return Promise.resolve(-1); }
+    if (!list) { setError("还没进入 MiniChat 群（自动推送未开启）"); floxLog("loadPage 中止：找不到列表 " + floxAutoList); return Promise.resolve(-1); }
     if (!(offset >= 0)) offset = 0;
     floxPageBusy = true;
     floxRaiseCloneLimit(1500);
@@ -847,8 +852,10 @@
 
     connect: function(args) {
       var email = String(args.EMAIL || "").trim();
+      floxLog("connect 被调用 email=[" + email + "] 当前已登录=" + (userEmail || "-"));
       if (!email) {
         setError("请输入邮箱后再「桥接连接」");
+        floxLog("connect 中止：邮箱为空（已登录用户信息[4] 是空的？）");
         return;
       }
       clearError();
@@ -858,6 +865,7 @@
       return getToken(email, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
+        floxLog("connect 失败:", e && e.message ? e.message : e);
         setError(e);
         floxAppendErrorBubble(e && e.message ? e.message : e);   // 连不上要能看见原因
       });
@@ -936,8 +944,9 @@
     floxAutoPush: function(args) {
       clearError();
       var name = Scratch.Cast.toString(args.LIST || "").trim();
-      if (!name) { setError("请先在积木下拉里选择列表"); return; }
-      if (!findList(name)) { setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表"); return; }
+      floxLog("autoPush 被调用 list=[" + name + "] token=" + (token ? "有" : "无") + " email=" + (userEmail || "-"));
+      if (!name) { setError("请先在积木下拉里选择列表"); floxLog("autoPush 中止：列表名为空"); return; }
+      if (!findList(name)) { setError("找不到列表「" + name + "」：请先在 Scratch 里创建同名列表"); floxLog("autoPush 中止：找不到列表 " + name); return; }
       floxAutoList = name;
       ext._floxSeen = ext._floxSeen || {};
       // 首次开启先回填一次，避免刚进聊天页是空的。
@@ -949,10 +958,14 @@
       floxStartAutoPage();
       floxWaitSession(12000).then(function(ok) {
         if (!ok) {
-          setError("等待连接超时：请确认已登录，且该邮箱已开通 MiniChat 账号");
-          floxAppendErrorBubble(lastError);
+          floxLog("等待会话超时 token=" + (token ? "有" : "无") + " email=" + (userEmail || "-"));
+          var msg = lastError || ("等待连接超时（12 秒）。当前会话：token=" + (token ? "有" : "无") +
+            " email=" + (userEmail || "无") + "。多半是「桥接直接连接」没成功，请看控制台 minichatbridge 日志。");
+          setError(msg);
+          floxAppendErrorBubble(msg);
           return;
         }
+        floxLog("会话就绪，开始取第一页");
         floxLoadPage(0, "reset").then(function(n) {
           if (n === -1) floxAppendErrorBubble(lastError);   // 加载失败也把原因显示出来
         });
