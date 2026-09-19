@@ -82,6 +82,31 @@
     });
   }
 
+  // ---- 清空当前会话 ----
+  // ⚠️ 切换 FloxChat 账号时必须先清掉上一段会话。
+  // 否则新账号连接失败时（比如这个账号还没开通 MiniChat，会返回 ACCOUNT_NOT_FOUND），
+  // 旧的 token 会留在内存里，之后发的消息就全算到上一个账号头上了。
+  function resetSession() {
+    token = null;
+    userEmail = null;
+    userName = null;
+    userId = null;
+    presenceMap = {};
+    presenceByEmail = {};
+    ext._usersCache = null;
+    ext._lastMsg = null;
+    ext._historyCache = null;
+    ext._floxSeen = {};
+    ext._floxLastTs = "";
+    lastMsg = null;
+    if (socket) { try { socket.close(); } catch (e) {} socket = null; }
+    stopTimer();
+    floxPages = [];
+    floxLoadedCount = 0;
+    floxNewSinceLoad = 0;
+    floxExhausted = false;
+  }
+
   // ---- 发送 FloxChat 验证码（走 Edge Function 代理，避免 TurboWarp 里的 CORS 拦截）----
   function sendFloxCode(email) {
     return callEdge("flox_send_code", { email: email });
@@ -101,7 +126,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v7";
+  var BRIDGE_VERSION = "v8";
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
   var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
@@ -593,7 +618,8 @@
   // ---- 自动翻页：盯着 FloxChat 的「滑动页面」，用户一滚动就自动往前多加载一页 ----
   // 重画后 FloxChat 自己会把 滑动页面 归位（它的「刷新消息」处理器里写死 55），
   // 所以加载完要等几秒再接受下一次触发，否则会被自己归位的动作反复触发。
-  var FLOX_AUTOPAGE_COOLDOWN = 3000;
+  var FLOX_AUTOPAGE_COOLDOWN = 3000;      // 每次加载后的冷却（渲染要几秒，别叠着来）
+  var FLOX_AUTOPAGE_INTERVAL = 6000;      // 定时自动加载的间隔
   var floxScrollWatch = null;
   var floxLastScroll = null;
   var floxScrollCooldown = 0;
@@ -619,17 +645,39 @@
     return null;
   }
 
+  function floxCanAutoLoad() {
+    if (floxPageBusy) return false;
+    if (floxExhausted) return false;
+    if (floxLoadedCount >= FLOX_MAX_LOADED) return false;
+    if (!floxAutoList || !token) return false;
+    if (Date.now() < floxScrollCooldown) return false;
+    return true;
+  }
+
+  function floxAutoTick() {
+    if (!floxCanAutoLoad()) return;
+    floxScrollCooldown = Date.now() + FLOX_AUTOPAGE_COOLDOWN;
+    floxLoadMore();
+  }
+
+  // 自动翻页有两条触发：
+  //   ① 定时：每 FLOX_AUTOPAGE_INTERVAL 毫秒自动往前多加载一页，直到拉完或到上限
+  //      （FloxChat 的聊天页是用【方向键】滚的，不是鼠标滚轮 —— 不能只等滚动事件）
+  //   ② 滚动：FloxChat 按一次上/下箭头会让「滑动页面」变 ±80，变化了就顺带加载
+  var floxAutoTimer = null;
+
   function floxStartAutoPage() {
+    if (!floxAutoTimer) {
+      floxAutoTimer = setInterval(function() {
+        try { floxAutoTick(); } catch (e) {}
+      }, FLOX_AUTOPAGE_INTERVAL);
+    }
     if (floxScrollWatch) return;
     floxLastScroll = null;
     floxScrollCooldown = 0;
     floxScrollWatch = setInterval(function() {
       try {
-        if (floxPageBusy) return;
-        if (floxExhausted) return;
-        if (floxLoadedCount >= FLOX_MAX_LOADED) return;
-        if (!floxAutoList || !token) return;
-        if (Date.now() < floxScrollCooldown) return;
+        if (!floxCanAutoLoad()) return;
         var sv = findVar("滑动页面");
         if (!sv) return;
         var cur = Number(sv.value);
@@ -637,14 +685,14 @@
         if (floxLastScroll === null) { floxLastScroll = cur; return; }
         if (Math.abs(cur - floxLastScroll) < 40) { floxLastScroll = cur; return; }
         floxLastScroll = cur;
-        floxScrollCooldown = Date.now() + FLOX_AUTOPAGE_COOLDOWN;
-        floxLoadMore();
+        floxAutoTick();
       } catch (e) {}
     }, 300);
   }
 
   function floxStopAutoPage() {
     if (floxScrollWatch) { clearInterval(floxScrollWatch); floxScrollWatch = null; }
+    if (floxAutoTimer) { clearInterval(floxAutoTimer); floxAutoTimer = null; }
     floxLastScroll = null;
   }
 
@@ -732,6 +780,7 @@
         return;
       }
       clearError();
+      resetSession();          // 换账号先清旧会话，失败也不能留着旧 token
       return getToken(email, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
@@ -759,6 +808,7 @@
       if (!email) { setError("请先填写邮箱"); return; }
       if (!code) { setError("请填写收到的验证码"); return; }
       clearError();
+      resetSession();          // 同上
       return loginWithFloxCode(email, code).then(function() {
         connectWS();
       }).catch(function(e) {
