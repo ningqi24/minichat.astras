@@ -64,17 +64,44 @@ https://minichat.astras.cc/Floxchat-Bridge/minichat-bridge.js
 
 TurboWarp 里「加载扩展 → 从 URL」粘贴上面这行即可。
 
-## 重新打补丁（FloxChat 发新版时）
+## 迁移到新版 FloxChat（一条命令）
 
-```bash
-# 1. 把 FloxChat 的 sb3 解压，拿到 project.json
-node floxchat-patch.js <原始 project.json> <输出 project.json>
-node floxchat-validate.js <输出目录>
-# 2. 把输出目录重新打包成 .sb3（zip 即可，project.json 必须在根）
+```powershell
+# 在项目根目录（放 build-floxchat.ps1 的那层）执行
+.\build-floxchat.ps1 -Src "FloxChat Alpha 0.6.9_P2.5.1" -Tag "P2.5.1"
 ```
 
-补丁清单写在 `floxchat-patch.js` 里每一段的上面，共 8 处。
+它会：复制源目录 → 打全部补丁 → 校验块图与资产 → 打包成 `FloxChat-<Tag>-MiniChat.sb3`。
+
+也可以手动分步（与脚本等价）：
+
+```bash
+node floxchat-patch.js <原始 project.json> <输出 project.json>
+node floxchat-validate.js <输出目录>
+# 再把输出目录打包成 zip 并改名为 .sb3（project.json 必须在根）
+```
+
+> ⚠️ `build-floxchat.ps1` **必须保持纯 ASCII**。PowerShell 5.1 在没有 BOM 时按
+> ANSI（中文系统是 GBK）读取 .ps1，文件里的中文会变乱码并可能直接把语法搞崩。
+
+补丁清单写在 `floxchat-patch.js` 里每一段的上面，共 10 处。
 已在 **FloxChat P2.4** 与 **FloxChat P2.5.1** 上验证通过。
+
+### 为什么迁移成本低
+
+`floxchat-patch.js` **不认任何块 ID**，只用结构特征定位，例如：
+「找 `SUBSTACK` 首块是 `gsaHTTPRequests_clearAll` 的 `control_if`」。
+所以 P2.5.1 时 8 个补丁是**一次全中**的。加上自动校验（块图一致性 + 资产完整性），
+跑完就知道有没有打歪。
+
+### 迁移新版时要额外留意的
+
+| 类型 | 例子 | 处理 |
+|---|---|---|
+| **新增状态变量 / 渲染门闸** | P2.5.1 的 `当前实际显示的群聊` | 最容易漏！守卫会跳过它的赋值 → 补丁 3 需要在守卫外补一句 |
+| 新增的服务器请求 | P2.5.1 的「退出群聊」POST | 用「扫描所有 `sendRequest`，看祖先条件」的办法找出来 → 补丁 9 |
+| 服务端协议变化 | 登录从 `get_all` 改成 `get` | 影响的是字段顺序，逐项核对 `已登录用户信息` 的构造顺序 |
+| 列表 / 变量改名 | — | 补丁会直接报「找不到列表 xxx」并中断，不会静默出错 |
 
 > ⚠️ P2.5.1 在消息渲染前新增了一道闸：`当前显示的群聊ID == 当前实际显示的群聊`。
 > 那个赋值原本在 HTTP 段里，会被补丁 3 的守卫跳过，所以补丁 3 额外在守卫外面补了一句同样的赋值。
