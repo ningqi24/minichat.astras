@@ -126,7 +126,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v8";
+  var BRIDGE_VERSION = "v10";
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
   var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
@@ -543,6 +543,39 @@
     return floxAutoList ? findList(floxAutoList) : null;
   }
 
+  // 连接是异步的：刚 resetSession 过、或者还在登录中时 token 还是空的。
+  // 直接取页会被 floxLoadPage 的前置检查挡掉，进群第一屏就一直是空的。
+  // 所以这里等一小会儿，等会话就绪再取页。
+  // 把错误直接作为一条气泡追加进目标列表（补丁里那个检查时机太早：
+  // 「桥接直接连接」是异步的，查 桥接最后错误 时错误还没产生，所以看不到）
+  function floxAppendErrorBubble(text) {
+    try {
+      var list = floxTargetList();
+      if (!list) return;
+      var t = String(text || lastError || "");
+      if (!t) return;
+      list.value.push(JSON.stringify({
+        username: "MiniChat 桥接",
+        uid: "",
+        avatar_url: "",
+        content: floxBase64(t),
+        time: "",
+        mid: "bridge-err-" + Date.now()
+      }));
+    } catch (e) {}
+  }
+
+  function floxWaitSession(timeoutMs) {
+    var deadline = Date.now() + (timeoutMs || 12000);
+    return new Promise(function(resolve) {
+      (function poll() {
+        if (token && userEmail) return resolve(true);
+        if (Date.now() > deadline) return resolve(false);
+        setTimeout(poll, 200);
+      })();
+    });
+  }
+
   // 一条消息会生成一组克隆体，Scratch 默认上限 300 很快会被打满，顺手抬高一些
   function floxRaiseCloneLimit(n) {
     try {
@@ -780,11 +813,14 @@
         return;
       }
       clearError();
-      resetSession();          // 换账号先清旧会话，失败也不能留着旧 token
+      // 只有换账号才清会话：同账号重进没必要重新登录，
+      // 而且清了 token 之后紧接着的取页会拿不到会话（进群第一屏就是空的）。
+      if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
       return getToken(email, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
         setError(e);
+        floxAppendErrorBubble(e && e.message ? e.message : e);   // 连不上要能看见原因
       });
     },
 
@@ -808,11 +844,12 @@
       if (!email) { setError("请先填写邮箱"); return; }
       if (!code) { setError("请填写收到的验证码"); return; }
       clearError();
-      resetSession();          // 同上
+      if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
       return loginWithFloxCode(email, code).then(function() {
         connectWS();
       }).catch(function(e) {
         setError(e);
+        floxAppendErrorBubble(e && e.message ? e.message : e);
       });
     },
 
@@ -867,11 +904,20 @@
       // 首次开启先回填一次，避免刚进聊天页是空的。
       // 注意这里是「发射后不管」：不回传 promise，FloxChat 的脚本不会卡在这一步，
       // 消息由它每秒的刷新循环自然渲染出来。
-      // 进入群时整页加载（而不是尾部追加）：翻页的起点才明确
-      if (token && userEmail) {
-        floxLoadPage(0, "reset");
-        floxStartAutoPage();
-      }
+      // 进入群时整页加载（而不是尾部追加）：翻页的起点才明确。
+      // 注意不能在这里判断 token —— 刚 connect 过时它还是空的，
+      // 那样整段加载会被跳过（表现就是「一直在加载中，内容不出来」）。
+      floxStartAutoPage();
+      floxWaitSession(12000).then(function(ok) {
+        if (!ok) {
+          setError("等待连接超时：请确认已登录，且该邮箱已开通 MiniChat 账号");
+          floxAppendErrorBubble(lastError);
+          return;
+        }
+        floxLoadPage(0, "reset").then(function(n) {
+          if (n === -1) floxAppendErrorBubble(lastError);   // 加载失败也把原因显示出来
+        });
+      });
     },
 
     floxAutoPushOff: function() {
