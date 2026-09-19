@@ -7,7 +7,7 @@
 | 文件 | 说明 |
 |---|---|
 | `minichat-bridge.js` | TurboWarp 扩展。给 FloxChat 提供「连接 MiniChat / 收发消息 / 把 MiniChat 群聊写进 FloxChat 列表」等积木 |
-| `minichat-logo.svg` | FloxChat 群聊列表里 MiniChat 条目的头像。做成 300px 高，和 FloxChat 默认群头像（300×300）同尺寸，否则会被 `set size` 缩得极小 |
+| `minichat-logo-300.svg` | FloxChat 群聊列表里 MiniChat 条目的头像。300px 高，和 FloxChat 默认群头像（300×300）同尺寸，否则会被 `set size` 缩得极小。⚠️ 注意 `width`/`height` 必须等于 `viewBox`（Scratch 的约定），放大要用内层 `scale()`，不能只改 width/height |
 | `floxchat-patch.js` | 给 FloxChat 工程打补丁、生成「带 MiniChat 群聊」的 sb3 |
 | `floxchat-validate.js` | 补丁后的块图一致性 / 资产完整性校验 |
 
