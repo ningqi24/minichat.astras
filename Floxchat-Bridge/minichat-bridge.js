@@ -147,7 +147,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v14";
+  var BRIDGE_VERSION = "v15";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -686,8 +686,7 @@
   // ---- 自动翻页：盯着 FloxChat 的「滑动页面」，用户一滚动就自动往前多加载一页 ----
   // 重画后 FloxChat 自己会把 滑动页面 归位（它的「刷新消息」处理器里写死 55），
   // 所以加载完要等几秒再接受下一次触发，否则会被自己归位的动作反复触发。
-  var FLOX_AUTOPAGE_COOLDOWN = 3000;      // 每次加载后的冷却（渲染要几秒，别叠着来）
-  var FLOX_AUTOPAGE_INTERVAL = 8000;      // 定时自动加载的间隔（还要等上一页画完才真的加载）
+  var FLOX_AUTOPAGE_COOLDOWN = 2500;      // 每次加载后的冷却（渲染要几秒，别叠着来）
   var floxScrollWatch = null;
   var floxLastScroll = null;
   var floxScrollCooldown = 0;
@@ -755,18 +754,11 @@
     floxLoadMore();
   }
 
-  // 自动翻页有两条触发：
-  //   ① 定时：每 FLOX_AUTOPAGE_INTERVAL 毫秒自动往前多加载一页，直到拉完或到上限
-  //      （FloxChat 的聊天页是用【方向键】滚的，不是鼠标滚轮 —— 不能只等滚动事件）
-  //   ② 滚动：FloxChat 按一次上/下箭头会让「滑动页面」变 ±80，变化了就顺带加载
-  var floxAutoTimer = null;
-
+  // 自动翻页只由【滚动】触发：
+  //   FloxChat 的聊天页是用方向键滚的（不是鼠标滚轮）——
+  //   按一次上/下箭头会让「滑动页面」变 ±80，我们就盯着这个变量。
+  // 不做定时自动加载：那会不管用户需不需要就一遍遍整表重画聊天区，体验很差。
   function floxStartAutoPage() {
-    if (!floxAutoTimer) {
-      floxAutoTimer = setInterval(function() {
-        try { floxAutoTick(); } catch (e) {}
-      }, FLOX_AUTOPAGE_INTERVAL);
-    }
     if (floxScrollWatch) return;
     floxLastScroll = null;
     floxScrollCooldown = 0;
@@ -779,7 +771,9 @@
         if (!isFinite(cur)) return;
         if (floxLastScroll === null) { floxLastScroll = cur; return; }
         if (Math.abs(cur - floxLastScroll) < 40) { floxLastScroll = cur; return; }
+        var from = floxLastScroll;
         floxLastScroll = cur;
+        floxLog("滚动触发翻页 滑动页面 " + from + " -> " + cur + "（已加载 " + floxLoadedCount + " 条）");
         floxAutoTick();
       } catch (e) {}
     }, 300);
@@ -787,7 +781,6 @@
 
   function floxStopAutoPage() {
     if (floxScrollWatch) { clearInterval(floxScrollWatch); floxScrollWatch = null; }
-    if (floxAutoTimer) { clearInterval(floxAutoTimer); floxAutoTimer = null; }
     floxLastScroll = null;
   }
 
