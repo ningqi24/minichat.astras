@@ -101,7 +101,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v3";
+  var BRIDGE_VERSION = "v4";
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
   var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
@@ -111,7 +111,9 @@
     var users = ext._usersCache || [];
     for (var i = 0; i < users.length; i++) {
       var u = users[i];
-      if (u && u.email) map[String(u.email).toLowerCase()] = u.avatar_url || "";
+      // 没有自定义头像的用户要给个默认图 —— 传空字符串的话 FloxChat 加载不出皮肤，
+      // 对话框里就会显示成精灵自带的小方块。
+      if (u && u.email) map[String(u.email).toLowerCase()] = u.avatar_url || getDefaultAvatar(u.email);
     }
     return map;
   }
@@ -121,12 +123,15 @@
   // 所以图片本身多大就直接决定显示多大。这里在读取端把任意来源的头像
   //（包括历史上传的、尺寸各异的）统一裁成 150x150 再交给 FloxChat，
   // 存量头像完全不用重新上传。
-  var FLOX_AVATAR_SIZE = 150;
+  // ⚠️ 这个尺寸只影响【消息气泡里的用户头像】（归一化后的 data URI）。
+  // 群聊列表里那个 MiniChat 群头像是补丁注入的静态 SVG，跟这里无关。
+  // FloxChat 用「set size to (20 × 放大系数)%」画它 —— 实测 150 偏小，调到 300。
+  var FLOX_AVATAR_SIZE = 300;
   // 头像规范化「最长等多久」。超时就用原图先顶上 —— 绝不能让某张图下载慢
   // 把整条消息链路堵死（之前就是这么卡住的）。
   var FLOX_AVATAR_TIMEOUT = 2000;
   // v2：v1 把透明头像压成了 JPEG 白底，必须作废旧缓存
-  var FLOX_AVATAR_CACHE_KEY = "minichat_bridge_avatars_v2";
+  var FLOX_AVATAR_CACHE_KEY = "minichat_bridge_avatars_v3";   // v3：头像尺寸 150 -> 300
   var floxAvatarCache = {};     // 原地址 -> 150x150 的 data URI
   var floxAvatarPending = {};
 

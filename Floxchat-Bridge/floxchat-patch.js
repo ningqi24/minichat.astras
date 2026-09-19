@@ -14,7 +14,7 @@ const GAVATAR = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.
 // ⚠️ 扩展 JS 走 GitHub Pages，缓存头是 max-age=3600（一小时）。
 // 不带版本号的话，改完扩展用户重开工程也会继续用浏览器缓存里的旧 JS。
 // 每次改 minichat-bridge.js 就把这个号 +1，并重新打包 sb3。
-const EXT_VER = '4';
+const EXT_VER = '5';
 const EXT_URL = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-bridge.js?v=' + EXT_VER;
 const log = [];
 let seq = 0;
