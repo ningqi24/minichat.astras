@@ -81,6 +81,95 @@
     });
   }
 
+  // ===================== FloxChat 兼容层 =====================
+  // FloxChat 的聊天界面是「数据驱动」的，它只认这两种 JSON 对象形状：
+  //   群聊对象 {"gid","name","avatar_url"}
+  //   消息对象 {"username","uid","avatar_url","content","time","mid"}
+  // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
+  // 就会直接渲染，不需要重画界面。
+  var FLOX_GID = "MINICHAT";
+  var FLOX_GROUP_NAME = "MiniChat 群聊";
+  var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/assets/logo.svg";
+
+  function avatarByEmail() {
+    var map = {};
+    var users = ext._usersCache || [];
+    for (var i = 0; i < users.length; i++) {
+      var u = users[i];
+      if (u && u.email) map[String(u.email).toLowerCase()] = u.avatar_url || "";
+    }
+    return map;
+  }
+
+  // MiniChat 的附件/引用标记在 FloxChat 里没法渲染，换成可读文字
+  function floxText(content) {
+    return String(content == null ? "" : content)
+      .replace(/!\[image\]\(([^)]+)\)/g, "[图片] $1")
+      .replace(/\[audio\]\(([^)]+)\)/g, "[语音] $1")
+      .replace(/\[video\]\(([^)]+)\)/g, "[视频] $1")
+      .replace(/\[file\]\(([^)|]+)(?:\|[^)]*)?\)/g, "[文件] $1")
+      .replace(/\[quote:[^\]]*\]/g, "[引用]");
+  }
+
+  function toFloxMessage(m, avatars) {
+    var email = String(m.sender_email || "");
+    return JSON.stringify({
+      username: m.sender_name || (email ? email.split("@")[0] : ""),
+      uid: email,
+      avatar_url: avatars[String(email).toLowerCase()] || "",
+      content: floxText(m.content),
+      time: m.created_at || "",
+      mid: m.id || ""
+    });
+  }
+
+  // 把「自上次以来新增的」MiniChat 消息追加到目标列表。
+  // 注意是「只追加」而不是「整表替换」：FloxChat 靠 len(列表) - len(已显示消息) 决定渲染几条，
+  // 列表一旦不再变长，后面所有新消息就永远不会显示出来。
+  function appendFloxMessages(listName) {
+    var list = findList(listName);
+    if (!list) throw new Error("找不到列表「" + listName + "」：请先在 Scratch 里创建同名列表，并在积木下拉里选中它");
+    ext._floxSeen = ext._floxSeen || {};
+    var backfill = !ext._floxLastTs;
+    var prep = ext._usersCache ? Promise.resolve() : (ext.loadUsers() || Promise.resolve());
+    return prep.then(function() {
+      return loadHistory(200);   // 最旧 → 最新
+    }).then(function(msgs) {
+      var avatars = avatarByEmail();
+      var start = backfill ? Math.max(0, msgs.length - 30) : 0;
+      var added = 0;
+      for (var i = start; i < msgs.length; i++) {
+        var m = msgs[i];
+        var id = String(m.id || "");
+        if (id && ext._floxSeen[id]) continue;
+        var t = String(m.created_at || "");
+        if (!id && ext._floxLastTs && t && t <= ext._floxLastTs) continue;
+        list.value.push(toFloxMessage(m, avatars));
+        if (id) ext._floxSeen[id] = 1;
+        if (t) ext._floxLastTs = t;
+        added++;
+      }
+      return added;
+    });
+  }
+
+  // 往 FloxChat 的群聊列表里塞一个「MiniChat」条目（幂等）
+  function injectFloxGroup(listName) {
+    var list = findList(listName);
+    if (!list) throw new Error("找不到列表「" + listName + "」：请先在 Scratch 里创建同名列表，并在积木下拉里选中它");
+    for (var i = 0; i < list.value.length; i++) {
+      var raw = list.value[i];
+      try { if (String(JSON.parse(raw).gid) === FLOX_GID) return 0; } catch (e) {}
+      if (String(raw).indexOf(FLOX_GID) !== -1) return 0;
+    }
+    list.value.push(JSON.stringify({
+      gid: FLOX_GID,
+      name: FLOX_GROUP_NAME,
+      avatar_url: FLOX_GROUP_AVATAR
+    }));
+    return 1;
+  }
+
   // ---- WebSocket 实时接收（走 apikey 参数，不受 CORS 影响）----
   function connectWS() {
     if (socket) { socket.close(); }
@@ -283,6 +372,8 @@
     _historyCache: null,
     _usersCache: null,
     _lastCodeEmail: "",
+    _floxSeen: null,
+    _floxLastTs: "",
 
     connect: function(args) {
       var email = String(args.EMAIL || "").trim();
@@ -334,6 +425,31 @@
       sendMsg(String(args.MSG || "")).catch(function(e) {
         setError(e);
       });
+    },
+
+    // ===== FloxChat 兼容 =====
+    floxInjectGroup: function(args) {
+      clearError();
+      try { injectFloxGroup(args.LIST); } catch (e) { setError(e); }
+    },
+
+    floxRefreshMessages: function(args) {
+      if (!token || !userEmail) {
+        setError("未连接，请先「桥接连接」或「用验证码登录」");
+        return;
+      }
+      clearError();
+      return appendFloxMessages(args.LIST).catch(function(e) {
+        setError(e);
+      });
+    },
+
+    floxGroupId: function() { return FLOX_GID; },
+
+    floxResetCursor: function() {
+      ext._floxSeen = {};
+      ext._floxLastTs = "";
+      clearError();
     },
 
     loadMessages: function(args) {
@@ -527,6 +643,8 @@
       ext._historyCache = null;
       ext._usersCache = null;
       ext._lastCodeEmail = "";
+      ext._floxSeen = {};
+      ext._floxLastTs = "";
       lastMsg = null;
       lastError = null;
     }
@@ -646,6 +764,22 @@
             arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
           },
           "---",
+          // ===== FloxChat 兼容（把 MiniChat 接进 FloxChat 的聊天界面）=====
+          { opcode: "floxInjectGroup", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接把 MiniChat 群聊写入列表 [LIST]（FloxChat 群聊格式）",
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
+          },
+          { opcode: "floxRefreshMessages", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接刷新 MiniChat 消息到列表 [LIST]（FloxChat 消息格式，需先连接）",
+            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
+          },
+          { opcode: "floxGroupId", blockType: Scratch.BlockType.REPORTER,
+            text: "桥接 MiniChat 群聊ID（和「当前显示的群聊ID」比较用）"
+          },
+          { opcode: "floxResetCursor", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接重置 MiniChat 消息游标（清空列表后调用）"
+          },
+          "---",
           // ===== 排障 =====
           { opcode: "bridgeError", blockType: Scratch.BlockType.REPORTER,
             text: "桥接最后错误（无则空，配合排障用）"
@@ -676,6 +810,10 @@
     connect: ext.connect,
     sendFloxCode: ext.sendFloxCode,
     connectByCode: ext.connectByCode,
+    floxInjectGroup: ext.floxInjectGroup,
+    floxRefreshMessages: ext.floxRefreshMessages,
+    floxGroupId: ext.floxGroupId,
+    floxResetCursor: ext.floxResetCursor,
     send: ext.send,
     loadMessages: ext.loadMessages,
     loadAllMessages: ext.loadAllMessages,
