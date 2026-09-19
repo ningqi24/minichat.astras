@@ -180,17 +180,41 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
 })();
 
 // ---- 补丁 3：消息刷新时跳过 FloxChat 的 HTTP ----
+// ⚠️ 这里非常容易写错：Ed 的 SUBSTACK 是【一条长链】，
+//    aia HTTP清空 → Ee → Ef → Eg → Eh → ed setList(响应) → Ei 算刷新条数 → ee 渲染
+//    只有前面 HTTP 那几块该被守卫包住；Ei / ee 必须留在【守卫外面】，
+//    否则 MiniChat 分支会把渲染也一起跳过 —— 表现就是「一条消息都没有，
+//    连错误气泡也不显示」（气泡写进列表了，但没人渲染它）。
 (function () {
   const t = T('消息显示');
   const f = findIfWithSubstackHead(t, 'gsaHTTPRequests_clearAll');
   if (!f) throw new Error('补丁3: 未找到 HTTP 分支');
+  // 顺着 HTTP 链找到「把响应写回 当前显示的群聊」那一块，它后面就是渲染链
+  const target = listId('当前显示的群聊');
+  let cur = f.headId, setListId = null;
+  for (let i = 0; cur && i < 20; i++) {
+    const b = t.blocks[cur];
+    if (!b) break;
+    if (b.opcode === 'skyhigh173JSON_json_vm_setlist') {
+      const v = b.inputs.list;
+      if (v && typeof v[1] === 'string') {
+        const m = t.blocks[v[1]];
+        if (m && m.fields && m.fields.get_list && m.fields.get_list[0] === target) { setListId = cur; break; }
+      }
+    }
+    cur = b.next;
+  }
+  if (!setListId) throw new Error('补丁3: 未在 HTTP 链里找到 setList 块');
+  const after = t.blocks[setListId].next;          // ← 渲染链的第一块（Ei）
   const neg = notOf(t, eqConst(t, '当前显示的群聊ID', GID));
   const g = mkBlock(t, 'control_if', { CONDITION: [2, neg], SUBSTACK: [2, f.headId] }, {});
   t.blocks[neg].parent = g;
   t.blocks[f.headId].parent = g;
+  t.blocks[setListId].next = null;                 // HTTP 链到此为止
   t.blocks[f.ifId].inputs.SUBSTACK = [2, g];
   t.blocks[g].parent = f.ifId;
-  log.push('补丁3: ' + f.ifId + '.SUBSTACK 从 ' + f.headId + ' 改为 ' + g + ' (非 MiniChat 才走原 HTTP)');
+  link(t, g, after);                               // 渲染链接在守卫后面，照样跑
+  log.push('补丁3: 只把 HTTP 段 ' + f.headId + '..' + setListId + ' 包进守卫 ' + g + '；渲染链 ' + after + ' 留在外面');
 })();
 
 // ---- 补丁 4：发送时按群走不同通道 ----
