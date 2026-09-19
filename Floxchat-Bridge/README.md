@@ -7,9 +7,27 @@
 | 文件 | 说明 |
 |---|---|
 | `minichat-bridge.js` | TurboWarp 扩展。给 FloxChat 提供「连接 MiniChat / 收发消息 / 把 MiniChat 群聊写进 FloxChat 列表」等积木 |
-| `minichat-logo-300.svg` | FloxChat 群聊列表里 MiniChat 条目的头像。300px 高，和 FloxChat 默认群头像（300×300）同尺寸，否则会被 `set size` 缩得极小。⚠️ 注意 `width`/`height` 必须等于 `viewBox`（Scratch 的约定），放大要用内层 `scale()`，不能只改 width/height |
+| `minichat-avatar.svg` | FloxChat 群聊列表里 MiniChat 条目的头像。**136px 高** |
 | `floxchat-patch.js` | 给 FloxChat 工程打补丁、生成「带 MiniChat 群聊」的 sb3 |
 | `floxchat-validate.js` | 补丁后的块图一致性 / 资产完整性校验 |
+
+## 头像尺寸怎么定的
+
+FloxChat 的群头像克隆体用的是 `set size to N%`，**N% 是相对图片自然尺寸的百分比**，
+所以图片本身多大直接决定它显示多大。站点原来的 `assets/logo.svg` 只有 40×44px，
+渲染出来只有别的群头像的 1/3 不到，看着像个小点。
+
+实测下来 **136px 高** 和 FloxChat 其他群头像大小相当。想再调就改两处：
+
+- `minichat-avatar.svg` 里的 `height` 和 `viewBox` 的后两位、以及 `scale()` 的倍数
+- `floxchat-patch.js` 里的 `GAVATAR` 常量
+
+⚠️ 两个坑（都踩过了）：
+
+1. **`width`/`height` 必须始终等于 `viewBox`**（Scratch 的约定）。放大要靠在外面套一层
+   `<g transform="scale(S)">`，只改 `width`/`height` 会让 `scratch-svg-renderer`
+   按新画布建皮肤、却仍按旧坐标画图形，结果只显示左上角一小块。
+2. `rotationCenter` 注释也要按同一倍数缩放。
 
 ## 扩展地址
 
