@@ -206,6 +206,25 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   }
   if (!setListId) throw new Error('补丁3: 未在 HTTP 链里找到 setList 块');
   const after = t.blocks[setListId].next;          // ← 渲染链的第一块（Ei）
+
+  // P2.5.1 起新增了一道闸：渲染前会检查
+  //   当前显示的群聊ID == 当前实际显示的群聊
+  // 不等就先「广播刷新消息 + 停止」。
+  // 而那个赋值原本写在 HTTP 段里（就在 setList 之前），MiniChat 分支被守卫跳过，
+  // 于是闸门永远不成立 —— 每轮都广播刷新并停住，消息一条都渲染不出来。
+  // 所以在守卫【外面】补一个同样的赋值。老版本没有这个变量，自动跳过。
+  let markId = null;
+  let markVarId = null;
+  for (const t2 of j.targets) {
+    const V = t2.variables || {};
+    for (const id in V) if (V[id][0] === '当前实际显示的群聊') markVarId = id;
+  }
+  if (markVarId) {
+    const rep = mkBlock(t, 'data_variable', {}, { VARIABLE: ['当前显示的群聊ID', varId('当前显示的群聊ID')] });
+    markId = mkBlock(t, 'data_setvariableto', { VALUE: [3, rep, [10, '0']] }, { VARIABLE: ['当前实际显示的群聊', markVarId] });
+    t.blocks[rep].parent = markId;
+  }
+
   const neg = notOf(t, eqConst(t, '当前显示的群聊ID', GID));
   const g = mkBlock(t, 'control_if', { CONDITION: [2, neg], SUBSTACK: [2, f.headId] }, {});
   t.blocks[neg].parent = g;
@@ -213,8 +232,11 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   t.blocks[setListId].next = null;                 // HTTP 链到此为止
   t.blocks[f.ifId].inputs.SUBSTACK = [2, g];
   t.blocks[g].parent = f.ifId;
-  link(t, g, after);                               // 渲染链接在守卫后面，照样跑
-  log.push('补丁3: 只把 HTTP 段 ' + f.headId + '..' + setListId + ' 包进守卫 ' + g + '；渲染链 ' + after + ' 留在外面');
+
+  link(t, g, markId || after);                     // 守卫 →（补的赋值）→ 渲染链
+  if (markId) link(t, markId, after);
+  log.push('补丁3: 只把 HTTP 段 ' + f.headId + '..' + setListId + ' 包进守卫 ' + g +
+    '；渲染链 ' + after + ' 留在外面' + (markId ? '；并补了「当前实际显示的群聊 = 当前显示的群聊ID」(' + markId + ')' : '（老版本无此闸）'));
 })();
 
 // ---- 补丁 4：发送时按群走不同通道 ----
