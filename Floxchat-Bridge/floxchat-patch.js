@@ -339,6 +339,87 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   log.push('补丁8: 登录验证成功后调 ' + call + ' (' + EXT + '_connect，邮箱取 已登录用户信息[4]，昵称取 [2])');
 })();
 
+// ---- 补丁 9：MiniChat 群里「退出群聊」不要往 FloxChat 服务器发请求 ----
+// P2.5.1 新增的退群功能会把「用户剩下的群」写回 FloxChat 服务器
+// （{"action":"update",...}）。在 MiniChat 群里点退群时，那个请求会把
+// MINCHAT 这个本地哨兵 ID 一起写上去，所以必须跳过 HTTP 段。
+// 注意：守卫插在「删除本地项」之后、清空 当前显示的群聊ID 之前 ——
+// 因为原来的清空语句排在 HTTP 段前面，晚了就拿不到群 ID 了。
+(function () {
+  const t = T('提示标');
+  let hat = null;
+  for (const id in t.blocks) {
+    const b = t.blocks[id];
+    if (b.opcode === 'event_whenbroadcastreceived' && b.fields.BROADCAST_OPTION && b.fields.BROADCAST_OPTION[0] === '退出群聊') hat = id;
+  }
+  if (!hat) throw new Error('补丁9: 提示标里没找到「退出群聊」接收器');
+  const chain = [], seen = new Set();
+  (function walk(x) {
+    let cur = x, n = 0;
+    while (cur && n < 300) {
+      const b = t.blocks[cur];
+      if (!b || seen.has(cur)) return;
+      seen.add(cur); chain.push(cur);
+      for (const k of ['SUBSTACK', 'SUBSTACK2']) { const v = b.inputs && b.inputs[k]; if (v && typeof v[1] === 'string') walk(v[1]); }
+      cur = b.next; n++;
+    }
+  })(hat);
+  const httpStart = chain.find(id => t.blocks[id].opcode === 'gsaHTTPRequests_clearAll');
+  if (!httpStart) throw new Error('补丁9: 没找到 HTTP 段');
+  let httpEnd = httpStart, m = 0;
+  while (httpEnd && m < 30) { if (t.blocks[httpEnd].opcode === 'gsaHTTPRequests_sendRequest') break; httpEnd = t.blocks[httpEnd].next; m++; }
+  if (!httpEnd) throw new Error('补丁9: 没找到 sendRequest');
+  const delId = chain.find(id => t.blocks[id].opcode === 'data_deleteoflist' && t.blocks[id].fields.LIST && t.blocks[id].fields.LIST[0] === '已登录用户所在群聊');
+  if (!delId) throw new Error('补丁9: 没找到退群的 deleteoflist');
+  const prevOfHttp = t.blocks[httpStart].parent;
+  const afterHttp = t.blocks[httpEnd].next;
+  if (!prevOfHttp) throw new Error('补丁9: HTTP 段没有前驱，无法摘链');
+  t.blocks[httpStart].parent = null;
+  t.blocks[httpEnd].next = null;
+  const neg = notOf(t, eqConst(t, '当前显示的群聊ID', GID));
+  const g = mkBlock(t, 'control_if', { CONDITION: [2, neg], SUBSTACK: [2, httpStart] }, {});
+  t.blocks[neg].parent = g;
+  t.blocks[httpStart].parent = g;
+  link(t, prevOfHttp, afterHttp);          // 从原位置摘掉
+  const afterDel = t.blocks[delId].next;
+  link(t, delId, g);                       // 插到「删除本地项」之后（此时群 ID 还在）
+  link(t, g, afterDel);
+  log.push('补丁9: 退群 HTTP 段 ' + httpStart + '..' + httpEnd + ' 包进守卫 ' + g + '，插在 ' + delId + ' 之后');
+})();
+
+// ---- 补丁 10：MiniChat 群里点附件按钮不要往 FloxChat 上传 ----
+// 附件走的是 httpfiletools（上传到 FloxChat 的 /upload）+ 一次 FloxChat 的发送请求。
+// MiniChat 群里这两步都不该发生，改成只往聊天区放一条提示气泡。
+(function () {
+  const t = T('通讯');
+  let up = null;
+  for (const id in t.blocks) if (t.blocks[id].opcode === 'httpfiletools_uploadFile') up = id;
+  if (!up) throw new Error('补丁10: 没找到 uploadFile');
+  let cur = t.blocks[up].parent, guardIf = null, n = 0;
+  while (cur && n < 40) {
+    const b = t.blocks[cur];
+    if (!b) break;
+    if (b.opcode === 'control_if' || b.opcode === 'control_if_else') {
+      const c = b.inputs && b.inputs.CONDITION;
+      if (c && typeof c[1] === 'string' && JSON.stringify(t.blocks[c[1]]).indexOf('CommunicationUI13') >= 0) { guardIf = cur; break; }
+    }
+    cur = b.parent; n++;
+  }
+  if (!guardIf) throw new Error('补丁10: 没找到 CommunicationUI13 分支');
+  const head = t.blocks[guardIf].inputs.SUBSTACK[1];
+  const ln = '当前显示的群聊';
+  const notice = '{"username":"MiniChat","uid":"","avatar_url":"","content":"[MiniChat 群] 这里发不了文件/图片：附件上传走的是 FloxChat 服务器。文字消息可以直接发。","time":"","mid":"attach"}';
+  const note = mkBlock(t, 'data_addtolist', { ITEM: lit(notice) }, { LIST: [ln, listId(ln)] });
+  const cond = eqConst(t, '当前显示的群聊ID', GID);
+  const g = mkBlock(t, 'control_if_else', { CONDITION: [2, cond], SUBSTACK: [2, note], SUBSTACK2: [2, head] }, {});
+  t.blocks[cond].parent = g;
+  t.blocks[note].parent = g;
+  t.blocks[head].parent = g;
+  t.blocks[guardIf].inputs.SUBSTACK = [2, g];
+  t.blocks[g].parent = guardIf;
+  log.push('补丁10: ' + guardIf + '.SUBSTACK 改为「MiniChat 只提示不发送 / 其他群走原流程」');
+})();
+
 // ---- 补丁 5：注册扩展 ----
 (function () {
   j.extensions = j.extensions || [];
