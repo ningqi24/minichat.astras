@@ -126,7 +126,8 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v10";
+  var BRIDGE_VERSION = "v12";
+  floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
   var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
@@ -539,6 +540,15 @@
   var floxExhausted = false;      // 已经拉到头了（没有更早的消息）
   var floxPageBusy = false;
 
+  // 控制台日志（排查用：Ctrl+Shift+I 打开控制台，过滤 minichatbridge）
+  function floxLog() {
+    try {
+      if (typeof console !== "undefined" && console.log) {
+        console.log.apply(console, ["[minichatbridge]"].concat(Array.prototype.slice.call(arguments)));
+      }
+    } catch (e) {}
+  }
+
   function floxTargetList() {
     return floxAutoList ? findList(floxAutoList) : null;
   }
@@ -622,6 +632,8 @@
         floxLoadedCount += page.length;
         if (page.length < FLOX_PAGE_SIZE) floxExhausted = true;
       }
+      floxLog("取到一页 offset=" + offset + " 共 " + page.length + " 条，累计 " + floxLoadedCount +
+              (floxExhausted ? "（已到底）" : ""));
       floxNewSinceLoad = 0;                             // 取页后基准重新锚定
       var all = floxFlatten();
       var avatars = avatarByEmail();
@@ -652,7 +664,7 @@
   // 重画后 FloxChat 自己会把 滑动页面 归位（它的「刷新消息」处理器里写死 55），
   // 所以加载完要等几秒再接受下一次触发，否则会被自己归位的动作反复触发。
   var FLOX_AUTOPAGE_COOLDOWN = 3000;      // 每次加载后的冷却（渲染要几秒，别叠着来）
-  var FLOX_AUTOPAGE_INTERVAL = 6000;      // 定时自动加载的间隔
+  var FLOX_AUTOPAGE_INTERVAL = 8000;      // 定时自动加载的间隔（还要等上一页画完才真的加载）
   var floxScrollWatch = null;
   var floxLastScroll = null;
   var floxScrollCooldown = 0;
@@ -678,16 +690,43 @@
     return null;
   }
 
+  // ⚠️ 判断「上一页画完了没有」。
+  // FloxChat 每渲染一条就往「已显示消息」里加一项，一直加到等于「当前显示的群聊」的长度。
+  // 这就是现成的完成信号 —— 不等它画完就加载下一页的话，会一直整表清空重画，
+  // 表现就是「一直在加载中、内容永远出不来」（重画比加载间隔还慢）。
+  function floxRenderIdle() {
+    try {
+      var shown = findList("已显示消息");
+      var target = floxTargetList();
+      if (!shown || !target) return true;
+      return Number(shown.value.length) >= Number(target.value.length);
+    } catch (e) { return true; }
+  }
+
   function floxCanAutoLoad() {
     if (floxPageBusy) return false;
     if (floxExhausted) return false;
     if (floxLoadedCount >= FLOX_MAX_LOADED) return false;
     if (!floxAutoList || !token) return false;
     if (Date.now() < floxScrollCooldown) return false;
+    if (!floxRenderIdle()) return false;      // 上一页还没画完，别动
     return true;
   }
 
+  // 安全阀：连着很多次都发现「上一页还没画完」就说明渲染卡住了，
+  // 这时候把自动翻页停掉，至少保证已经加载的那一页能稳定显示出来。
+  var floxBusyStreak = 0;
+
   function floxAutoTick() {
+    if (!floxRenderIdle()) {
+      floxBusyStreak++;
+      if (floxBusyStreak > 20) {
+        floxLog("渲染迟迟画不完，停掉自动翻页（已加载 " + floxLoadedCount + " 条）");
+        floxStopAutoPage();
+      }
+      return;
+    }
+    floxBusyStreak = 0;
     if (!floxCanAutoLoad()) return;
     floxScrollCooldown = Date.now() + FLOX_AUTOPAGE_COOLDOWN;
     floxLoadMore();
