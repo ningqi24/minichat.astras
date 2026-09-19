@@ -6,10 +6,10 @@ const j = JSON.parse(fs.readFileSync(src, 'utf8'));
 const EXT = 'minichatbridge';
 const GID = 'MINICHAT';
 const GNAME = 'MiniChat 群聊';
-// 136px 版本：FloxChat 群头像「自然尺寸 × set size%」决定实际大小，
-// 站点原来的 assets/logo.svg 只有 40x44，渲染出来小得几乎看不见；
-// 300px 又大过头（约 2.2 倍），136px 实测和别的群头像相当。
-const GAVATAR = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar.svg';
+// 150x150 圆形：FloxChat 的群头像/用户头像规格（原作者确认）。
+// FloxChat 用「set size to N%」缩放头像，N% 相对图片自然尺寸，
+// 所以尺寸必须是 150x150 才能和其他群头像一样大。
+const GAVATAR = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg';
 const EXT_URL = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-bridge.js';
 const log = [];
 let seq = 0;

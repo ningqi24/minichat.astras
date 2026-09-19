@@ -89,7 +89,7 @@
   // 就会直接渲染，不需要重画界面。
   var FLOX_GID = "MINICHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
-  var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/assets/logo.svg";
+  var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
 
   function avatarByEmail() {
     var map = {};
@@ -99,6 +99,61 @@
       if (u && u.email) map[String(u.email).toLowerCase()] = u.avatar_url || "";
     }
     return map;
+  }
+
+  // ---- 头像归一化：FloxChat 的头像规格是 150x150 正方形 ----
+  // FloxChat 用「设为 N% 大小」来缩放头像，而 N% 是相对图片【自然尺寸】的百分比，
+  // 所以图片本身多大就直接决定显示多大。这里在读取端把任意来源的头像
+  //（包括历史上传的、尺寸各异的）统一裁成 150x150 再交给 FloxChat，
+  // 存量头像完全不用重新上传。
+  var FLOX_AVATAR_SIZE = 150;
+  var floxAvatarCache = {};     // 原地址 -> 150x150 的 data URI
+  var floxAvatarPending = {};
+
+  function normalizeAvatar(url) {
+    url = String(url == null ? "" : url);
+    if (!url) return Promise.resolve("");
+    if (floxAvatarCache[url]) return Promise.resolve(floxAvatarCache[url]);
+    if (floxAvatarPending[url]) return floxAvatarPending[url];
+    floxAvatarPending[url] = new Promise(function(resolve) {
+      var done = function(v) { floxAvatarCache[url] = v; resolve(v); };
+      try {
+        var img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function() {
+          try {
+            var n = FLOX_AVATAR_SIZE;
+            var iw = img.naturalWidth || img.width;
+            var ih = img.naturalHeight || img.height;
+            var s = Math.min(iw, ih);                 // 居中正方形裁剪
+            var c = document.createElement("canvas");
+            c.width = n; c.height = n;
+            c.getContext("2d").drawImage(img, (iw - s) / 2, (ih - s) / 2, s, s, 0, 0, n, n);
+            done(c.toDataURL("image/jpeg", 0.85));
+          } catch (e) {
+            done(url);                                // 画布被污染（跨域）等 -> 退回原图
+          }
+        };
+        img.onerror = function() { done(url); };
+        img.src = url;
+      } catch (e) { done(url); }
+    });
+    return floxAvatarPending[url];
+  }
+
+  // 把这张「邮箱 -> 头像地址」表里的所有头像先规范化，结果落到 floxAvatarCache
+  function normalizeAvatarMap(avatars) {
+    var uniq = {};
+    Object.keys(avatars).forEach(function(e) {
+      var u = avatars[e];
+      if (u && !uniq[u]) uniq[u] = 1;
+    });
+    return Promise.all(Object.keys(uniq).map(function(u) { return normalizeAvatar(u); }));
+  }
+
+  function floxAvatarOf(avatars, email) {
+    var u = avatars[String(email).toLowerCase()] || "";
+    return (u && floxAvatarCache[u]) ? floxAvatarCache[u] : u;
   }
 
   // MiniChat 的附件/引用标记在 FloxChat 里没法渲染，换成可读文字
@@ -116,7 +171,7 @@
     return JSON.stringify({
       username: m.sender_name || (email ? email.split("@")[0] : ""),
       uid: email,
-      avatar_url: avatars[String(email).toLowerCase()] || "",
+      avatar_url: floxAvatarOf(avatars, email),
       content: floxText(m.content),
       time: m.created_at || "",
       mid: m.id || ""
@@ -136,20 +191,22 @@
       return loadHistory(200);   // 最旧 → 最新
     }).then(function(msgs) {
       var avatars = avatarByEmail();
-      var start = backfill ? Math.max(0, msgs.length - 30) : 0;
-      var added = 0;
-      for (var i = start; i < msgs.length; i++) {
-        var m = msgs[i];
-        var id = String(m.id || "");
-        if (id && ext._floxSeen[id]) continue;
-        var t = String(m.created_at || "");
-        if (!id && ext._floxLastTs && t && t <= ext._floxLastTs) continue;
-        list.value.push(toFloxMessage(m, avatars));
-        if (id) ext._floxSeen[id] = 1;
-        if (t) ext._floxLastTs = t;
-        added++;
-      }
-      return added;
+      return normalizeAvatarMap(avatars).then(function() {
+        var start = backfill ? Math.max(0, msgs.length - 30) : 0;
+        var added = 0;
+        for (var i = start; i < msgs.length; i++) {
+          var m = msgs[i];
+          var id = String(m.id || "");
+          if (id && ext._floxSeen[id]) continue;
+          var t = String(m.created_at || "");
+          if (!id && ext._floxLastTs && t && t <= ext._floxLastTs) continue;
+          list.value.push(toFloxMessage(m, avatars));
+          if (id) ext._floxSeen[id] = 1;
+          if (t) ext._floxLastTs = t;
+          added++;
+        }
+        return added;
+      });
     });
   }
 
@@ -158,17 +215,20 @@
   var floxAutoList = null;
 
   function floxAutoPushToList(msg) {
-    if (!floxAutoList || !msg) return;
+    if (!floxAutoList || !msg) return Promise.resolve();
     var list = findList(floxAutoList);
-    if (!list) return;
+    if (!list) return Promise.resolve();
     ext._floxSeen = ext._floxSeen || {};
     var id = String(msg.id || "");
     if (id) {
-      if (ext._floxSeen[id]) return;
+      if (ext._floxSeen[id]) return Promise.resolve();
       ext._floxSeen[id] = 1;
     }
-    list.value.push(toFloxMessage(msg, avatarByEmail()));
-    if (msg.created_at) ext._floxLastTs = String(msg.created_at);
+    var avatars = avatarByEmail();
+    return normalizeAvatarMap(avatars).then(function() {
+      list.value.push(toFloxMessage(msg, avatars));
+      if (msg.created_at) ext._floxLastTs = String(msg.created_at);
+    });
   }
 
   // 往 FloxChat 的群聊列表里塞一个「MiniChat」条目（幂等）
@@ -250,11 +310,17 @@
   // ---- 收到新消息的统一入口（扩展加载时只注册一次，避免回调无限增长）----
   function onBridgeMessage(msg) {
     lastMsg = msg;
-    // 先推进列表，再触发 HAT，保证 FloxChat 渲染时数据已经就位
-    try { floxAutoPushToList(msg); } catch (_) {}
-    if (Scratch.vm && Scratch.vm.runtime) {
-      Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
-    }
+    var fire = function() {
+      if (Scratch.vm && Scratch.vm.runtime) {
+        Scratch.vm.runtime.startHats("minichatbridge_whenReceived");
+      }
+    };
+    if (!floxAutoList) { fire(); return; }
+    // 先把头像规范化再推进列表，保证 FloxChat 渲染时数据已经就位
+    Promise.resolve()
+      .then(function() { return floxAutoPushToList(msg); })
+      .catch(function() {})
+      .then(fire);
   }
 
   // ---- 在线状态(presence)：加入 presence-global 频道并维护在线用户表 ----

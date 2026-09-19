@@ -1342,7 +1342,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '4.1.0';
+var APP_VERSION = '4.2.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -5597,8 +5597,10 @@ function refreshAllAvatars(email, newUrl) {
 async function uploadAvatar(file) {
             if (!currentUserId) { showAlert(t('pleaseLogin'), 'error'); return; }
             if (!file || !file.type.startsWith('image/')) { showAlert(t('pleaseSelectImage'), 'error'); return; }
+            // 统一裁成正方形：FloxChat 侧的群头像/用户头像规格是 150×150 正方形，
+            // 非正方形图在那边会被拉伸变形，而且尺寸不一致会导致显示大小忽大忽小。
             var pf = file;
-            if (file.size > 200*1024) try { pf = await compressImage(file, 512, 0.7); } catch(e) {}
+            try { pf = await cropAvatar(file, 300); } catch(e) { pf = file; }
             if (pf.size > 5*1024*1024) { showAlert(t('imageTooLargeMsg'), 'error'); return; }
             showLoading(t('uploading'));
             try {
@@ -5624,6 +5626,7 @@ async function uploadAvatar(file) {
                 showAlert(t('avatarUpdated'), 'success');
             } catch(err) { console.error(err); closeCustomModal(); showAlert(t('uploadFailedMsg'), 'error'); }
         }
+// 等比压缩（聊天图片附件用，不裁剪、保留长宽比）
 function compressImage(file, mw, q) {
     return new Promise((res,rej) => {
         var r = new FileReader();
@@ -5636,6 +5639,28 @@ function compressImage(file, mw, q) {
                 c.width = w; c.height = h;
                 c.getContext('2d').drawImage(img, 0, 0, w, h);
                 c.toBlob(b => { if (!b) rej(new Error('压缩失败')); else res(new File([b], file.name, {type:'image/jpeg'})); }, 'image/jpeg', q);
+            };
+            img.onerror = rej;
+            img.src = e.target.result;
+        };
+        r.onerror = rej;
+        r.readAsDataURL(file);
+    });
+}
+
+// 居中裁剪成正方形并缩放：头像统一存 300×300 正方形
+// （FloxChat 那边会用桥接扩展再压到 150×150，正好是它的头像规格）
+function cropAvatar(file, size) {
+    return new Promise((res,rej) => {
+        var r = new FileReader();
+        r.onload = e => {
+            var img = new Image();
+            img.onload = () => {
+                var s = Math.min(img.width, img.height);   // 取短边做正方形
+                var c = document.createElement('canvas');
+                c.width = size; c.height = size;
+                c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+                c.toBlob(b => { if (!b) rej(new Error('裁剪失败')); else res(new File([b], 'avatar.jpg', {type:'image/jpeg'})); }, 'image/jpeg', 0.9);
             };
             img.onerror = rej;
             img.src = e.target.result;
