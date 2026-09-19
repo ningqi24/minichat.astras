@@ -14,7 +14,7 @@ const GAVATAR = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.
 // ⚠️ 扩展 JS 走 GitHub Pages，缓存头是 max-age=3600（一小时）。
 // 不带版本号的话，改完扩展用户重开工程也会继续用浏览器缓存里的旧 JS。
 // 每次改 minichat-bridge.js 就把这个号 +1，并重新打包 sb3。
-const EXT_VER = '18';
+const EXT_VER = '19';
 const EXT_URL = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-bridge.js?v=' + EXT_VER;
 const log = [];
 let seq = 0;
@@ -418,6 +418,51 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   link(t, hat, g);
   t.blocks[g].parent = hat;
   log.push('补丁11: MiniChat 群退出时不删群聊列表那一行（' + hat + '.next 改为守卫 ' + g + '）');
+})();
+
+// ---- 补丁 12：MiniChat 群里点退群，直接弹「无法退出」，不走确认框 ----
+// 「退群」按钮第一步广播的是「退出群聊提示」，由「提示」弹出确认窗口 Rq；
+// 用户确认之后才会广播「退出群聊」再走补丁9 那条路。既然 MiniChat 群根本不能退，
+// 就在第一步直接换成我们的提示窗口，别让用户白确认一次。
+(function () {
+  const t = T('提示');
+  let hat = null;
+  for (const id in t.blocks) {
+    const b = t.blocks[id];
+    if (b.opcode === 'event_whenbroadcastreceived' && b.fields.BROADCAST_OPTION && b.fields.BROADCAST_OPTION[0] === '退出群聊提示') hat = id;
+  }
+  if (!hat) throw new Error('补丁12: 提示里没找到「退出群聊提示」接收器');
+  const outer = t.blocks[hat].next;
+  if (!outer) throw new Error('补丁12: 「退出群聊提示」下面没有块');
+  const sv = t.blocks[outer].inputs && t.blocks[outer].inputs.SUBSTACK;
+  if (!sv || typeof sv[1] !== 'string') throw new Error('补丁12: 第一块不是带 SUBSTACK 的控制块（' + t.blocks[outer].opcode + '）');
+  const head = sv[1];
+
+  const A_TITLE = '}z_7!=yrcNgOn8`SopS*';
+  const A_CONTENT = '*~w+tlqibsN6@!Mid881';
+  const A_YESNO = '0!R]u`PONbLh=wuo=jGR';
+  const A_DARK = 'Aum]pFaWTN+i6tqkL^fh';
+  const dialog = mkBlock(t, 'procedures_call', {
+    [A_TITLE]:   [1, [10, '退出群聊']],
+    [A_CONTENT]: [1, [10, '无法退出 MiniChat 群：它由桥接注入，在 FloxChat 服务器上并不存在。']],
+    [A_YESNO]:   [1, [10, '1']],
+    [A_DARK]:    [1, [10, '1']]
+  }, {});
+  t.blocks[dialog].mutation = {
+    tagName: 'mutation', children: [],
+    proccode: '创建窗口 | 标题 %s 内容 %s 包含“否”？ %s 暗色模式 %s',
+    argumentids: JSON.stringify([A_TITLE, A_CONTENT, A_YESNO, A_DARK]),
+    wasm: 'false'
+  };
+
+  const cond = eqConst(t, '当前显示的群聊ID', GID);
+  const g = mkBlock(t, 'control_if_else', { CONDITION: [2, cond], SUBSTACK: [2, dialog], SUBSTACK2: [2, head] }, {});
+  t.blocks[cond].parent = g;
+  t.blocks[dialog].parent = g;
+  t.blocks[head].parent = g;
+  t.blocks[outer].inputs.SUBSTACK = [2, g];
+  t.blocks[g].parent = outer;
+  log.push('补丁12: MiniChat 群点退群直接弹提示，不走确认框（' + outer + '.SUBSTACK 从 ' + head + ' 改为 ' + g + '）');
 })();
 
 // ---- 补丁 10：MiniChat 群里点附件按钮不要往 FloxChat 上传 ----

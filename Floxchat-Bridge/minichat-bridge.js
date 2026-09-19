@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v18";
+  var BRIDGE_VERSION = "v19";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -565,8 +565,8 @@
   // FloxChat 的渲染是「只往尾部追加」的：刷新数 = len(当前显示的群聊) - len(已显示消息)。
   // 所以往前翻历史不能 unshift（下标全乱），而要【整表替换】+ 广播一次「刷新消息」——
   // 那个广播的处理器会把 已显示消息 / 消息长度 / i 等全归零，下一秒从头重画整页。
-  var FLOX_PAGE_SIZE = 30;        // 每次往前取多少条
-  var FLOX_MAX_LOADED = 120;      // 累积上限：渲染 0.07 秒/条 + 每条约一组克隆体，再多就卡了
+  var FLOX_PAGE_SIZE = 50;        // 每次往前取多少条
+  var FLOX_MAX_LOADED = 200;      // 累积上限：渲染 0.07 秒/条 + 每条约一组克隆体，再多就卡了
   var floxPages = [];             // 已加载的页，每页都是「旧→新」，floxPages[0] 是最老的一页
   var floxLoadedCount = 0;        // 已累积条数（从最新往回数）
   var floxNewSinceLoad = 0;       // 上次取页之后又实时推了几条（校正 offset 用）
