@@ -349,12 +349,12 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   log.push('补丁8: 登录验证成功后调 ' + call + ' (' + EXT + '_connect，邮箱取 已登录用户信息[4]，昵称取 [2])');
 })();
 
-// ---- 补丁 9：MiniChat 群里「退出群聊」不要往 FloxChat 服务器发请求 ----
-// P2.5.1 新增的退群功能会把「用户剩下的群」写回 FloxChat 服务器
-// （{"action":"update",...}）。在 MiniChat 群里点退群时，那个请求会把
-// MINCHAT 这个本地哨兵 ID 一起写上去，所以必须跳过 HTTP 段。
-// 注意：守卫插在「删除本地项」之后、清空 当前显示的群聊ID 之前 ——
-// 因为原来的清空语句排在 HTTP 段前面，晚了就拿不到群 ID 了。
+// ---- 补丁 9：MiniChat 群完全跳过「退出群聊」流程 ----
+// MiniChat 群是桥接注入的【本地哨兵】，在 FloxChat 服务端根本不存在，退它没有意义。
+// 而且原版退群对非默认群本来就是半成品（服务端写的是占位 uid "UID0001"），
+// 接上去只会踩坑（之前的现象：退完群聊列表和消息区全空）。
+// 做法：把「提示标」里那个接收器的整个 SUBSTACK 包进守卫。
+// 守卫条件用的是 当前显示的群聊ID —— 它在流程内部才被清空，所以进守卫时还在。
 (function () {
   const t = T('提示标');
   let hat = null;
@@ -363,38 +363,61 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
     if (b.opcode === 'event_whenbroadcastreceived' && b.fields.BROADCAST_OPTION && b.fields.BROADCAST_OPTION[0] === '退出群聊') hat = id;
   }
   if (!hat) throw new Error('补丁9: 提示标里没找到「退出群聊」接收器');
-  const chain = [], seen = new Set();
-  (function walk(x) {
-    let cur = x, n = 0;
-    while (cur && n < 300) {
-      const b = t.blocks[cur];
-      if (!b || seen.has(cur)) return;
-      seen.add(cur); chain.push(cur);
-      for (const k of ['SUBSTACK', 'SUBSTACK2']) { const v = b.inputs && b.inputs[k]; if (v && typeof v[1] === 'string') walk(v[1]); }
-      cur = b.next; n++;
-    }
-  })(hat);
-  const httpStart = chain.find(id => t.blocks[id].opcode === 'gsaHTTPRequests_clearAll');
-  if (!httpStart) throw new Error('补丁9: 没找到 HTTP 段');
-  let httpEnd = httpStart, m = 0;
-  while (httpEnd && m < 30) { if (t.blocks[httpEnd].opcode === 'gsaHTTPRequests_sendRequest') break; httpEnd = t.blocks[httpEnd].next; m++; }
-  if (!httpEnd) throw new Error('补丁9: 没找到 sendRequest');
-  const delId = chain.find(id => t.blocks[id].opcode === 'data_deleteoflist' && t.blocks[id].fields.LIST && t.blocks[id].fields.LIST[0] === '已登录用户所在群聊');
-  if (!delId) throw new Error('补丁9: 没找到退群的 deleteoflist');
-  const prevOfHttp = t.blocks[httpStart].parent;
-  const afterHttp = t.blocks[httpEnd].next;
-  if (!prevOfHttp) throw new Error('补丁9: HTTP 段没有前驱，无法摘链');
-  t.blocks[httpStart].parent = null;
-  t.blocks[httpEnd].next = null;
+  const outer = t.blocks[hat].next;
+  if (!outer) throw new Error('补丁9: 「退出群聊」下面没有块');
+  const sv = t.blocks[outer].inputs && t.blocks[outer].inputs.SUBSTACK;
+  if (!sv || typeof sv[1] !== 'string') throw new Error('补丁9: 第一块不是带 SUBSTACK 的控制块（' + t.blocks[outer].opcode + '）');
+  const head = sv[1];
+
+  // MiniChat 分支：不做事，只弹一个和原版同款的窗口（借用它自己的「创建窗口」过程）。
+  // 参数 id 和 proccode 是从工程里读出来的，调用块本身是【新增】的，没改原积木。
+  const A_TITLE = '}z_7!=yrcNgOn8`SopS*';
+  const A_CONTENT = '*~w+tlqibsN6@!Mid881';
+  const A_YESNO = '0!R]u`PONbLh=wuo=jGR';
+  const A_DARK = 'Aum]pFaWTN+i6tqkL^fh';
+  const dialog = mkBlock(t, 'procedures_call', {
+    [A_TITLE]:   [1, [10, '退出群聊']],
+    [A_CONTENT]: [1, [10, '无法退出 MiniChat 群：它由桥接注入，在 FloxChat 服务器上并不存在。']],
+    [A_YESNO]:   [1, [10, '1']],
+    [A_DARK]:    [1, [10, '1']]
+  }, {});
+  t.blocks[dialog].mutation = {
+    tagName: 'mutation', children: [],
+    proccode: '创建窗口 | 标题 %s 内容 %s 包含“否”？ %s 暗色模式 %s',
+    argumentids: JSON.stringify([A_TITLE, A_CONTENT, A_YESNO, A_DARK]),
+    wasm: 'false'
+  };
+
+  const cond = eqConst(t, '当前显示的群聊ID', GID);   // == MINICHAT -> 弹窗
+  const g = mkBlock(t, 'control_if_else', { CONDITION: [2, cond], SUBSTACK: [2, dialog], SUBSTACK2: [2, head] }, {});
+  t.blocks[cond].parent = g;
+  t.blocks[dialog].parent = g;
+  t.blocks[head].parent = g;
+  t.blocks[outer].inputs.SUBSTACK = [2, g];
+  t.blocks[g].parent = outer;
+  log.push('补丁9: MiniChat 群跳过整个退群流程并弹提示（' + outer + '.SUBSTACK 从 ' + head + ' 改为 ' + g + '）');
+})();
+
+// ---- 补丁 11：MiniChat 群退出时不要删掉群聊列表里的那一行 ----
+// 「群聊列表」里还有一个「收到 退出群聊」的接收器：停掉该角色其它脚本 -> 淡出 -> 删除那一行的克隆体。
+// 补丁9 只挡了「提示标」那一边，这一个不挡的话 MiniChat 那一行还是会从列表里消失。
+(function () {
+  const t = T('群聊列表');
+  let hat = null;
+  for (const id in t.blocks) {
+    const b = t.blocks[id];
+    if (b.opcode === 'event_whenbroadcastreceived' && b.fields.BROADCAST_OPTION && b.fields.BROADCAST_OPTION[0] === '退出群聊') hat = id;
+  }
+  if (!hat) throw new Error('补丁11: 群聊列表里没找到「退出群聊」接收器');
+  const head = t.blocks[hat].next;
+  if (!head) throw new Error('补丁11: 「退出群聊」下面没有块');
   const neg = notOf(t, eqConst(t, '当前显示的群聊ID', GID));
-  const g = mkBlock(t, 'control_if', { CONDITION: [2, neg], SUBSTACK: [2, httpStart] }, {});
+  const g = mkBlock(t, 'control_if', { CONDITION: [2, neg], SUBSTACK: [2, head] }, {});
   t.blocks[neg].parent = g;
-  t.blocks[httpStart].parent = g;
-  link(t, prevOfHttp, afterHttp);          // 从原位置摘掉
-  const afterDel = t.blocks[delId].next;
-  link(t, delId, g);                       // 插到「删除本地项」之后（此时群 ID 还在）
-  link(t, g, afterDel);
-  log.push('补丁9: 退群 HTTP 段 ' + httpStart + '..' + httpEnd + ' 包进守卫 ' + g + '，插在 ' + delId + ' 之后');
+  t.blocks[head].parent = g;
+  link(t, hat, g);
+  t.blocks[g].parent = hat;
+  log.push('补丁11: MiniChat 群退出时不删群聊列表那一行（' + hat + '.next 改为守卫 ' + g + '）');
 })();
 
 // ---- 补丁 10：MiniChat 群里点附件按钮不要往 FloxChat 上传 ----
