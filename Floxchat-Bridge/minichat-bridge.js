@@ -10,6 +10,12 @@
   var EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
   var SECRET = "flox-meow-2024";
 
+  // 「这个账号还没开通 MiniChat」时的中文提示（游客账号是最常见的触发场景）
+  var FLOX_NEED_OPEN_HINT =
+    "还没有 MiniChat 账号。请先到 minichat.astras.cc，用同一个邮箱 + FloxChat 验证码登录一次，" +
+    "之后回到 FloxChat 就能直接进 MiniChat 群了。" +
+    "如果你现在用的是游客账号，请先在 FloxChat 里登录你自己的账号再试。";
+
   var token = null;
   var userEmail = null;
   var userName = null;
@@ -147,7 +153,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v15";
+  var BRIDGE_VERSION = "v17";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -560,6 +566,7 @@
   var floxNewSinceLoad = 0;       // 上次取页之后又实时推了几条（校正 offset 用）
   var floxExhausted = false;      // 已经拉到头了（没有更早的消息）
   var floxPageBusy = false;
+  var floxLastLoadAt = 0;        // 上次取页的时间（给「渲染慢」兜底用）
 
   // 控制台日志（排查用：Ctrl+Shift+I 打开控制台，过滤 minichatbridge）
   function floxLog() {
@@ -636,6 +643,7 @@
     if (!list) { setError("还没进入 MiniChat 群（自动推送未开启）"); floxLog("loadPage 中止：找不到列表 " + floxAutoList); return Promise.resolve(-1); }
     if (!(offset >= 0)) offset = 0;
     floxPageBusy = true;
+    floxLastLoadAt = Date.now();
     floxRaiseCloneLimit(1500);
     // ⚠️ 必须先拿到用户表，否则 avatarByEmail() 是空的 -> 头像 URL 全空 -> 头像不显示
     var prep = ext._usersCache ? Promise.resolve() : (ext.loadUsers() || Promise.resolve());
@@ -731,24 +739,13 @@
     if (floxLoadedCount >= FLOX_MAX_LOADED) return false;
     if (!floxAutoList || !token) return false;
     if (Date.now() < floxScrollCooldown) return false;
-    if (!floxRenderIdle()) return false;      // 上一页还没画完，别动
+    // 上一页还没画完就先不动 —— 但也不能无限等：
+    // 消息多的时候单页重画可能要十几秒，一直卡着就永远不会再加载了。
+    if (!floxRenderIdle() && (Date.now() - floxLastLoadAt) < 15000) return false;
     return true;
   }
 
-  // 安全阀：连着很多次都发现「上一页还没画完」就说明渲染卡住了，
-  // 这时候把自动翻页停掉，至少保证已经加载的那一页能稳定显示出来。
-  var floxBusyStreak = 0;
-
   function floxAutoTick() {
-    if (!floxRenderIdle()) {
-      floxBusyStreak++;
-      if (floxBusyStreak > 20) {
-        floxLog("渲染迟迟画不完，停掉自动翻页（已加载 " + floxLoadedCount + " 条）");
-        floxStopAutoPage();
-      }
-      return;
-    }
-    floxBusyStreak = 0;
     if (!floxCanAutoLoad()) return;
     floxScrollCooldown = Date.now() + FLOX_AUTOPAGE_COOLDOWN;
     floxLoadMore();
@@ -878,12 +875,17 @@
       return getToken(email, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
-        floxLog("connect 失败:", e && e.message ? e.message : e);
-        setError(e);
+        var raw = e && e.message ? String(e.message) : String(e);
+        floxLog("connect 失败:", raw);
+        // 把服务端的英文错误码换成能直接看懂的中文说明
+        if (/ACCOUNT_NOT_FOUND|账号不存在/.test(raw)) {
+          raw = "您正在使用的账号（" + email + "）" + FLOX_NEED_OPEN_HINT;
+        }
+        setError(raw);
         // 想登的账号和当前会话不是同一个 -> 必须清掉旧会话，
         // 否则会继续用上一个账号的 token 发消息（消息算到别人头上）。
         if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
-        floxAppendErrorBubble(e && e.message ? e.message : e);
+        floxAppendErrorBubble(raw);
       });
     },
 
@@ -910,9 +912,14 @@
       return loginWithFloxCode(email, code).then(function() {
         connectWS();
       }).catch(function(e) {
-        setError(e);
+        var raw2 = e && e.message ? String(e.message) : String(e);
+        floxLog("connectByCode 失败:", raw2);
+        if (/ACCOUNT_NOT_FOUND|账号不存在/.test(raw2)) {
+          raw2 = "您正在使用的账号（" + email + "）" + FLOX_NEED_OPEN_HINT;
+        }
+        setError(raw2);
         if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
-        floxAppendErrorBubble(e && e.message ? e.message : e);
+        floxAppendErrorBubble(raw2);
       });
     },
 
@@ -921,15 +928,12 @@
         setError("未连接，请先「桥接连接」");
         return;
       }
-      // 历史翻页命令：在 MiniChat 群里发这些词就当翻页，不真的发出去
+      // 历史翻页命令：在 MiniChat 群里发 /more 就加载更早的一页，不真的发出去
       // （MiniChat 群的发送本来就只走扩展，所以在这里拦最省事、不用加任何 UI）
+      // 注意只保留 /more 这一个指令；要回最新一页用积木「桥接跳回最新一页消息」。
       var cmd = String(args.MSG == null ? "" : args.MSG).trim();
-      if (/^(↑|\.\.|\/older|\/old|\/more|\/up|更早|\/更早)$/.test(cmd)) {
+      if (cmd === "/more") {
         floxLoadMore();
-        return;
-      }
-      if (/^(↓|\/newer|\/new|\/latest|\/down|最新|\/最新)$/.test(cmd)) {
-        floxLoadPage(0, "reset");
         return;
       }
       clearError();
@@ -1222,10 +1226,6 @@
         color2: "#1d4ed8",
         blocks: [
           // ===== 连接 =====
-          { opcode: "sendFloxCode", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接发送 FloxChat 验证码到邮箱 [EMAIL]",
-            arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
-          },
           { opcode: "connectByCode", blockType: Scratch.BlockType.COMMAND,
             text: "桥接用验证码 [CODE] 登录邮箱 [EMAIL]（没账号会自动开通）",
             arguments: {
@@ -1240,52 +1240,14 @@
               NAME:  { type: Scratch.ArgumentType.STRING, defaultValue: "" }
             }
           },
-          { opcode: "connected", blockType: Scratch.BlockType.BOOLEAN,
-            text: "桥接已连接？（判断连接状态）"
-          },
-          { opcode: "disconnect", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接断开连接（断开当前连接）"
-          },
           "---",
           // ===== 发送 / 接收 =====
           { opcode: "send", blockType: Scratch.BlockType.COMMAND,
             text: "桥接发送 [MSG]（需先连接）",
             arguments: { MSG: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
           },
-          { opcode: "whenReceived", blockType: Scratch.BlockType.HAT,
-            text: "当桥接收到消息时（需先连接）", isEdgeActivated: false
-          },
-          { opcode: "lastSender", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后发送者（配合接收积木用）"
-          },
-          { opcode: "lastContent", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后内容（配合接收积木用）"
-          },
-          { opcode: "lastTime", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接最后时间（配合接收积木用）"
-          },
           "---",
           // ===== 历史 =====
-          { opcode: "loadMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接加载 [LIMIT] 条历史消息（需先连接）",
-            arguments: { LIMIT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 30 } }
-          },
-          { opcode: "loadAllMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接加载全部历史消息（需先连接，消息多时较慢）"
-          },
-          { opcode: "historyCount", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接历史消息数量（需先加载）"
-          },
-          { opcode: "historyLoaded", blockType: Scratch.BlockType.BOOLEAN,
-            text: "桥接历史已加载？（判断加载状态）"
-          },
-          { opcode: "historyItem", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接历史第 [INDEX] 条 [FIELD]（需先加载）",
-            arguments: {
-              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
-              FIELD: { type: Scratch.ArgumentType.STRING, menu: "fields" }
-            }
-          },
           "---",
           // ===== 历史翻页（MiniChat 群里用）=====
           { opcode: "floxLoadOlder", blockType: Scratch.BlockType.COMMAND,
@@ -1302,63 +1264,16 @@
           },
           "---",
           // ===== 列表 =====
-          { opcode: "setListToMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "将 [LIST] 设为消息列表（JSON 条目，需先加载）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
-          },
-          { opcode: "parseItem", blockType: Scratch.BlockType.REPORTER,
-            text: "解析 [LIST] 的第 [INDEX] 项，取 [FIELD]（消息列表条目）",
-            arguments: {
-              LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" },
-              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
-              FIELD: { type: Scratch.ArgumentType.STRING, menu: "itemFields" }
-            }
-          },
           "---",
           // ===== 用户 =====
-          { opcode: "loadUsers", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接加载全部用户（在线+离线，需先连接）"
-          },
-          { opcode: "userCount", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接用户总数（需先加载）"
-          },
-          { opcode: "userLoaded", blockType: Scratch.BlockType.BOOLEAN,
-            text: "桥接用户已加载？（判断加载状态）"
-          },
-          { opcode: "setListToUsers", blockType: Scratch.BlockType.COMMAND,
-            text: "将 [LIST] 设为用户列表（JSON 条目，需先加载）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
-          },
-          { opcode: "onlineCount", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接在线用户数量（需先连接）"
-          },
-          { opcode: "userIsOnline", blockType: Scratch.BlockType.BOOLEAN,
-            text: "桥接 [EMAIL] 是否在线？（需先连接）",
-            arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
-          },
-          { opcode: "userAvatar", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接 [EMAIL] 的头像",
-            arguments: { EMAIL: { type: Scratch.ArgumentType.STRING, defaultValue: "" } }
-          },
           "---",
           // ===== FloxChat 兼容（把 MiniChat 接进 FloxChat 的聊天界面）=====
-          { opcode: "floxInjectGroup", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接把 MiniChat 群聊写入列表 [LIST]（FloxChat 群聊格式）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
-          },
-          { opcode: "floxRefreshMessages", blockType: Scratch.BlockType.COMMAND,
-            text: "桥接刷新 MiniChat 消息到列表 [LIST]（FloxChat 消息格式，需先连接）",
-            arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
-          },
           { opcode: "floxAutoPush", blockType: Scratch.BlockType.COMMAND,
             text: "桥接开启 MiniChat 自动推送（新消息直接写入 [LIST]，不轮询）",
             arguments: { LIST: { type: Scratch.ArgumentType.STRING, menu: "lists" } }
           },
           { opcode: "floxAutoPushOff", blockType: Scratch.BlockType.COMMAND,
             text: "桥接关闭 MiniChat 自动推送"
-          },
-          { opcode: "floxGroupId", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接 MiniChat 群聊ID（和「当前显示的群聊ID」比较用）"
           },
           { opcode: "floxResetCursor", blockType: Scratch.BlockType.COMMAND,
             text: "桥接重置 MiniChat 消息游标（清空列表后调用）"
@@ -1370,35 +1285,18 @@
           }
         ],
         menus: {
-          fields: { items: [
-            { text: "发送者", value: "sender" },
-            { text: "内容", value: "content" },
-            { text: "时间", value: "time" }
-          ] },
           lists: {
             acceptReporters: true,
             items: "_getLists"
           },
-          itemFields: { items: [
-            { text: "名字", value: "name" },
-            { text: "邮箱", value: "email" },
-            { text: "内容", value: "content" },
-            { text: "头像", value: "avatar" },
-            { text: "在线", value: "online" },
-            { text: "最后登录", value: "last_login" }
-          ] }
         }
       };
     },
 
     connect: ext.connect,
-    sendFloxCode: ext.sendFloxCode,
     connectByCode: ext.connectByCode,
-    floxInjectGroup: ext.floxInjectGroup,
-    floxRefreshMessages: ext.floxRefreshMessages,
     floxAutoPush: ext.floxAutoPush,
     floxAutoPushOff: ext.floxAutoPushOff,
-    floxGroupId: ext.floxGroupId,
     floxResetCursor: ext.floxResetCursor,
     // ⚠️ 光在 getInfo 里声明积木是不够的：必须在这里把实现挂到 id 上，
     // 否则 Scratch 调用到的是 undefined。
@@ -1407,27 +1305,7 @@
     floxPageIndex: ext.floxPageIndex,
     floxHasMore: ext.floxHasMore,
     send: ext.send,
-    loadMessages: ext.loadMessages,
-    loadAllMessages: ext.loadAllMessages,
-    setListToMessages: ext.setListToMessages,
-    parseItem: ext.parseItem,
     _getLists: ext._getLists,
-    historyCount: ext.historyCount,
-    historyLoaded: ext.historyLoaded,
-    historyItem: ext.historyItem,
-    whenReceived: ext.whenReceived,
-    lastSender: ext.lastSender,
-    lastContent: ext.lastContent,
-    lastTime: ext.lastTime,
-    connected: ext.connected,
-    bridgeError: ext.bridgeError,
-    disconnect: ext.disconnect,
-    loadUsers: ext.loadUsers,
-    userCount: ext.userCount,
-    userLoaded: ext.userLoaded,
-    setListToUsers: ext.setListToUsers,
-    onlineCount: ext.onlineCount,
-    userIsOnline: ext.userIsOnline,
-    userAvatar: ext.userAvatar
+    bridgeError: ext.bridgeError
   });
 })(Scratch);
