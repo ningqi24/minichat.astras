@@ -67,6 +67,24 @@
 
   // ---- 把 Edge 返回的会话落到本地状态 ----
   function applySession(d, fallbackEmail, fallbackName) {
+    var prev = String(userEmail || "").toLowerCase();
+    var next = String(d.email || fallbackEmail || "").toLowerCase();
+    if (prev && next && prev !== next) {
+      // 换账号了：清掉上一段会话的缓存（用户表/推送游标/头像缓存相关）
+      floxLog("检测到换账号 " + prev + " -> " + next + "，清理上一段会话状态");
+      ext._usersCache = null;
+      ext._floxSeen = {};
+      ext._floxLastTs = "";
+      ext._lastMsg = null;
+      ext._historyCache = null;
+      lastMsg = null;
+      presenceMap = {};
+      presenceByEmail = {};
+      floxPages = [];
+      floxLoadedCount = 0;
+      floxNewSinceLoad = 0;
+      floxExhausted = false;
+    }
     token = d.access_token;
     userEmail = d.email || fallbackEmail;
     userName = d.display_name || (fallbackName || (fallbackEmail || "").split("@")[0]);
@@ -129,7 +147,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v13";
+  var BRIDGE_VERSION = "v14";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -859,15 +877,20 @@
         return;
       }
       clearError();
-      // 只有换账号才清会话：同账号重进没必要重新登录，
-      // 而且清了 token 之后紧接着的取页会拿不到会话（进群第一屏就是空的）。
-      if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
+      // ⚠️ 千万不要在这里 resetSession()：
+      // connect 是异步的，而补丁会在它后面紧接着取页 / 触发第二次 connect，
+      // 开头清 token 会让取页拿不到会话，第二次 connect 又会把第一次的会话清掉 ——
+      // 表现就是「一直在加载、内容永远出不来」。
+      // 换账号的正确处理放在 applySession（新会话带不同邮箱回来时）和下面的失败分支里。
       return getToken(email, args.NAME).then(function() {
         connectWS();
       }).catch(function(e) {
         floxLog("connect 失败:", e && e.message ? e.message : e);
         setError(e);
-        floxAppendErrorBubble(e && e.message ? e.message : e);   // 连不上要能看见原因
+        // 想登的账号和当前会话不是同一个 -> 必须清掉旧会话，
+        // 否则会继续用上一个账号的 token 发消息（消息算到别人头上）。
+        if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
+        floxAppendErrorBubble(e && e.message ? e.message : e);
       });
     },
 
@@ -891,11 +914,11 @@
       if (!email) { setError("请先填写邮箱"); return; }
       if (!code) { setError("请填写收到的验证码"); return; }
       clearError();
-      if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
       return loginWithFloxCode(email, code).then(function() {
         connectWS();
       }).catch(function(e) {
         setError(e);
+        if (String(email).toLowerCase() !== String(userEmail || "").toLowerCase()) resetSession();
         floxAppendErrorBubble(e && e.message ? e.message : e);
       });
     },
