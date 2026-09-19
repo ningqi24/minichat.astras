@@ -101,7 +101,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v6";
+  var BRIDGE_VERSION = "v7";
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
   var FLOX_GROUP_AVATAR = "https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.svg";
@@ -329,8 +329,9 @@
 
   function floxAutoPushToList(msg) {
     if (!floxAutoList || !msg) return Promise.resolve();
-    // 用户正在翻看历史时不要往后追加，否则会把旧页和新消息混在一起
-    if (floxPageOffset > 0) return Promise.resolve();
+    // 新消息始终追加到尾部（列表本来就是旧→新），但要记一笔：
+    // 取页用的 offset 是「从最新往回数」，来了新消息这个基准就前移了。
+    // （floxNewSinceLoad 在每次取页时归零）
     var list = findList(floxAutoList);
     if (!list) return Promise.resolve();
     ext._floxSeen = ext._floxSeen || {};
@@ -343,6 +344,7 @@
     // 实时推送这条：只等它的发送者头像，且限时；超时就先用原图，不耽误出消息
     return normalizeAvatarsFor(avatars, [msg.sender_email]).then(function() {
       list.value.push(toFloxMessage(msg, avatars));
+      floxNewSinceLoad++;
       if (msg.created_at) ext._floxLastTs = String(msg.created_at);
     });
   }
@@ -504,8 +506,12 @@
   // FloxChat 的渲染是「只往尾部追加」的：刷新数 = len(当前显示的群聊) - len(已显示消息)。
   // 所以往前翻历史不能 unshift（下标全乱），而要【整表替换】+ 广播一次「刷新消息」——
   // 那个广播的处理器会把 已显示消息 / 消息长度 / i 等全归零，下一秒从头重画整页。
-  var FLOX_PAGE_SIZE = 30;      // 每页条数。一条消息会生成一组克隆体，别开太大
-  var floxPageOffset = 0;       // 距离最新消息的偏移，0 = 最新一页
+  var FLOX_PAGE_SIZE = 30;        // 每次往前取多少条
+  var FLOX_MAX_LOADED = 120;      // 累积上限：渲染 0.07 秒/条 + 每条约一组克隆体，再多就卡了
+  var floxPages = [];             // 已加载的页，每页都是「旧→新」，floxPages[0] 是最老的一页
+  var floxLoadedCount = 0;        // 已累积条数（从最新往回数）
+  var floxNewSinceLoad = 0;       // 上次取页之后又实时推了几条（校正 offset 用）
+  var floxExhausted = false;      // 已经拉到头了（没有更早的消息）
   var floxPageBusy = false;
 
   function floxTargetList() {
@@ -520,33 +526,126 @@
     } catch (e) {}
   }
 
-  // 用第 offset 条（从最新往回数）开始的一页整表替换目标列表，并让 FloxChat 从头重画
-  function floxLoadPage(offset) {
+  // 把已加载的所有页摊平（旧→新）
+  function floxFlatten() {
+    var all = [];
+    for (var p = 0; p < floxPages.length; p++) {
+      for (var i = 0; i < floxPages[p].length; i++) all.push(floxPages[p][i]);
+    }
+    return all;
+  }
+
+  // 取一页并铺进列表，然后让 FloxChat 从头重画
+  //   mode = "reset"：从最新开始（进群 / 回最新）
+  //   mode = "more" ：往更早累积一页
+  function floxLoadPage(offset, mode) {
     if (!token || !userEmail) { setError("未连接，请先「桥接连接」"); return Promise.resolve(-1); }
     if (floxPageBusy) return Promise.resolve(-1);
     var list = floxTargetList();
     if (!list) { setError("还没进入 MiniChat 群（自动推送未开启）"); return Promise.resolve(-1); }
     if (!(offset >= 0)) offset = 0;
     floxPageBusy = true;
-    floxRaiseCloneLimit(1000);
-    return callEdge("get_messages", { limit: FLOX_PAGE_SIZE, offset: offset }).then(function(d) {
-      var msgs = (d.messages || []).slice().reverse();     // 服务端是「新→旧」，翻转成「旧→新」
+    floxRaiseCloneLimit(1500);
+    // ⚠️ 必须先拿到用户表，否则 avatarByEmail() 是空的 -> 头像 URL 全空 -> 头像不显示
+    var prep = ext._usersCache ? Promise.resolve() : (ext.loadUsers() || Promise.resolve());
+    return prep.then(function() {
+      return callEdge("get_messages", { limit: FLOX_PAGE_SIZE, offset: offset });
+    }).then(function(d) {
+      var page = (d.messages || []).slice().reverse();     // 服务端是「新→旧」，翻转成「旧→新」
+      if (mode === "reset") {
+        floxPages = [];
+        floxLoadedCount = 0;
+        floxExhausted = false;
+      }
+      if (!page.length) {
+        floxExhausted = true;
+      } else {
+        floxPages.unshift(page);                          // 更老的一页放到最前面
+        floxLoadedCount += page.length;
+        if (page.length < FLOX_PAGE_SIZE) floxExhausted = true;
+      }
+      floxNewSinceLoad = 0;                             // 取页后基准重新锚定
+      var all = floxFlatten();
       var avatars = avatarByEmail();
-      return normalizeAvatarsFor(avatars, senderEmails(msgs)).then(function() {
-        list.value.length = 0;                             // 整表替换
-        for (var i = 0; i < msgs.length; i++) list.value.push(toFloxMessage(msgs[i], avatars));
-        floxPageOffset = offset;
+      return normalizeAvatarsFor(avatars, senderEmails(all)).then(function() {
+        list.value.length = 0;                            // 整表替换成「已加载的全部」
+        for (var i = 0; i < all.length; i++) list.value.push(toFloxMessage(all[i], avatars));
         ext._floxSeen = {};
         ext._floxLastTs = "";
         clearError();
-        // 让 FloxChat 自己把这一页从头画出来（和它自己点群聊时用的是同一套机制）
+        // 让 FloxChat 自己把整个列表从头画出来（和它自己点群聊时用的是同一套机制）
         try {
           Scratch.vm.runtime.startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: "刷新消息" });
         } catch (e) {}
-        return msgs.length;
+        return floxLoadedCount;
       });
     }).then(function(n) { floxPageBusy = false; return n; },
             function(e) { floxPageBusy = false; setError(e); return -1; });
+  }
+
+  function floxLoadMore() {
+    if (floxExhausted) return Promise.resolve(-1);
+    if (floxLoadedCount >= FLOX_MAX_LOADED) return Promise.resolve(-1);
+    // 已连续加载了 N 条（加上期间实时推来的），下一页就从那里开始
+    return floxLoadPage(floxLoadedCount + floxNewSinceLoad, "more");
+  }
+
+  // ---- 自动翻页：盯着 FloxChat 的「滑动页面」，用户一滚动就自动往前多加载一页 ----
+  // 重画后 FloxChat 自己会把 滑动页面 归位（它的「刷新消息」处理器里写死 55），
+  // 所以加载完要等几秒再接受下一次触发，否则会被自己归位的动作反复触发。
+  var FLOX_AUTOPAGE_COOLDOWN = 3000;
+  var floxScrollWatch = null;
+  var floxLastScroll = null;
+  var floxScrollCooldown = 0;
+
+  function findVar(name) {
+    try {
+      var targets = Scratch.vm.runtime.targets;
+      for (var i = 0; i < targets.length; i++) {
+        var t = targets[i];
+        if (t && t.stage === true && t.lookupVariableByNameAndType) {
+          var v = t.lookupVariableByNameAndType(name, "variable");
+          if (v) return v;
+        }
+      }
+      for (var j = 0; j < targets.length; j++) {
+        var t2 = targets[j];
+        if (t2 && t2.lookupVariableByNameAndType) {
+          var v2 = t2.lookupVariableByNameAndType(name, "variable");
+          if (v2) return v2;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function floxStartAutoPage() {
+    if (floxScrollWatch) return;
+    floxLastScroll = null;
+    floxScrollCooldown = 0;
+    floxScrollWatch = setInterval(function() {
+      try {
+        if (floxPageBusy) return;
+        if (floxExhausted) return;
+        if (floxLoadedCount >= FLOX_MAX_LOADED) return;
+        if (!floxAutoList || !token) return;
+        if (Date.now() < floxScrollCooldown) return;
+        var sv = findVar("滑动页面");
+        if (!sv) return;
+        var cur = Number(sv.value);
+        if (!isFinite(cur)) return;
+        if (floxLastScroll === null) { floxLastScroll = cur; return; }
+        if (Math.abs(cur - floxLastScroll) < 40) { floxLastScroll = cur; return; }
+        floxLastScroll = cur;
+        floxScrollCooldown = Date.now() + FLOX_AUTOPAGE_COOLDOWN;
+        floxLoadMore();
+      } catch (e) {}
+    }, 300);
+  }
+
+  function floxStopAutoPage() {
+    if (floxScrollWatch) { clearInterval(floxScrollWatch); floxScrollWatch = null; }
+    floxLastScroll = null;
   }
 
   // ---- 提取文件/图片/视频/音频消息中的链接 ----
@@ -676,11 +775,11 @@
       // （MiniChat 群的发送本来就只走扩展，所以在这里拦最省事、不用加任何 UI）
       var cmd = String(args.MSG == null ? "" : args.MSG).trim();
       if (/^(↑|\.\.|\/older|\/old|\/more|\/up|更早|\/更早)$/.test(cmd)) {
-        floxLoadPage(floxPageOffset + FLOX_PAGE_SIZE);
+        floxLoadMore();
         return;
       }
       if (/^(↓|\/newer|\/new|\/latest|\/down|最新|\/最新)$/.test(cmd)) {
-        floxLoadPage(0);
+        floxLoadPage(0, "reset");
         return;
       }
       clearError();
@@ -720,12 +819,14 @@
       // 消息由它每秒的刷新循环自然渲染出来。
       // 进入群时整页加载（而不是尾部追加）：翻页的起点才明确
       if (token && userEmail) {
-        floxLoadPage(0);
+        floxLoadPage(0, "reset");
+        floxStartAutoPage();
       }
     },
 
     floxAutoPushOff: function() {
       floxAutoList = null;
+      floxStopAutoPage();
       clearError();
     },
 
@@ -737,14 +838,16 @@
 
     // ---- 历史翻页（整表替换 + 让 FloxChat 重画）----
     floxLoadOlder: function() {
-      return floxLoadPage(floxPageOffset + FLOX_PAGE_SIZE);
+      return floxLoadMore();
     },
     floxLoadNewest: function() {
-      floxPageOffset = 0;
-      return floxLoadPage(0);
+      return floxLoadPage(0, "reset");
     },
     floxPageIndex: function() {
-      return Math.round(floxPageOffset / FLOX_PAGE_SIZE);
+      return floxLoadedCount;
+    },
+    floxHasMore: function() {
+      return !floxExhausted && floxLoadedCount < FLOX_MAX_LOADED;
     },
 
     loadMessages: function(args) {
@@ -1028,7 +1131,10 @@
             text: "桥接跳回最新一页消息（MiniChat 群）"
           },
           { opcode: "floxPageIndex", blockType: Scratch.BlockType.REPORTER,
-            text: "桥接当前往回翻了几页（0 = 最新）"
+            text: "桥接已加载了多少条历史（MiniChat 群）"
+          },
+          { opcode: "floxHasMore", blockType: Scratch.BlockType.BOOLEAN,
+            text: "桥接还有更早的历史可以加载？（MiniChat 群）"
           },
           "---",
           // ===== 列表 =====
@@ -1130,6 +1236,12 @@
     floxAutoPushOff: ext.floxAutoPushOff,
     floxGroupId: ext.floxGroupId,
     floxResetCursor: ext.floxResetCursor,
+    // ⚠️ 光在 getInfo 里声明积木是不够的：必须在这里把实现挂到 id 上，
+    // 否则 Scratch 调用到的是 undefined。
+    floxLoadOlder: ext.floxLoadOlder,
+    floxLoadNewest: ext.floxLoadNewest,
+    floxPageIndex: ext.floxPageIndex,
+    floxHasMore: ext.floxHasMore,
     send: ext.send,
     loadMessages: ext.loadMessages,
     loadAllMessages: ext.loadAllMessages,
