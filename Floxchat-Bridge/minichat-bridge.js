@@ -161,7 +161,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v28";
+  var BRIDGE_VERSION = "v29";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -486,31 +486,11 @@
         });
       }
       return SUPABASE_URL + "/storage/v1/object/public/" + bucket + "/" + path;
-    }).catch(function(e) {
-      // 探针：同样的地址、同样的头，只把 body 换成一个小字符串。
-      // 能拿到 HTTP 响应 -> 网络是通的，问题在 body（文件字节）；
-      // 还是 Failed to fetch -> 请求根本发不出去。
-      if (String(e && e.message).indexOf("Failed to fetch") < 0) throw e;
-      // 三个探针，用来区分到底是「TurboWarp 权限」「CORS 预检」还是「主机被拦」
-      try {
-        floxLog("探针A canFetch(storage) = " +
-          ((typeof Scratch !== "undefined" && typeof Scratch.canFetch === "function") ? Scratch.canFetch(url) : "无此接口"));
-        floxLog("探针A canFetch(edge)    = " +
-          ((typeof Scratch !== "undefined" && typeof Scratch.canFetch === "function") ? Scratch.canFetch(EDGE_URL) : "无此接口"));
-      } catch (e0) { floxLog("探针A 异常:", e0 && e0.message); }
-
-      // 探针B：GET 同一个主机（简单请求，不触发预检）
-      return fetch(SUPABASE_URL + "/storage/v1/object/public/chat-images/__no_such_file__")
-        .then(function(rB) { floxLog("探针B GET 同主机 -> HTTP", rB.status, "(主机可访问)"); },
-              function(eB) { floxLog("探针B GET 同主机也失败:", eB && eB.message, "(主机级拦截)"); })
-        .then(function() {
-          // 探针C：POST 但只用 text/plain（安全头，不触发预检）
-          return fetch(url, { method: "POST", headers: { "Content-Type": "text/plain" }, body: "probe" })
-            .then(function(rC) { floxLog("探针C POST 无预检 -> HTTP", rC.status, "(说明问题出在预检)"); },
-                  function(eC) { floxLog("探针C POST 无预检也失败:", eC && eC.message, "(POST 本身被拦)"); });
-        })
-        .then(function() { throw e; });
     });
+    // 说明：这里原来挂了三个探针（canFetch / GET 同主机 / 无预检 POST），
+    // 用来定位「直传 Storage 失败」的原因 —— 结论是这个环境下 Storage 端点的
+    // CORS 预检过不去（同主机 GET 和简单 POST 都正常）。
+    // 原因查到、Edge 中转让路已通，探针撤掉，日志保持干净。
   }
 
   function floxAttachmentMarker(kind, url, mime, name, size) {
@@ -576,12 +556,16 @@
         floxAppendErrorBubble(lastError);
         return;
       }
-      // 先试浏览器直传 Storage；失败（TurboWarp 桌面版的预检过不去）就自动改走 Edge 中转
-      return floxUploadToMiniChat(file, kind, picked.buffer)
-        .catch(function(eDirect) {
-          floxLog("直传失败，转 Edge 中转：", eDirect && eDirect.message);
-          return floxUploadViaEdge(picked.buffer, kind, file);
-        })
+      // 先试浏览器直传 Storage；失败就自动改走 Edge 中转，并记住「直传在这台机器上不可用」，
+      // 之后不再白试一次（直传失败虽快，但会在控制台留两行无用日志）。
+      var upload = floxDirectUploadBroken
+        ? floxUploadViaEdge(picked.buffer, kind, file)
+        : floxUploadToMiniChat(file, kind, picked.buffer).catch(function(eDirect) {
+            floxDirectUploadBroken = true;
+            floxLog("直传 Storage 不可用（CORS 预检被拦），之后一律走 Edge 中转：", eDirect && eDirect.message);
+            return floxUploadViaEdge(picked.buffer, kind, file);
+          });
+      return upload
         .then(function(pub) {
           floxLog("上传完成", pub);
           return sendMsg(floxAttachmentMarker(kind, pub, file.type || "application/octet-stream", file.name, file.size));
@@ -595,6 +579,8 @@
 
   // ---- 大小补齐：图片/音频的标记里没有大小，用 HEAD 拿 Content-Length ----
   // （已实测：Supabase Storage 返回 acao:* 且 Content-Length 是 CORS 安全头，浏览器读得到）
+  // 一旦直传失败过就置 true，之后直接走 Edge 中转（每台机器只需试一次）
+  var floxDirectUploadBroken = false;
   var floxFileSizeCache = {};       // url -> 字节数（0 表示查过但拿不到）
   var floxFileSizePending = {};
 
