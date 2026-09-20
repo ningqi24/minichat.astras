@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v23";
+  var BRIDGE_VERSION = "v24";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -428,6 +428,24 @@
     });
   }
 
+  // TurboWarp 会把全局 fetch 包一层来做安全校验（canFetch 不通过就 reject `TypeError('Failed to fetch')`）。
+  // 官方入口是 Scratch.fetch，所以优先用它，失败再退回原生 fetch。
+  function floxFetchRaw(url, opts) {
+    var useScratch = (typeof Scratch !== "undefined" && typeof Scratch.fetch === "function");
+    floxLog("fetch 方式:", useScratch ? "Scratch.fetch" : "原生 fetch", url.replace(/\?.*$/, "").slice(-60));
+    var run = useScratch
+      ? function() { return Scratch.fetch(url, opts); }
+      : function() { return fetch(url, opts); };
+    return Promise.resolve().then(run).catch(function(e) {
+      floxLog("fetch 失败 name=" + (e && e.name) + " message=" + (e && e.message));
+      if (useScratch) {
+        floxLog("退回原生 fetch 再试一次");
+        return fetch(url, opts);
+      }
+      throw e;
+    });
+  }
+
   // 直传 MiniChat 的 Supabase Storage（用登录会话的 access_token，和网页端同一套策略）
   function floxUploadToMiniChat(file, kind) {
     var ext = String(file.name || "bin").split(".").pop() || "bin";
@@ -435,7 +453,7 @@
     var safe = Date.now() + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
     var path = "public/" + safe;
     var bucket = FLOX_BUCKETS[kind] || "chat-files";
-    return fetch(SUPABASE_URL + "/storage/v1/object/" + bucket + "/" + path, {
+    return floxFetchRaw(SUPABASE_URL + "/storage/v1/object/" + bucket + "/" + path, {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + token,
@@ -445,7 +463,11 @@
       },
       body: file
     }).then(function(r) {
-      if (!r.ok) throw new Error("上传失败（HTTP " + r.status + "）");
+      if (!r.ok) {
+        return r.text().catch(function() { return ""; }).then(function(t) {
+          throw new Error("上传失败（HTTP " + r.status + "）：" + String(t).slice(0, 160));
+        });
+      }
       return SUPABASE_URL + "/storage/v1/object/public/" + bucket + "/" + path;
     });
   }
