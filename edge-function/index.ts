@@ -495,8 +495,9 @@ async function uploadFile(body: any) {
   if (!bucketInfo) return json({ error: "bad_bucket" }, 400);
 
   // 代码里的兜底上限（和网页端一致），bucket 没设限制时用
+  // 仅在 bucket 没设 file_size_limit 时兜底（当前四个桶都设了，所以走不到这里）
   const FALLBACK_LIMIT_MB: Record<string, number> = {
-    "chat-images": 5, "chat-audios": 20, "chat-videos": 50, "chat-files": 10,
+    "chat-images": 20, "chat-audios": 20, "chat-videos": 50, "chat-files": 20,
   };
   const bucketLimit = typeof bucketInfo.file_size_limit === "number" ? bucketInfo.file_size_limit : null;
   const limitBytes = bucketLimit ?? (FALLBACK_LIMIT_MB[bucket] ?? 10) * 1024 * 1024;

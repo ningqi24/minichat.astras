@@ -161,7 +161,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v27";
+  var BRIDGE_VERSION = "v28";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -390,8 +390,12 @@
     pdf: 'chat-files', doc: 'chat-files', xls: 'chat-files',
     ppt: 'chat-files', text: 'chat-files', zip: 'chat-files'
   };
+  // ⚠️ 必须和 Supabase 控制台里各 bucket 的 file_size_limit 保持一致，
+  // 否则会出现「网页端/扩展先拦下、但桶其实允许更大」这种莫名其妙的情况。
+  // 当前对齐值：chat-images 20 / chat-audios 20 / chat-videos 50 / chat-files 20
+  // （真正的权威是 bucket 设置，Edge 每次上传都会读它再校验一遍）
   var FLOX_LIMITS_MB = {
-    image: 5, audio: 20, video: 50, pdf: 10, doc: 10, xls: 10, ppt: 10, text: 5, zip: 20
+    image: 20, audio: 20, video: 50, pdf: 20, doc: 20, xls: 20, ppt: 20, text: 20, zip: 20
   };
 
   // 分类规则和 MiniChat 网页端一致（index.html addAttachment）
