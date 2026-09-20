@@ -46,7 +46,7 @@
   // 客户端不再发送也不再持有任何 password。
 
   // ---- 统一走 Edge Function（不带 Authorization 头，靠 secret + 登录 token 校验，绕开 Electron CORS bug）----
-  function callEdge(action, payload) {
+  function callEdge(action, payload, timeoutMs) {
     var body = Object.assign({ action: action, secret: SECRET }, payload || {});
     // 除 login 外都自动携带登录 token（放 body 里，由 Edge 校验身份，防止伪造）
     if (token && action !== "login") {
@@ -54,7 +54,9 @@
     }
     // 加超时：Edge 冷启动 / 网络卡住时，绝不能让积木链永远挂在那里
     var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
-    var tid = ctl ? setTimeout(function() { ctl.abort(); }, 12000) : null;
+    // 上传大文件要放宽超时（默认 12 秒对几 MB 的 base64 不够）
+    var ms = timeoutMs || 12000;
+    var tid = ctl ? setTimeout(function() { ctl.abort(); }, ms) : null;
     var opts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,7 +74,7 @@
     }).catch(function(e) {
       stopTimer();
       floxLog("edge FAIL:", action, e && e.message ? e.message : e);
-      if (e && e.name === "AbortError") throw new Error("请求超时（12 秒无响应），请检查网络");
+      if (e && e.name === "AbortError") throw new Error("请求超时（" + Math.round((timeoutMs || 12000) / 1000) + " 秒无响应），请检查网络");
       throw e;
     });
   }
@@ -159,7 +161,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v26";
+  var BRIDGE_VERSION = "v27";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -515,6 +517,36 @@
     return "[file](" + s + ")";
   }
 
+  // ArrayBuffer -> base64（分块，避免大文件把调用栈撑爆）
+  function floxBufToBase64(buf) {
+    var bytes = new Uint8Array(buf), CH = 0x8000, out = "";
+    for (var i = 0; i < bytes.length; i += CH) {
+      out += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    }
+    return btoa(out);
+  }
+
+  // 走 Edge 中转上传：浏览器直传 Storage 的 CORS 预检在 TurboWarp 桌面版里过不去
+  // （同主机、无自定义头的简单请求却可以），走这条已验证可用的通道最稳。
+  function floxUploadViaEdge(buf, kind, file) {
+    var ext = String(file.name || "bin").split(".").pop() || "bin";
+    ext = ext.replace(/[^A-Za-z0-9]/g, "").slice(0, 8) || "bin";
+    var safe = Date.now() + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
+    var path = "public/" + safe;
+    var bucket = FLOX_BUCKETS[kind] || "chat-files";
+    floxLog("改走 Edge 中转上传", (buf.byteLength / 1024).toFixed(0) + "KB ->", bucket + "/" + path);
+    return callEdge("upload_file", {
+      bucket: bucket,
+      path: path,
+      content_type: file.type || "application/octet-stream",
+      data: floxBufToBase64(buf)
+    }, 120000).then(function(d) {
+      if (d && d.error) throw new Error("中转上传失败：" + d.error);
+      if (!d || !d.url) throw new Error("中转上传没有返回 URL");
+      return d.url;
+    });
+  }
+
   // 给积木和补丁用：选文件 -> 上传 -> 发送
   function floxSendFile() {
     if (!token || !userEmail) { setError("未连接，请先「桥接连接」"); return Promise.resolve(); }
@@ -535,10 +567,21 @@
         return;
       }
       floxLog("开始上传文件", file.name, file.size, kind, "已读入内存:", picked.buffer ? picked.buffer.byteLength : "(读失败)");
-      return floxUploadToMiniChat(file, kind, picked.buffer).then(function(pub) {
-        floxLog("上传完成", pub);
-        return sendMsg(floxAttachmentMarker(kind, pub, file.type || "application/octet-stream", file.name, file.size));
-      });
+      if (!picked.buffer) {
+        setError("读取文件内容失败，请重试");
+        floxAppendErrorBubble(lastError);
+        return;
+      }
+      // 先试浏览器直传 Storage；失败（TurboWarp 桌面版的预检过不去）就自动改走 Edge 中转
+      return floxUploadToMiniChat(file, kind, picked.buffer)
+        .catch(function(eDirect) {
+          floxLog("直传失败，转 Edge 中转：", eDirect && eDirect.message);
+          return floxUploadViaEdge(picked.buffer, kind, file);
+        })
+        .then(function(pub) {
+          floxLog("上传完成", pub);
+          return sendMsg(floxAttachmentMarker(kind, pub, file.type || "application/octet-stream", file.name, file.size));
+        });
     }).catch(function(e) {
       floxLog("发文件失败:", e && e.message ? e.message : e);
       setError(e && e.message ? e.message : e);

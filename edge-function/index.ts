@@ -132,6 +132,7 @@ Deno.serve(async (req: Request) => {
     if (action === "get_messages") return await getMessages(body);
     if (action === "send_message") return await sendMessage(body);
     if (action === "get_users") return await getUsers(body);
+    if (action === "upload_file") return await uploadFile(body);
     return await login(req, body);
   } catch (e: any) {
     return json({ error: e.message }, 500);
@@ -381,6 +382,48 @@ async function sendMessage(body: any) {
 
   if (error) throw new Error(error.message);
   return json({ ok: true, message: data });
+}
+
+// ---- 上传文件（供 TurboWarp 扩展用）----
+// 为什么需要中转：浏览器直传 Storage 时，Supabase 的 CORS 预检在 TurboWarp 桌面版里
+// 过不去（同主机、无自定义头的简单请求却可以）。走这个已经验证可用的 Edge 通道最稳。
+// 客户端把文件读成 base64（+33%），Edge 用 service_role 写进 Storage，返回公开 URL。
+async function uploadFile(body: any) {
+  const user = await getUserFromBody(body);
+  if (!user) return json({ error: "unauthorized" }, 401);
+
+  const ALLOWED = ["chat-images", "chat-audios", "chat-videos", "chat-files"];
+  const bucket = String(body.bucket ?? "");
+  const path = String(body.path ?? "");
+  const contentType = String(body.content_type ?? "application/octet-stream").slice(0, 120);
+  const b64 = String(body.data ?? "");
+
+  if (!ALLOWED.includes(bucket)) return json({ error: "bad_bucket" }, 400);
+  if (!/^public\/[A-Za-z0-9._-]+$/.test(path)) return json({ error: "bad_path" }, 400);
+  if (!b64) return json({ error: "empty_data" }, 400);
+  if (b64.length > 40 * 1024 * 1024) return json({ error: "too_large" }, 413);
+
+  // 限流：每账号每分钟最多 20 次上传
+  if (!rateLimit(`upload:${user.id}`, 20, 60_000)) {
+    return json({ error: "上传过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
+  }
+
+  let bytes: Uint8Array;
+  try {
+    const bin = atob(b64);
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  } catch {
+    return json({ error: "bad_base64" }, 400);
+  }
+
+  const { error } = await supabaseAdmin.storage
+    .from(bucket)
+    .upload(path, bytes, { contentType, upsert: false });
+  if (error) return json({ error: error.message }, 400);
+
+  const { data } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);
+  return json({ ok: true, url: data.publicUrl });
 }
 
 // ---- 读全部用户（在线+离线，来自 profiles 表；需登录 token） ----
