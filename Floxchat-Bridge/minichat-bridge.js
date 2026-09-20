@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v19";
+  var BRIDGE_VERSION = "v20";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -287,9 +287,60 @@
     return (u && floxAvatarCache[u]) ? floxAvatarCache[u] : u;
   }
 
-  // MiniChat 的附件/引用标记在 FloxChat 里没法渲染，换成可读文字
+  // ================= FloxChat 文件消息格式 =================
+  // 从工程里挖出来的（发送端「通讯/xG」拼的，识别端「消息显示/z[」比对前 24 个字符）：
+  //   \u0001 @@§§::floxchatfileurl{"<下载URL>💾<文件名>💾<大小>MB"}::§§@@
+  // 识别方式： letters_of(内容, 1, 24) == \u0001 + '@@§§::floxchatfileurl{"'
+  // 所以只要把 MiniChat 的附件改写成这个格式，FloxChat 就会渲染成真正的文件卡片。
+  var FLOX_FILE_PREFIX = "\u0001@@§§::floxchatfileurl{\"";
+  var FLOX_FILE_SUFFIX = "\"}::§§@@";
+  var FLOX_FILE_SEP = "💾";
+
+  // FloxChat 的大小是【已经格式化好的字符串】：getFileSize/1000000 取前 4 位 + "MB"
+  function floxSizeText(bytes) {
+    var b = Number(bytes);
+    if (!isFinite(b) || b <= 0) return "";
+    return String(b / 1000000).slice(0, 4) + "MB";
+  }
+
+  function floxNameFromUrl(url, fallback) {
+    try {
+      var parts = String(url).split("?")[0].split("/");
+      var n = decodeURIComponent(parts[parts.length - 1] || "");
+      return n || fallback;
+    } catch (e) { return fallback; }
+  }
+
+  function floxFileMarker(url, name, sizeText) {
+    return FLOX_FILE_PREFIX + url + FLOX_FILE_SEP + name + FLOX_FILE_SEP + sizeText + FLOX_FILE_SUFFIX;
+  }
+
+  // MiniChat 的附件/引用标记
+  //   图片 ![image](url)                  音频 [audio](url)
+  //   视频 [video](url|mime|name|size)    文件 [file](url|mime|name|size)
+  // 【单个附件】就转成 FloxChat 的文件消息（必须整条就是那个附件，
+  // 因为 FloxChat 只看内容的前 24 个字符，标记不在开头就认不出来）。
+  // 多附件 / 图文混排只能降级成可读文字。
+  var FLOX_SINGLE_ATTACH = new RegExp(
+    "^(?:" +
+    "!\\[image\\]\\(([^)]+)\\)" +                                   "|" +
+    "\\[audio\\]\\(([^)]+)\\)" +                                     "|" +
+    "\\[video\\]\\(([^)|]+)\\|([^|]*)\\|([^|]*)\\|([^)]*)\\)" + "|" +
+    "\\[file\\]\\(([^)|]+)\\|([^|]*)\\|([^|]*)\\|([^)]*)\\)" +
+    ")$"
+  );
+
   function floxText(content) {
-    return String(content == null ? "" : content)
+    var s = String(content == null ? "" : content);
+    var m = s.match(FLOX_SINGLE_ATTACH);
+    if (m) {
+      if (m[1]) return floxFileMarker(m[1], floxNameFromUrl(m[1], "图片"), "");
+      if (m[2]) return floxFileMarker(m[2], floxNameFromUrl(m[2], "语音"), "");
+      if (m[3]) return floxFileMarker(m[3], m[5] || floxNameFromUrl(m[3], "视频"), floxSizeText(m[6]));
+      if (m[7]) return floxFileMarker(m[7], m[9] || floxNameFromUrl(m[7], "文件"), floxSizeText(m[10]));
+    }
+    // 多附件 / 图文混排 / 引用：降级成可读文字
+    return s
       .replace(/!\[image\]\(([^)]+)\)/g, "[图片] $1")
       .replace(/\[audio\]\(([^)]+)\)/g, "[语音] $1")
       .replace(/\[video\]\(([^)]+)\)/g, "[视频] $1")
