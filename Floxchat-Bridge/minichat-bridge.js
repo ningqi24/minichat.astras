@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v20";
+  var BRIDGE_VERSION = "v21";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -379,6 +379,92 @@
     } catch (e) { return true; }
   }
 
+  // ---- 大小补齐：图片/音频的标记里没有大小，用 HEAD 拿 Content-Length ----
+  // （已实测：Supabase Storage 返回 acao:* 且 Content-Length 是 CORS 安全头，浏览器读得到）
+  var floxFileSizeCache = {};       // url -> 字节数（0 表示查过但拿不到）
+  var floxFileSizePending = {};
+
+  function floxFetchSizes(urls) {
+    var need = [];
+    for (var i = 0; i < urls.length; i++) {
+      var u = urls[i];
+      if (!u || (u in floxFileSizeCache) || floxFileSizePending[u]) continue;
+      floxFileSizePending[u] = true;
+      need.push(u);
+    }
+    if (!need.length) return Promise.resolve();
+    return Promise.all(need.map(function(u) {
+      return fetch(u, { method: "HEAD" }).then(function(r) {
+        var n = Number(r.headers.get("content-length"));
+        floxFileSizeCache[u] = (isFinite(n) && n > 0) ? n : 0;
+      }).catch(function() { floxFileSizeCache[u] = 0; })
+        .then(function() { delete floxFileSizePending[u]; });
+    }));
+  }
+
+  // ---- 把一条 MiniChat 消息拆成若干片段：文本 / 附件 ----
+  // FloxChat 只看内容的前 24 个字符来识别文件消息，所以【每个附件必须独占一条】。
+  var FLOX_ATTACH_RE = /!\[image\]\(([^)]+)\)|\[audio\]\(([^)]+)\)|\[video\]\(([^)|]+)\|([^|]*)\|([^|]*)\|([^)]*)\)|\[file\]\(([^)|]+)\|([^|]*)\|([^|]*)\|([^)]*)\)/g;
+
+  function floxSplitParts(raw) {
+    var out = [], last = 0, m;
+    FLOX_ATTACH_RE.lastIndex = 0;
+    while ((m = FLOX_ATTACH_RE.exec(raw)) !== null) {
+      var before = raw.slice(last, m.index);
+      if (before.trim()) out.push({ kind: "text", text: before });
+      if (m[1])      out.push({ kind: "file", url: m[1], name: floxNameFromUrl(m[1], "图片"), size: 0 });
+      else if (m[2]) out.push({ kind: "file", url: m[2], name: floxNameFromUrl(m[2], "语音"), size: 0 });
+      else if (m[3]) out.push({ kind: "file", url: m[3], name: m[5] || floxNameFromUrl(m[3], "视频"), size: Number(m[6]) || 0 });
+      else if (m[7]) out.push({ kind: "file", url: m[7], name: m[9] || floxNameFromUrl(m[7], "文件"), size: Number(m[10]) || 0 });
+      last = m.index + m[0].length;
+    }
+    var rest = raw.slice(last);
+    if (rest.trim()) out.push({ kind: "text", text: rest });
+    if (!out.length) out.push({ kind: "text", text: raw });
+    return out;
+  }
+
+  // 扫描一批消息，把需要查大小的附件 URL 收集起来
+  function floxCollectSizeUrls(msgs) {
+    var urls = [];
+    for (var i = 0; i < msgs.length; i++) {
+      var parts = floxSplitParts(String(msgs[i].content == null ? "" : msgs[i].content));
+      for (var k = 0; k < parts.length; k++) {
+        if (parts[k].kind === "file" && !parts[k].size) urls.push(parts[k].url);
+      }
+    }
+    return urls;
+  }
+
+  // ---- 一条 MiniChat 消息 -> 1..N 个 FloxChat 消息条目 ----
+  // 图文混排 / 一条多附件会被拆成多条（每个附件独占一条，文本各占一条），
+  // 这样 FloxChat 才能把附件都渲染成文件卡片。
+  function toFloxEntries(m, avatars) {
+    var email = String(m.sender_email || "");
+    var raw = String(m.content == null ? "" : m.content);
+    var parts = floxSplitParts(raw);
+    var out = [];
+    for (var k = 0; k < parts.length; k++) {
+      var p = parts[k], content;
+      if (p.kind === "file") {
+        var bytes = p.size || floxFileSizeCache[p.url] || 0;
+        content = floxFileMarker(p.url, p.name, floxSizeText(bytes));
+      } else {
+        content = p.text.replace(/\[quote:[^\]]*\]/g, "[引用]").trim();
+      }
+      if (!content) continue;
+      out.push(JSON.stringify({
+        username: m.sender_name || (email ? email.split("@")[0] : ""),
+        uid: email,
+        avatar_url: floxAvatarOf(avatars, email),
+        content: floxBase64(content),
+        time: floxTime(m.created_at),
+        mid: String(m.id || "") + (parts.length > 1 ? "#" + (k + 1) : "")
+      }));
+    }
+    return out;
+  }
+
   function toFloxMessage(m, avatars) {
     var email = String(m.sender_email || "");
     return JSON.stringify({
@@ -453,7 +539,10 @@
     var avatars = avatarByEmail();
     // 实时推送这条：只等它的发送者头像，且限时；超时就先用原图，不耽误出消息
     return normalizeAvatarsFor(avatars, [msg.sender_email]).then(function() {
-      list.value.push(toFloxMessage(msg, avatars));
+      return floxFetchSizes(floxCollectSizeUrls([msg]));
+    }).then(function() {
+      var ents = toFloxEntries(msg, avatars);
+      for (var e = 0; e < ents.length; e++) list.value.push(ents[e]);
       floxNewSinceLoad++;
       if (msg.created_at) ext._floxLastTs = String(msg.created_at);
     });
@@ -728,6 +817,8 @@
       var all = floxFlatten();
       var avatars = avatarByEmail();
       return normalizeAvatarsFor(avatars, senderEmails(all)).then(function() {
+        return floxFetchSizes(floxCollectSizeUrls(all));   // 图片/音频补大小（带缓存）
+      }).then(function() {
         list.value.length = 0;                            // 整表替换成「已加载的全部」
         // 最顶上放一条操作提示，告诉用户怎么往前翻（FloxChat 的界面插不了按钮）
         list.value.push(JSON.stringify({
@@ -740,7 +831,10 @@
           time: "",
           mid: "bridge-hint"
         }));
-        for (var i = 0; i < all.length; i++) list.value.push(toFloxMessage(all[i], avatars));
+        for (var i = 0; i < all.length; i++) {
+          var ents = toFloxEntries(all[i], avatars);
+          for (var e = 0; e < ents.length; e++) list.value.push(ents[e]);
+        }
         ext._floxSeen = {};
         ext._floxLastTs = "";
         clearError();
