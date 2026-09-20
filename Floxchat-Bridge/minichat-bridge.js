@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v21";
+  var BRIDGE_VERSION = "v22";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -341,9 +341,9 @@
     }
     // 多附件 / 图文混排 / 引用：降级成可读文字
     return s
-      .replace(/!\[image\]\(([^)]+)\)/g, "[图片] $1")
-      .replace(/\[audio\]\(([^)]+)\)/g, "[语音] $1")
-      .replace(/\[video\]\(([^)]+)\)/g, "[视频] $1")
+      .replace(/!\[image\]\(([^)|]+)(?:\|[^)]*)?\)/g, "[图片] $1")
+      .replace(/\[audio\]\(([^)|]+)(?:\|[^)]*)?\)/g, "[语音] $1")
+      .replace(/\[video\]\(([^)|]+)(?:\|[^)]*)?\)/g, "[视频] $1")
       .replace(/\[file\]\(([^)|]+)(?:\|[^)]*)?\)/g, "[文件] $1")
       .replace(/\[quote:[^\]]*\]/g, "[引用]");
   }
@@ -404,7 +404,16 @@
 
   // ---- 把一条 MiniChat 消息拆成若干片段：文本 / 附件 ----
   // FloxChat 只看内容的前 24 个字符来识别文件消息，所以【每个附件必须独占一条】。
-  var FLOX_ATTACH_RE = /!\[image\]\(([^)]+)\)|\[audio\]\(([^)]+)\)|\[video\]\(([^)|]+)\|([^|]*)\|([^|]*)\|([^)]*)\)|\[file\]\(([^)|]+)\|([^|]*)\|([^|]*)\|([^)]*)\)/g;
+  // 图片/音频：MiniChat 4.2.1 起也带 |mime|name|size（老消息只有 URL，后缀可选）
+  // 视频/文件：一直是四段式
+  // 分组：1-4 图片 | 5-8 音频 | 9-12 视频 | 13-16 文件
+  var FLOX_ATTACH_RE = new RegExp(
+    "!\\[image\\]\\(([^)|]+)(?:\\|([^|]*)\\|([^|]*)\\|([^)]*))?\\)" + "|" +
+    "\\[audio\\]\\(([^)|]+)(?:\\|([^|]*)\\|([^|]*)\\|([^)]*))?\\)" + "|" +
+    "\\[video\\]\\(([^)|]+)\\|([^|]*)\\|([^|]*)\\|([^)]*)\\)" + "|" +
+    "\\[file\\]\\(([^)|]+)\\|([^|]*)\\|([^|]*)\\|([^)]*)\\)",
+    "g"
+  );
 
   function floxSplitParts(raw) {
     var out = [], last = 0, m;
@@ -412,10 +421,10 @@
     while ((m = FLOX_ATTACH_RE.exec(raw)) !== null) {
       var before = raw.slice(last, m.index);
       if (before.trim()) out.push({ kind: "text", text: before });
-      if (m[1])      out.push({ kind: "file", url: m[1], name: floxNameFromUrl(m[1], "图片"), size: 0 });
-      else if (m[2]) out.push({ kind: "file", url: m[2], name: floxNameFromUrl(m[2], "语音"), size: 0 });
-      else if (m[3]) out.push({ kind: "file", url: m[3], name: m[5] || floxNameFromUrl(m[3], "视频"), size: Number(m[6]) || 0 });
-      else if (m[7]) out.push({ kind: "file", url: m[7], name: m[9] || floxNameFromUrl(m[7], "文件"), size: Number(m[10]) || 0 });
+      if (m[1])       out.push({ kind: "file", url: m[1],  name: m[3]  || floxNameFromUrl(m[1], "图片"), size: Number(m[4])  || 0 });
+      else if (m[5])  out.push({ kind: "file", url: m[5],  name: m[7]  || floxNameFromUrl(m[5], "语音"), size: Number(m[8])  || 0 });
+      else if (m[9])  out.push({ kind: "file", url: m[9],  name: m[11] || floxNameFromUrl(m[9], "视频"), size: Number(m[12]) || 0 });
+      else if (m[13]) out.push({ kind: "file", url: m[13], name: m[15] || floxNameFromUrl(m[13], "文件"), size: Number(m[16]) || 0 });
       last = m.index + m[0].length;
     }
     var rest = raw.slice(last);

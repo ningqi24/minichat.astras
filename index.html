@@ -1342,7 +1342,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '4.2.0';
+var APP_VERSION = '4.2.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -4621,8 +4621,9 @@ function renderMessageContent(raw) {
     var mentions = [], links = [], codes = [], strongs = [], ems = [];
     text = text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([^\|\]]+)\|([\s\S]*?)\]/g, (_,a,t,e,id,b) => { quotes.push({author:a,time:t,email:e,messageId:id,body:b}); return '\x00Q'+quotes.length+'Q\x00'; });
     text = text.replace(/\[quote:([^\|\]]+)\|([^\|\]]+)\|([^\|\]]*)\|([\s\S]*?)\]/g, (_,a,t,e,b) => { quotes.push({author:a,time:t,email:e,messageId:'',body:b}); return '\x00Q'+quotes.length+'Q\x00'; });
-    text = text.replace(/!\[image\]\(([^)]+)\)/g, (_,u) => { images.push(u); return '\x00I'+images.length+'I\x00'; });
-    text = text.replace(/\[audio\]\(([^)]+)\)/g, (_,u) => { audios.push(u); return '\x00A'+audios.length+'A\x00'; });
+    // 图片/音频现在也带 |mime|name|size 后缀（老消息没有），所以只取第一段当 URL
+    text = text.replace(/!\[image\]\(([^)|]+)(?:\|[^)]*)?\)/g, (_,u) => { images.push(u); return '\x00I'+images.length+'I\x00'; });
+    text = text.replace(/\[audio\]\(([^)|]+)(?:\|[^)]*)?\)/g, (_,u) => { audios.push(u); return '\x00A'+audios.length+'A\x00'; });
     text = text.replace(/\[video\]\(([^)]+)\|([^)]*)\|([^)]*)\|([^)]*)\)/g, (_,u,m,n,s) => { videos.push({url:u,mime:m,name:n,size:s}); return '\x00V'+videos.length+'V\x00'; });
     text = text.replace(/\[file\]\(([^)]+)\|([^)]*)\|([^)]*)\|([^)]*)\)/g, (_,u,m,n,s) => { files.push({url:u,mime:m,name:n,size:s}); return '\x00F'+files.length+'F\x00'; });
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_,l,u) => { links.push({label:l,url:u}); return '\x00L'+links.length+'L\x00'; });
@@ -5749,10 +5750,14 @@ async function uploadNewAttachments(list) {
         if (error) throw error;
         var url = supabase.storage.from(bucket).getPublicUrl(fp).data.publicUrl;
         // 文档类型以 [file:URL|mime|name|size] 形式存储
-        if (att.type === 'image') return '![image]('+url+')';
-        if (att.type === 'audio') return '[audio]('+url+')';
-        if (att.type === 'video') return '[video]('+url+'|'+esc(att.mime||'video/mp4')+'|'+esc(att.name||'video.mp4')+'|'+att.file.size+')';
-        return '[file]('+url+'|'+esc(att.mime||'application/octet-stream')+'|'+esc(att.name||'file')+'|'+att.file.size+')';
+        // ⚠️ 大小一律用 pf.size（实际上传的那个 blob）—— 图片超过 200KB 会被 compressImage 压过，
+        // 用 att.file.size 会报出原始大小，和服务器上的对不上。
+        var realSize = (pf && typeof pf.size === 'number') ? pf.size : att.file.size;
+        // 图片/音频现在也带上 |mime|name|size，桥接方（FloxChat）就能显示大小了
+        if (att.type === 'image') return '![image]('+url+'|'+esc(att.mime||'image/png')+'|'+esc(att.name||'image')+'|'+realSize+')';
+        if (att.type === 'audio') return '[audio]('+url+'|'+esc(att.mime||'audio/mpeg')+'|'+esc(att.name||'audio')+'|'+realSize+')';
+        if (att.type === 'video') return '[video]('+url+'|'+esc(att.mime||'video/mp4')+'|'+esc(att.name||'video.mp4')+'|'+realSize+')';
+        return '[file]('+url+'|'+esc(att.mime||'application/octet-stream')+'|'+esc(att.name||'file')+'|'+realSize+')';
     }));
 }
 
