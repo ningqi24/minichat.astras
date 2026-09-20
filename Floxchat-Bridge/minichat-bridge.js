@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v22";
+  var BRIDGE_VERSION = "v23";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -377,6 +377,115 @@
       }
       return false;
     } catch (e) { return true; }
+  }
+
+  // ================= 发文件（FloxChat -> MiniChat）=================
+  // 思路：不让 FloxChat 上传到它自己的服务器（那样 MiniChat 用户大概率下不了），
+  // 而是扩展自己弹文件选择框 -> 直传 MiniChat 的 Supabase Storage -> 发一条 MiniChat 附件消息。
+  // 消息经 WebSocket 回来后又会被渲染成 FloxChat 的文件卡片，形成闭环。
+  var FLOX_BUCKETS = {
+    image: 'chat-images', audio: 'chat-audios', video: 'chat-videos',
+    pdf: 'chat-files', doc: 'chat-files', xls: 'chat-files',
+    ppt: 'chat-files', text: 'chat-files', zip: 'chat-files'
+  };
+  var FLOX_LIMITS_MB = {
+    image: 5, audio: 20, video: 50, pdf: 10, doc: 10, xls: 10, ppt: 10, text: 5, zip: 20
+  };
+
+  // 分类规则和 MiniChat 网页端一致（index.html addAttachment）
+  function floxClassifyFile(file) {
+    var ty = String(file.type || ""), nm = String(file.name || "");
+    if (/^image\//.test(ty)) return "image";
+    if (/^audio\//.test(ty)) return "audio";
+    if (/^video\//.test(ty)) return "video";
+    if (ty === "application/pdf" || /\.pdf$/i.test(nm)) return "pdf";
+    if (/word|document|\.docx?$/i.test(ty) || /\.docx?$/i.test(nm)) return "doc";
+    if (/excel|spreadsheet|\.xlsx?$/i.test(ty) || /\.xlsx?$/i.test(nm)) return "xls";
+    if (/presentation|\.pptx?$/i.test(ty) || /\.pptx?$/i.test(nm)) return "ppt";
+    if (/^text\//.test(ty) || /\.txt$/i.test(nm)) return "text";
+    if (/zip|archive|\.(zip|rar|7z)$/i.test(nm)) return "zip";
+    return "";
+  }
+
+  // 弹系统的文件选择框（要靠用户的点击激活，所以只能在点击链路里调）
+  function floxPickFile() {
+    return new Promise(function(resolve) {
+      var inp = document.createElement("input");
+      inp.type = "file";
+      inp.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px";
+      document.body.appendChild(inp);
+      var done = false;
+      function finish(v) {
+        if (done) return; done = true;
+        try { document.body.removeChild(inp); } catch (e) {}
+        resolve(v);
+      }
+      inp.addEventListener("change", function() {
+        finish(inp.files && inp.files[0] ? inp.files[0] : null);
+      });
+      inp.addEventListener("cancel", function() { finish(null); });
+      inp.click();
+    });
+  }
+
+  // 直传 MiniChat 的 Supabase Storage（用登录会话的 access_token，和网页端同一套策略）
+  function floxUploadToMiniChat(file, kind) {
+    var ext = String(file.name || "bin").split(".").pop() || "bin";
+    ext = ext.replace(/[^A-Za-z0-9]/g, "").slice(0, 8) || "bin";
+    var safe = Date.now() + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
+    var path = "public/" + safe;
+    var bucket = FLOX_BUCKETS[kind] || "chat-files";
+    return fetch(SUPABASE_URL + "/storage/v1/object/" + bucket + "/" + path, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "apikey": ANON_KEY,
+        "x-upsert": "false",
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file
+    }).then(function(r) {
+      if (!r.ok) throw new Error("上传失败（HTTP " + r.status + "）");
+      return SUPABASE_URL + "/storage/v1/object/public/" + bucket + "/" + path;
+    });
+  }
+
+  function floxAttachmentMarker(kind, url, mime, name, size) {
+    var s = url + "|" + mime + "|" + name + "|" + size;
+    if (kind === "image") return "![image](" + s + ")";
+    if (kind === "audio") return "[audio](" + s + ")";
+    if (kind === "video") return "[video](" + s + ")";
+    return "[file](" + s + ")";
+  }
+
+  // 给积木和补丁用：选文件 -> 上传 -> 发送
+  function floxSendFile() {
+    if (!token || !userEmail) { setError("未连接，请先「桥接连接」"); return Promise.resolve(); }
+    clearError();
+    return floxPickFile().then(function(file) {
+      if (!file) return;                                    // 用户取消了
+      var kind = floxClassifyFile(file);
+      if (!kind) {
+        setError("暂不支持该文件类型：" + file.name);
+        floxAppendErrorBubble(lastError);
+        return;
+      }
+      var maxMB = FLOX_LIMITS_MB[kind] || 10;
+      if (file.size > maxMB * 1024 * 1024) {
+        setError("文件超过大小限制（" + maxMB + "MB）：" + file.name);
+        floxAppendErrorBubble(lastError);
+        return;
+      }
+      floxLog("开始上传文件", file.name, file.size, kind);
+      return floxUploadToMiniChat(file, kind).then(function(pub) {
+        floxLog("上传完成", pub);
+        return sendMsg(floxAttachmentMarker(kind, pub, file.type || "application/octet-stream", file.name, file.size));
+      });
+    }).catch(function(e) {
+      floxLog("发文件失败:", e && e.message ? e.message : e);
+      setError(e && e.message ? e.message : e);
+      floxAppendErrorBubble(lastError);
+    });
   }
 
   // ---- 大小补齐：图片/音频的标记里没有大小，用 HEAD 拿 Content-Length ----
@@ -1183,6 +1292,10 @@
     },
 
     // ---- 历史翻页（整表替换 + 让 FloxChat 重画）----
+    // 在 MiniChat 群里点附件按钮时调用（补丁10）
+    sendFile: function() {
+      return floxSendFile();
+    },
     floxLoadOlder: function() {
       return floxLoadMore();
     },
@@ -1426,6 +1539,9 @@
           },
           "---",
           // ===== 历史 =====
+          { opcode: "sendFile", blockType: Scratch.BlockType.COMMAND,
+            text: "桥接发送文件到 MiniChat（选文件 → 上传 → 发送）"
+          },
           "---",
           // ===== 历史翻页（MiniChat 群里用）=====
           { opcode: "floxLoadOlder", blockType: Scratch.BlockType.COMMAND,
@@ -1478,6 +1594,7 @@
     floxResetCursor: ext.floxResetCursor,
     // ⚠️ 光在 getInfo 里声明积木是不够的：必须在这里把实现挂到 id 上，
     // 否则 Scratch 调用到的是 undefined。
+    sendFile: ext.sendFile,
     floxLoadOlder: ext.floxLoadOlder,
     floxLoadNewest: ext.floxLoadNewest,
     floxPageIndex: ext.floxPageIndex,

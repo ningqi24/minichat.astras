@@ -14,7 +14,7 @@ const GAVATAR = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-avatar-150.
 // ⚠️ 扩展 JS 走 GitHub Pages，缓存头是 max-age=3600（一小时）。
 // 不带版本号的话，改完扩展用户重开工程也会继续用浏览器缓存里的旧 JS。
 // 每次改 minichat-bridge.js 就把这个号 +1，并重新打包 sb3。
-const EXT_VER = '22';
+const EXT_VER = '23';
 const EXT_URL = 'https://minichat.astras.cc/Floxchat-Bridge/minichat-bridge.js?v=' + EXT_VER;
 const log = [];
 let seq = 0;
@@ -465,9 +465,11 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   log.push('补丁12: MiniChat 群点退群直接弹提示，不走确认框（' + outer + '.SUBSTACK 从 ' + head + ' 改为 ' + g + '）');
 })();
 
-// ---- 补丁 10：MiniChat 群里点附件按钮不要往 FloxChat 上传 ----
-// 附件走的是 httpfiletools（上传到 FloxChat 的 /upload）+ 一次 FloxChat 的发送请求。
-// MiniChat 群里这两步都不该发生，改成只往聊天区放一条提示气泡。
+// ---- 补丁 10：MiniChat 群里点附件按钮改为「发到 MiniChat」 ----
+// 原流程走 httpfiletools（上传到 FloxChat 的 /upload）+ 一次 FloxChat 发送请求。
+// MiniChat 群里这两步都不该发生，改成调用桥接的「发送文件到 MiniChat」：
+// 扩展自己弹文件选择框 -> 直传 MiniChat 的 Supabase Storage -> 发一条 MiniChat 附件消息，
+// 消息经 WebSocket 回来后又被渲染成 FloxChat 的文件卡片，形成闭环。
 (function () {
   const t = T('通讯');
   let up = null;
@@ -485,21 +487,15 @@ function findIfWithSubstackHead(t, headOpcode, varName) {
   }
   if (!guardIf) throw new Error('补丁10: 没找到 CommunicationUI13 分支');
   const head = t.blocks[guardIf].inputs.SUBSTACK[1];
-  const ln = '当前显示的群聊';
-  // content 必须是 Base64（FloxChat 会 Encoding_decode 它），静态文案直接在这里编好
-  const noticeText = '[MiniChat 群] 这里发不了文件/图片：附件上传走的是 FloxChat 服务器。文字消息可以直接发。';
-  const notice = '{"username":"MiniChat","uid":"","avatar_url":"","content":"'
-    + Buffer.from(noticeText, 'utf8').toString('base64')
-    + '","time":"","mid":"attach"}';
-  const note = mkBlock(t, 'data_addtolist', { ITEM: lit(notice) }, { LIST: [ln, listId(ln)] });
+  const sendFile = mkBlock(t, EXT + '_sendFile', {}, {});
   const cond = eqConst(t, '当前显示的群聊ID', GID);
-  const g = mkBlock(t, 'control_if_else', { CONDITION: [2, cond], SUBSTACK: [2, note], SUBSTACK2: [2, head] }, {});
+  const g = mkBlock(t, 'control_if_else', { CONDITION: [2, cond], SUBSTACK: [2, sendFile], SUBSTACK2: [2, head] }, {});
   t.blocks[cond].parent = g;
-  t.blocks[note].parent = g;
+  t.blocks[sendFile].parent = g;
   t.blocks[head].parent = g;
   t.blocks[guardIf].inputs.SUBSTACK = [2, g];
   t.blocks[g].parent = guardIf;
-  log.push('补丁10: ' + guardIf + '.SUBSTACK 改为「MiniChat 只提示不发送 / 其他群走原流程」');
+  log.push('补丁10: ' + guardIf + '.SUBSTACK 改为「MiniChat 走桥接发文件 / 其他群走原流程」');
 })();
 
 // ---- 补丁 5：注册扩展 ----
