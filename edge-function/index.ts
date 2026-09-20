@@ -399,13 +399,45 @@ async function uploadFile(body: any) {
   const b64 = String(body.data ?? "");
 
   if (!ALLOWED.includes(bucket)) return json({ error: "bad_bucket" }, 400);
-  if (!/^public\/[A-Za-z0-9._-]+$/.test(path)) return json({ error: "bad_path" }, 400);
+  // 路径必须以字母数字开头（原来允许 "." 开头，能造出 public/. 这种怪名字）
+  if (!/^public\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(path)) return json({ error: "bad_path" }, 400);
   if (!b64) return json({ error: "empty_data" }, 400);
-  if (b64.length > 40 * 1024 * 1024) return json({ error: "too_large" }, 413);
 
-  // 限流：每账号每分钟最多 20 次上传
+  // base64 -> 近似字节数，先按大小拦掉，避免把超大 payload 解出来
+  const approxBytes = Math.floor((b64.length * 3) / 4);
+  if (approxBytes > 64 * 1024 * 1024) return json({ error: "文件过大", code: "TOO_LARGE" }, 413);
+
+  // 限流：每分钟 + 每天（内存态，冷启动会重置，属于尽力而为）
   if (!rateLimit(`upload:${user.id}`, 20, 60_000)) {
     return json({ error: "上传过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
+  }
+  if (!rateLimit(`upload_day:${user.id}`, 300, 24 * 60 * 60 * 1000)) {
+    return json({ error: "今天上传次数已达上限，请明天再试", code: "RATE_LIMITED" }, 429);
+  }
+
+  // ★ 主动读 bucket 配置，在 Edge 侧强制同一条规则。
+  // 为什么必须自己再查一遍：bucket 的 file_size_limit / allowed_mime_types 是
+  // Storage API 层面强制的（与 RLS 无关，service_role 也受限）；但如果管理员只用
+  // RLS 策略限制，service_role 会直接绕过 RLS —— 所以这里两种配置都自己兜住。
+  const { data: bucketInfo } = await supabaseAdmin.storage.getBucket(bucket);
+  if (!bucketInfo) return json({ error: "bad_bucket" }, 400);
+
+  // 代码里的兜底上限（和网页端一致），bucket 没设限制时用
+  const FALLBACK_LIMIT_MB: Record<string, number> = {
+    "chat-images": 5, "chat-audios": 20, "chat-videos": 50, "chat-files": 10,
+  };
+  const bucketLimit = typeof bucketInfo.file_size_limit === "number" ? bucketInfo.file_size_limit : null;
+  const limitBytes = bucketLimit ?? (FALLBACK_LIMIT_MB[bucket] ?? 10) * 1024 * 1024;
+  if (approxBytes > limitBytes) {
+    return json({
+      error: `文件超过限制（${(limitBytes / 1048576).toFixed(0)}MB）`,
+      code: "TOO_LARGE",
+    }, 413);
+  }
+
+  const allowedMimes = Array.isArray(bucketInfo.allowed_mime_types) ? bucketInfo.allowed_mime_types : null;
+  if (allowedMimes && allowedMimes.length && !allowedMimes.includes(contentType)) {
+    return json({ error: `该 bucket 不接受这种类型：${contentType}`, code: "BAD_MIME" }, 415);
   }
 
   let bytes: Uint8Array;
@@ -415,6 +447,11 @@ async function uploadFile(body: any) {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   } catch {
     return json({ error: "bad_base64" }, 400);
+  }
+
+  // 解码后再核对一次真实大小（base64 近似值可能有 ±2 字节误差）
+  if (bytes.length > limitBytes) {
+    return json({ error: `文件超过限制（${(limitBytes / 1048576).toFixed(0)}MB）`, code: "TOO_LARGE" }, 413);
   }
 
   const { error } = await supabaseAdmin.storage
