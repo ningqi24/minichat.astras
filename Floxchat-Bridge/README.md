@@ -64,6 +64,67 @@ https://minichat.astras.cc/Floxchat-Bridge/minichat-bridge.js
 
 TurboWarp 里「加载扩展 → 从 URL」粘贴上面这行即可。
 
+## 附件 / 文件消息：两边的格式对照
+
+### FloxChat 的文件消息格式
+
+从工程里挖出来的（发送端 `通讯/xG` 拼接、识别端 `消息显示/z[` 比对）：
+
+```
+\u0001 @@§§::floxchatfileurl{"<下载URL>💾<文件名>💾<大小>MB"}::§§@@
+```
+
+| 部分 | 说明 |
+|---|---|
+| `\u0001` | `strings_unicodefrom(1)`，一个不可见前导符 |
+| 分隔符 | `💾` —— `[1]`=URL，`[2]`=文件名，`[3]`=大小 |
+| 大小 | **已格式化好的字符串**（`字节数/1000000` 取前 4 位 + `"MB"`） |
+
+**识别方式**：`letters_of(内容, 1, 24) == \u0001 + '@@§§::floxchatfileurl{"'` —— 前缀正好 **24 个字符**，
+所以**文件标记必须独占一条消息、且在最开头**，否则认不出来。
+（这就是为什么图文混排 / 多附件要拆成多条：见 `floxSplitParts`）
+
+解析算式：`split( 内容[25 .. 长度-8] , "💾" )` —— 剥掉 24 字符前缀 + 8 字符后缀 `"}::§§@@`。
+
+### MiniChat 的附件标记
+
+```
+![image](url|mime|name|size)      ← 4.2.1 起带后缀（老消息只有 url）
+[audio](url|mime|name|size)      ← 同上
+[video](url|mime|name|size)
+[file](url|mime|name|size)
+```
+
+> ⚠️ 大小一律用 **`pf.size`**（实际上传的 blob）—— 图片超过 200KB 会被 `compressImage` 压过，
+> 用 `att.file.size` 报的是压缩前的大小，和服务器上对不上。
+
+**解析端必须兼容两种格式**：`([^)|]+)(?:\|[^)]*)?` —— 只取第一段当 URL。
+（`renderMessageContent` 约 4625 行、桥接的 `FLOX_ATTACH_RE`）
+桥接侧对**老格式**（没有 size）用 `HEAD` 请求取 `Content-Length` 兜底，按 URL 缓存。
+
+## 文件下载（已知：FloxChat 侧半成品，暂不修）
+
+链路（全部核过）：
+
+```
+点文件卡片  消息显示/当角色被点击  ->  预下载文件 = 刷新消息[3]（=消息内容） -> 广播「下载文件」
+提示/收到「下载文件」              ->  解析出文件名，弹确认框
+点确认      提示/当角色被点击      ->  [提示] 含「是否需要下载一个名为」-> 广播「文件下载」
+提示/收到「文件下载」              ->  setServerUrl + setAuthToken + httpfiletools_downloadFromUrl(URL, 文件名)
+```
+
+我们这边**格式是对的**（文件名显示正确；CORS 预检 Supabase 也允许 `X-Upload-Auth` 这个自定义头）。
+失败点在 FloxChat 自带的 `httpfiletools` 扩展里（它以 `data:` URI 内嵌在 `extensionURLs`）：
+
+```js
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(blobUrl);   // ⚠️ 立刻撤销，可能赶在下载真正开始之前
+```
+
+**结论：作者的半成品，暂不修。** 以后要修的话，只需把 `extensionURLs.httpfiletools`
+换成我们托管的一份修正版（**不动任何积木**），那样 FloxChat 自己的文件下载也会一起好。
+
 ## 历史消息翻页（MiniChat 群）
 
 FloxChat 的渲染是**只往尾部追加**的：
