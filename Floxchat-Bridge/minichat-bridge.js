@@ -159,7 +159,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v24";
+  var BRIDGE_VERSION = "v25";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -421,7 +421,18 @@
         resolve(v);
       }
       inp.addEventListener("change", function() {
-        finish(inp.files && inp.files[0] ? inp.files[0] : null);
+        var f = (inp.files && inp.files[0]) ? inp.files[0] : null;
+        if (!f) { finish(null); return; }
+        // ⚠️ File 是【懒加载】的：底层数据由那个 input 持有。
+        // 我们在 finish() 里会同步把 input 从 DOM 移除，之后再 fetch 它就可能
+        // 取不到数据 —— 表现就是 TypeError: Failed to fetch。
+        // 所以趁 input 还在，立刻把字节读进内存。
+        f.arrayBuffer().then(function(buf) {
+          finish({ file: f, buffer: buf });
+        }).catch(function(e) {
+          floxLog("读取文件失败:", e && e.message);
+          finish({ file: f, buffer: null });
+        });
       });
       inp.addEventListener("cancel", function() { finish(null); });
       inp.click();
@@ -447,28 +458,41 @@
   }
 
   // 直传 MiniChat 的 Supabase Storage（用登录会话的 access_token，和网页端同一套策略）
-  function floxUploadToMiniChat(file, kind) {
+  function floxUploadToMiniChat(file, kind, buffer) {
     var ext = String(file.name || "bin").split(".").pop() || "bin";
     ext = ext.replace(/[^A-Za-z0-9]/g, "").slice(0, 8) || "bin";
     var safe = Date.now() + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
     var path = "public/" + safe;
     var bucket = FLOX_BUCKETS[kind] || "chat-files";
-    return floxFetchRaw(SUPABASE_URL + "/storage/v1/object/" + bucket + "/" + path, {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + token,
-        "apikey": ANON_KEY,
-        "x-upsert": "false",
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: file
-    }).then(function(r) {
+    var url = SUPABASE_URL + "/storage/v1/object/" + bucket + "/" + path;
+    var headers = {
+      "Authorization": "Bearer " + token,
+      "apikey": ANON_KEY,
+      "x-upsert": "false",
+      "Content-Type": file.type || "application/octet-stream"
+    };
+    // 用 ArrayBuffer 而不是 File 当 body：File 是懒加载的，ArrayBuffer 是自包含的
+    var body = buffer || file;
+    return floxFetchRaw(url, { method: "POST", headers: headers, body: body }).then(function(r) {
       if (!r.ok) {
         return r.text().catch(function() { return ""; }).then(function(t) {
           throw new Error("上传失败（HTTP " + r.status + "）：" + String(t).slice(0, 160));
         });
       }
       return SUPABASE_URL + "/storage/v1/object/public/" + bucket + "/" + path;
+    }).catch(function(e) {
+      // 探针：同样的地址、同样的头，只把 body 换成一个小字符串。
+      // 能拿到 HTTP 响应 -> 网络是通的，问题在 body（文件字节）；
+      // 还是 Failed to fetch -> 请求根本发不出去。
+      if (String(e && e.message).indexOf("Failed to fetch") < 0) throw e;
+      floxLog("做一次空 body 探针……");
+      return fetch(url, { method: "POST", headers: headers, body: "probe" }).then(function(r2) {
+        floxLog("探针拿到了 HTTP 响应:", r2.status, "-> 网络通，问题出在 body（文件字节）");
+        throw e;
+      }, function(e2) {
+        floxLog("探针也 Failed to fetch -> 请求根本发不出去:", e2 && e2.message);
+        throw e;
+      });
     });
   }
 
@@ -484,8 +508,9 @@
   function floxSendFile() {
     if (!token || !userEmail) { setError("未连接，请先「桥接连接」"); return Promise.resolve(); }
     clearError();
-    return floxPickFile().then(function(file) {
-      if (!file) return;                                    // 用户取消了
+    return floxPickFile().then(function(picked) {
+      if (!picked) return;                                  // 用户取消了
+      var file = picked.file;
       var kind = floxClassifyFile(file);
       if (!kind) {
         setError("暂不支持该文件类型：" + file.name);
@@ -498,8 +523,8 @@
         floxAppendErrorBubble(lastError);
         return;
       }
-      floxLog("开始上传文件", file.name, file.size, kind);
-      return floxUploadToMiniChat(file, kind).then(function(pub) {
+      floxLog("开始上传文件", file.name, file.size, kind, "已读入内存:", picked.buffer ? picked.buffer.byteLength : "(读失败)");
+      return floxUploadToMiniChat(file, kind, picked.buffer).then(function(pub) {
         floxLog("上传完成", pub);
         return sendMsg(floxAttachmentMarker(kind, pub, file.type || "application/octet-stream", file.name, file.size));
       });
