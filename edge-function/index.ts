@@ -133,6 +133,7 @@ Deno.serve(async (req: Request) => {
     if (action === "send_message") return await sendMessage(body);
     if (action === "get_users") return await getUsers(body);
     if (action === "upload_file") return await uploadFile(body);
+    if (action === "storage_gc") return json(await storageGc(Boolean(body?.force)));
     return await login(req, body);
   } catch (e: any) {
     return json({ error: e.message }, 500);
@@ -384,6 +385,67 @@ async function sendMessage(body: any) {
   return json({ ok: true, message: data });
 }
 
+// ================= 存储容量自动清理 =================
+// 免费额度 1GB，留点余量：超过 950MB 就删，删到 900MB 以下。
+// 不用新表：靠 Storage 的 list() 现算总量（结果缓存 5 分钟）。
+const STORAGE_BUCKETS = ["chat-images", "chat-audios", "chat-videos", "chat-files"];
+const STORAGE_SOFT_LIMIT = 950 * 1024 * 1024;   // 超过它开始清理
+const STORAGE_TARGET = 900 * 1024 * 1024;       // 清理到这个值以下
+let storageUsageCache: { bytes: number; at: number } | null = null;
+
+async function listAllObjects(bucket: string) {
+  const out: any[] = [];
+  const PAGE = 1000;
+  for (let offset = 0; offset < 40000; offset += PAGE) {
+    const { data, error } = await supabaseAdmin.storage
+      .from(bucket)
+      .list("public", { limit: PAGE, offset, sortBy: { column: "created_at", order: "asc" } });
+    if (error) break;
+    if (!data || data.length === 0) break;
+    out.push(...data);
+    if (data.length < PAGE) break;
+  }
+  return out;
+}
+
+async function collectStorageUsage() {
+  let total = 0;
+  const items: { bucket: string; name: string; createdAt: string; size: number }[] = [];
+  for (const b of STORAGE_BUCKETS) {
+    const objs = await listAllObjects(b);
+    for (const o of objs) {
+      const size = Number(o?.metadata?.size ?? 0);
+      if (!o || !o.name) continue;
+      total += size;
+      items.push({ bucket: b, name: o.name, createdAt: String(o.created_at ?? ""), size });
+    }
+  }
+  // 最老的排前面
+  items.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  return { total, items };
+}
+
+// force=false 时会走 5 分钟缓存；force=true 强制重算（给定时任务用）
+async function storageGc(force = false) {
+  const now = Date.now();
+  if (!force && storageUsageCache && now - storageUsageCache.at < 5 * 60_000) {
+    return { skipped: true, total: storageUsageCache.bytes, deleted: 0 };
+  }
+  const { total, items } = await collectStorageUsage();
+  storageUsageCache = { bytes: total, at: now };
+  if (total <= STORAGE_SOFT_LIMIT) return { total, deleted: 0 };
+
+  let remaining = total;
+  let deleted = 0;
+  for (const it of items) {
+    if (remaining <= STORAGE_TARGET) break;
+    const { error } = await supabaseAdmin.storage.from(it.bucket).remove(["public/" + it.name]);
+    if (!error) { remaining -= it.size; deleted++; }
+  }
+  storageUsageCache = { bytes: remaining, at: Date.now() };
+  return { total, remaining, deleted };
+}
+
 // ---- 上传文件（供 TurboWarp 扩展用）----
 // 为什么需要中转：浏览器直传 Storage 时，Supabase 的 CORS 预检在 TurboWarp 桌面版里
 // 过不去（同主机、无自定义头的简单请求却可以）。走这个已经验证可用的 Edge 通道最稳。
@@ -413,6 +475,16 @@ async function uploadFile(body: any) {
   }
   if (!rateLimit(`upload_day:${user.id}`, 300, 24 * 60 * 60 * 1000)) {
     return json({ error: "今天上传次数已达上限，请明天再试", code: "RATE_LIMITED" }, 429);
+  }
+
+  // 先看一眼容量：快到 1GB 就把最老的文件清掉（5 分钟内只算一次）
+  try {
+    const gc = await storageGc();
+    if ((gc as any).deleted) {
+      console.log(`storage gc: 删除 ${(gc as any).deleted} 个文件，剩余 ${(((gc as any).remaining ?? 0) / 1048576).toFixed(0)}MB`);
+    }
+  } catch (e) {
+    console.error("storage gc 失败（不影响上传）:", e);
   }
 
   // ★ 主动读 bucket 配置，在 Edge 侧强制同一条规则。
