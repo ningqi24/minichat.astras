@@ -161,7 +161,7 @@
   // 只要把 MiniChat 的数据按这个形状写进它的列表，FloxChat 现有的气泡/滚动/头像 UI
   // 就会直接渲染，不需要重画界面。
   // FloxChat 群聊 ID 统一 7 位（GID+4位数字 / FLOXGRP / SAYLINK）
-  var BRIDGE_VERSION = "v29";
+  var BRIDGE_VERSION = "v30";
   floxLog("扩展已加载", BRIDGE_VERSION);
   var FLOX_GID = "MINCHAT";
   var FLOX_GROUP_NAME = "MiniChat 群聊";
@@ -298,10 +298,18 @@
   var FLOX_FILE_SUFFIX = "\"}::§§@@";
   var FLOX_FILE_SEP = "💾";
 
-  // FloxChat 的大小是【已经格式化好的字符串】：getFileSize/1000000 取前 4 位 + "MB"
+  // 大小字段是【纯展示】用的：我核对过 FloxChat 的确认框和下载只读第 1 段(URL)
+  // 和第 2 段(文件名)，第 3 段只被当文字画出来，所以内容可以自定义。
+  //
+  // FloxChat 自己的算法是 letters_of(字节数/1000000, 1, 4) + "MB" —— 取前 4 个字符，
+  // 于是 2KB 的文件会显示成 "0.00MB"（它自己发的文件也这样）。
+  // 这里 1MB 以上保持和它完全一致（不做任何改变），1MB 以下改用可读单位。
   function floxSizeText(bytes) {
     var b = Number(bytes);
     if (!isFinite(b) || b <= 0) return "";
+    if (b < 1000) return Math.round(b) + "B";
+    var kb = Math.round(b / 1000);
+    if (kb < 1000) return kb + "KB";
     return String(b / 1000000).slice(0, 4) + "MB";
   }
 
