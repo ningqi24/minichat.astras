@@ -1,9 +1,15 @@
-const CACHE_NAME = 'minichat-v41';
+const CACHE_NAME = 'minichat-v42';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  // CSS / JS 已从 index.html 拆成独立文件，必须一起预缓存，
+  // 否则离线打开时页面在但样式和脚本都缺
+  '/css/app.css',
+  '/js/app.js',
+  '/assets/logo.svg',
+  '/assets/favicon.svg',
+  '/favicon.ico',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
-  // 如果有其他静态资源（如 CSS 背景图、字体等），可在此添加
 ];
 
 // 安装时缓存核心资源
