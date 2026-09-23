@@ -56,61 +56,52 @@
         .new-messages-btn .badge{position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;border-radius:10px;padding:0 5px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center}
         .time-divider{text-align:center;margin:16px 0 8px;font-size:12px;color:var(--text-muted);opacity:0.8}
         .time-divider span{background:var(--bg-secondary);padding:4px 12px;border-radius:10px;border:1px solid var(--border-color)}
-        /* ===================== 启动动画「讯息汇聚」===================== */
-        /* 分层时序：光晕 → 双标识飞入 → 光柱/涟漪 → logo 聚焦 → 字标展开 → 打字点 → 退出 */
-        #splash{position:absolute;inset:0;z-index:400;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#07070d;transition:opacity .55s cubic-bezier(.4,0,.2,1),transform .55s cubic-bezier(.4,0,.2,1),visibility .55s}
-        #splash.hidden{opacity:0;visibility:hidden;pointer-events:none;transform:scale(1.06)}
+        /* ===================== 启动画面 ===================== */
+        /* 设计主张：克制。
+           上一版堆了 8 层特效（网格/光柱/涟漪/模糊聚焦/字距展开/流光…），反而廉价。
+           这一版只留：一次淡入 + 一条真实进度线。层级 = logo → 字标 → 细线 → 进度 → 状态，
+           底部一行极暗署名。高级感来自留白、精确的排版和“几乎没动”的位移。 */
+        #splash{position:absolute;inset:0;z-index:400;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(125% 85% at 50% 0%,#0d1017 0%,#08080b 46%,#060608 100%);transition:opacity .45s cubic-bezier(.4,0,.2,1),visibility .45s}
+        #splash.hidden{opacity:0;visibility:hidden;pointer-events:none}
 
-        /* 背景：中心蓝光晕（呼吸式浮现）+ 极淡网格（径向遮罩，聚焦视线） */
-        .sp-aura{position:absolute;left:50%;top:44%;width:min(84vw,620px);height:min(84vw,620px);transform:translate(-50%,-50%) scale(.6);border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.34) 0%,rgba(59,130,246,.11) 40%,transparent 72%);filter:blur(8px);opacity:0;animation:spAura 2.4s cubic-bezier(.4,0,.2,1) forwards}
-        @keyframes spAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:.5;transform:translate(-50%,-50%) scale(1.12)}}
-        .sp-grid{position:absolute;inset:0;opacity:0;animation:spFadeIn 1.2s ease .12s forwards;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:34px 34px;-webkit-mask-image:radial-gradient(circle at 50% 44%,#000 0%,transparent 60%);mask-image:radial-gradient(circle at 50% 44%,#000 0%,transparent 60%)}
+        .sp-main{position:relative;display:flex;flex-direction:column;align-items:center}
+
+        /* logo：从 0.94 淡入，只有 6% 的缩放 —— 高级感来自“几乎没动” */
+        .sp-logo-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+        .sp-halo{position:absolute;width:158px;height:158px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(59,130,246,.30) 0%,rgba(59,130,246,.07) 45%,transparent 68%);opacity:0;animation:spHalo 2.1s cubic-bezier(.16,1,.3,1) forwards}
+        @keyframes spHalo{0%{opacity:0;transform:scale(.86)}55%{opacity:.9;transform:scale(1)}100%{opacity:.6;transform:scale(1.06)}}
+        .sp-logo{position:relative;height:58px;width:auto;opacity:0;animation:spLogoIn .8s cubic-bezier(.16,1,.3,1) forwards}
+        @keyframes spLogoIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
+
+        /* 字标：收紧字距 + 8px 上浮（不做字距动画，那是 2015 年的做法） */
+        .sp-title{margin-top:22px;font-size:25px;font-weight:600;letter-spacing:-.01em;line-height:1;color:#f2f4f8;opacity:0;animation:spUp .7s cubic-bezier(.16,1,.3,1) .38s forwards}
+        @keyframes spUp{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+
+        /* 1px 发丝线，由中间展开 */
+        .sp-rule{margin-top:18px;width:128px;height:1px;background:rgba(255,255,255,.08);transform:scaleX(0);animation:spRuleIn .6s cubic-bezier(.16,1,.3,1) .55s forwards}
+        @keyframes spRuleIn{to{transform:scaleX(1)}}
+
+        /* 进度线：真实填充，不是装饰条。缓动前快后慢，像真的在加载 */
+        .sp-bar{position:relative;margin-top:20px;width:184px;height:2px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;opacity:0;animation:spFadeIn .4s ease .58s forwards}
+        .sp-bar i{position:absolute;top:0;left:0;bottom:0;width:0;border-radius:2px;background:linear-gradient(90deg,rgba(59,130,246,.45),#3b82f6);box-shadow:0 0 8px rgba(59,130,246,.45);animation:spBarFill 1.25s cubic-bezier(.35,.1,.25,1) .6s forwards}
+        @keyframes spBarFill{to{width:100%}}
         @keyframes spFadeIn{to{opacity:1}}
 
-        /* ① 上方两个标识：从两侧弹性飞入，落到低亮度 */
-        .sp-top{display:flex;align-items:center;gap:26px;height:24px;margin-bottom:34px}
-        .sp-mark{height:21px;width:auto;opacity:0;filter:brightness(.62) saturate(.75)}
-        .sp-mark--l{animation:spInL .9s cubic-bezier(.22,1.15,.36,1) .14s forwards}
-        .sp-mark--r{animation:spInR .9s cubic-bezier(.22,1.15,.36,1) .22s forwards}
-        @keyframes spInL{0%{opacity:0;transform:translateX(-54px) scale(.84)}100%{opacity:.8;transform:translateX(0) scale(1)}}
-        @keyframes spInR{0%{opacity:0;transform:translateX(54px) scale(.84)}100%{opacity:.8;transform:translateX(0) scale(1)}}
+        /* 状态：小字、低对比、正常大小写（不要大写 + 宽字距，那很廉价） */
+        .sp-status{margin-top:14px;font-size:12px;font-weight:400;letter-spacing:0;color:rgba(255,255,255,.38);opacity:0;animation:spFadeIn .5s ease .85s forwards}
 
-        /* ② 舞台：logo + 光柱 + 涟漪 */
-        .sp-core{position:relative;display:flex;align-items:center;justify-content:center;width:132px;height:132px}
-        .sp-ring{position:absolute;inset:0;margin:auto;width:74px;height:74px;border-radius:50%;border:1px solid rgba(59,130,246,.55);opacity:0;transform:scale(.5)}
-        .sp-ring--1{animation:spRing 1.3s cubic-bezier(.2,.6,.3,1) .66s forwards}
-        .sp-ring--2{animation:spRing 1.3s cubic-bezier(.2,.6,.3,1) .82s forwards}
-        @keyframes spRing{0%{opacity:0;transform:scale(.5)}22%{opacity:.85}100%{opacity:0;transform:scale(1.75)}}
-        .sp-beam{position:absolute;left:50%;top:50%;width:2px;height:0;transform:translate(-50%,-50%);border-radius:2px;background:linear-gradient(180deg,transparent,rgba(96,165,250,.95),transparent);box-shadow:0 0 18px rgba(96,165,250,.85);opacity:0;animation:spBeam 1s cubic-bezier(.2,.8,.3,1) .64s forwards}
-        @keyframes spBeam{0%{opacity:0;height:0}30%{opacity:1;height:126px}100%{opacity:0;height:150px}}
-        .sp-logo{position:relative;height:64px;width:auto;opacity:0;filter:blur(10px) drop-shadow(0 6px 26px rgba(59,130,246,.45));animation:spLogo 1.05s cubic-bezier(.2,.9,.25,1) .82s forwards}
-        @keyframes spLogo{0%{opacity:0;transform:scale(.62) translateY(14px);filter:blur(10px) drop-shadow(0 6px 26px rgba(59,130,246,.45))}60%{opacity:1;filter:blur(0) drop-shadow(0 8px 30px rgba(59,130,246,.55))}100%{opacity:1;transform:scale(1) translateY(0);filter:blur(0) drop-shadow(0 8px 30px rgba(59,130,246,.5))}}
-
-        /* ③ 字标：字距展开 + 上浮 */
-        .sp-title{margin-top:20px;font-size:23px;font-weight:600;letter-spacing:.06em;color:#f1f1f1;opacity:0;animation:spTitle .95s cubic-bezier(.2,.8,.3,1) 1.06s forwards}
-        @keyframes spTitle{0%{opacity:0;letter-spacing:.42em;transform:translateY(9px);filter:blur(5px)}100%{opacity:1;letter-spacing:.06em;transform:translateY(0);filter:blur(0)}}
-
-        /* ④ 分隔线：由中间向两侧展开 + 流光扫过 */
-        .sp-rule{position:relative;margin-top:16px;width:186px;height:1px;background:rgba(255,255,255,.09);transform:scaleX(0);animation:spRule .8s cubic-bezier(.2,.8,.3,1) 1.2s forwards;overflow:hidden}
-        .sp-rule i{position:absolute;top:0;left:-42%;width:42%;height:100%;background:linear-gradient(90deg,transparent,rgba(96,165,250,.95),transparent);animation:spSweep 2s cubic-bezier(.4,0,.2,1) 1.7s infinite}
-        @keyframes spRule{to{transform:scaleX(1)}}
-        @keyframes spSweep{0%{left:-42%}60%,100%{left:100%}}
-
-        /* ⑤ 状态：打字指示器 + 文案 */
-        .sp-status{margin-top:20px;display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.34);font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:0;animation:spFadeIn .7s ease 1.36s forwards}
-        .sp-typing{display:inline-flex;gap:4px}
-        .sp-typing i{width:4px;height:4px;border-radius:50%;background:var(--accent,#3b82f6);display:block;animation:spDot 1.3s ease-in-out infinite}
-        .sp-typing i:nth-child(2){animation-delay:.16s}
-        .sp-typing i:nth-child(3){animation-delay:.32s}
-        @keyframes spDot{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-4px);opacity:1}}
+        /* 底部署名：极小、极暗 */
+        .sp-foot{position:absolute;left:0;right:0;bottom:38px;display:flex;align-items:center;justify-content:center;gap:22px;opacity:0;animation:spFadeIn .8s ease 1.2s forwards}
+        .sp-foot img{height:12px;width:auto;filter:brightness(.5) saturate(.55)}
+        .sp-foot .sp-sep{width:1px;height:10px;background:rgba(255,255,255,.10)}
 
         /* 无障碍：尊重「减少动态效果」 */
         @media (prefers-reduced-motion:reduce){
           #splash *{animation:none!important}
-          #splash .sp-aura,#splash .sp-grid,#splash .sp-status{opacity:1}
-          #splash .sp-mark{opacity:.8}
-          #splash .sp-logo,#splash .sp-title{opacity:1}
+          #splash .sp-logo,#splash .sp-title,#splash .sp-bar,#splash .sp-status,#splash .sp-foot{opacity:1}
+          #splash .sp-halo{opacity:.6}
           #splash .sp-rule{transform:scaleX(1)}
+          #splash .sp-bar i{width:100%}
         }
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
@@ -846,11 +837,9 @@
 
             /* 登录卡片 */
             .login-card { padding: 28px 20px; }
-            .sp-logo { height: 52px; }
-            .sp-core { width: 112px; height: 112px; }
-            .sp-ring { width: 62px; height: 62px; }
-            .sp-top { margin-bottom: 28px; }
-            .sp-mark { height: 17px; }
+            .sp-logo { height: 50px; }
+            .sp-halo { width: 138px; height: 138px; }
+            .sp-title { font-size: 22px; }
 
             /* 设置面板全屏 */
             .settings-overlay { position: fixed !important; align-items: stretch !important; }
@@ -878,13 +867,10 @@
             .auth-title { font-size: 20px; }
             .auth-sub { font-size: 14px; }
             .sp-logo { height: 44px; }
-            .sp-core { width: 96px; height: 96px; }
-            .sp-ring { width: 54px; height: 54px; }
-            .sp-top { margin-bottom: 24px; gap: 18px; }
-            .sp-mark { height: 15px; }
-            .sp-title { font-size: 20px; margin-top: 16px; }
-            .sp-rule { width: 150px; }
-            .sp-status { font-size: 10px; margin-top: 16px; }
+            .sp-halo { width: 122px; height: 122px; }
+            .sp-title { font-size: 20px; margin-top: 18px; }
+            .sp-bar { width: 156px; }
+            .sp-foot { bottom: 28px; gap: 16px; }
             .settings-content { padding: 16px 12px; }
             .settings-group { padding: 12px; }
             .settings-group-title { font-size: 13px; }
@@ -905,21 +891,21 @@
 <body>
 <div class="app" id="app">
     <div id="splash">
-        <div class="sp-aura"></div>
-        <div class="sp-grid"></div>
-        <div class="sp-top">
-            <img class="sp-mark sp-mark--l" src="assets/Inspired.svg" alt="Inspired"/>
-            <img class="sp-mark sp-mark--r" src="assets/basied.svg" alt="basied"/>
+        <div class="sp-main">
+            <div class="sp-logo-wrap">
+                <span class="sp-halo"></span>
+                <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
+            </div>
+            <div class="sp-title">MiniChat</div>
+            <div class="sp-rule"></div>
+            <div class="sp-bar"><i></i></div>
+            <div class="sp-status" data-i18n="loading">加载中</div>
         </div>
-        <div class="sp-core">
-            <span class="sp-ring sp-ring--1"></span>
-            <span class="sp-ring sp-ring--2"></span>
-            <span class="sp-beam"></span>
-            <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
+        <div class="sp-foot">
+            <img src="assets/Inspired.svg" alt="Inspired"/>
+            <span class="sp-sep"></span>
+            <img src="assets/basied.svg" alt="basied"/>
         </div>
-        <div class="sp-title">MiniChat</div>
-        <div class="sp-rule"><i></i></div>
-        <div class="sp-status"><span class="sp-typing"><i></i><i></i><i></i></span><span data-i18n="loading">加载中</span></div>
     </div>
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
@@ -1409,7 +1395,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '4.2.2';
+var APP_VERSION = '4.2.3';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2193,7 +2179,7 @@ async function ensureProfile(uid, email) {
 // ===================== 启动画面 =====================
 (function() {
     // 动画总时长（CSS 里最后一层在 1.62s 出现，留出一点收尾时间）
-    var DURATION = 2200;
+    var DURATION = 2100;
     var splash = document.getElementById('splash');
     function hide() {
         if (!splash) return;
