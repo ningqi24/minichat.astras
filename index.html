@@ -142,6 +142,29 @@
         .login-card .pwd-wrapper input{padding-right:44px}
         .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:7px;color:var(--text-muted);cursor:pointer;transition:background var(--transition),color var(--transition)}
         .login-card .pwd-wrapper .toggle-pwd:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .terms-overlay{display:none;position:fixed;inset:0;background:var(--modal-overlay);backdrop-filter:blur(8px);justify-content:center;align-items:center;z-index:500;animation:fadeIn .2s ease}
+        .terms-overlay.active{display:flex}
+        .terms-modal{background:var(--bg-card);border-radius:16px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,.25);width:90%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+        .terms-header{padding:20px 24px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card)}
+        .terms-header h3{margin:0;font-size:17px;font-weight:600;color:var(--text-primary)}
+        .terms-close{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:6px 10px;border-radius:6px;transition:all .2s ease}
+        .terms-close:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .terms-content{flex:1;overflow-y:auto;padding:20px 24px;background:var(--bg-secondary)}
+        .terms-item{margin-bottom:10px;padding:14px 16px;background:var(--bg-card);border-radius:12px;border:1px solid var(--border-color)}
+        .terms-item:last-child{margin-bottom:0}
+        .terms-item h4{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--accent)}
+        .terms-item p{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.7}
+        .terms-item p:last-child{margin-top:6px;color:var(--text-primary)}
+        .terms-footer{padding:16px 24px;border-top:1px solid var(--border-color);background:var(--bg-card)}
+        .terms-checkbox{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-input);border-radius:8px;margin-bottom:14px;cursor:pointer;transition:background .2s}
+        .terms-checkbox:hover{background:var(--bg-hover)}
+        .terms-checkbox input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+        .terms-checkbox span{font-size:13px;color:var(--text-secondary)}
+        .terms-footer .btn-primary{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 8px rgba(59,130,246,.2);font-family:inherit}
+        .terms-footer .btn-primary:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.3)}
+        .terms-footer .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+        .terms-link{display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-weight:500;font-size:13px;padding:6px 10px;border-radius:6px;transition:all .2s;background:var(--accent-soft)}
+        .terms-link:hover{background:var(--accent);color:#fff;transform:translateX(2px)}
         /* ==================== FloxChat 验证码登录 ==================== */
         .floxchat-login{display:none}
         .floxchat-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:12.5px;font-family:inherit;padding:4px 0;margin-bottom:18px;transition:color var(--transition-fast),gap var(--transition-fast)}
@@ -1583,7 +1606,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.9';
+var APP_VERSION = '4.6.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
