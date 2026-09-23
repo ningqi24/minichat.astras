@@ -224,8 +224,12 @@
         .search-bar.open{animation:searchBarIn .24s cubic-bezier(.22,1,.36,1) both}
         /* 角标：弹出 */
         .online-badge.show,.sidebar-badge.show,.bottom-nav .nav-item .badge.show{animation:mcBadgeIn .22s cubic-bezier(.22,1,.36,1) both}
-        /* 登录 → 聊天：与登录层淡出交叉溶解 */
-        .main-interface:not(.hidden){animation:mcOverlayIn .3s ease both}
+        /* 登录 → 聊天：与登录层淡出交叉溶解
+           ⚠️ 这里【不能加 both】：both 会把起始帧 opacity:0 也应用上，
+              一旦动画因为任何原因没跑起来（被 display:none 打断、标签页被节流、
+              系统开了"减少动态效果"等），主界面就会永远停在透明状态 —— 整页看不见。
+              去掉 both 后，动画正常时仍有淡入；动画没跑时元素保持默认的 opacity:1。 */
+        .main-interface:not(.hidden){animation:mcOverlayIn .3s ease}
         /* FloxChat 登录面板切换 */
         .floxchat-login{animation:mcOverlayIn .26s ease both}
         .floxchat-login .floxchat-step2{animation:mcDropIn .22s ease both}
@@ -1579,7 +1583,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.7';
+var APP_VERSION = '4.5.8';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2488,6 +2492,28 @@ async function ensureProfile(uid, email) {
         if (loginHidden && appHidden) {
             console.warn('[MiniChat/boot] 两个界面都不可见 → 强制显示登录界面');
             if (loginOverlay) loginOverlay.classList.remove('hidden');
+        }
+        // 实测计算样式与几何：class 正常不代表真的可见
+        // （opacity / visibility 会沿 DOM 树继承，光看 classList 看不出来）
+        if (mainInterface) {
+            var cs = getComputedStyle(mainInterface);
+            var rect = mainInterface.getBoundingClientRect();
+            console.log('[MiniChat/boot] 主界面实测 | opacity=' + cs.opacity + ' visibility=' + cs.visibility +
+                        ' display=' + cs.display + ' zIndex=' + cs.zIndex + ' animation=' + cs.animationName +
+                        ' 尺寸=' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+                        '@' + Math.round(rect.left) + ',' + Math.round(rect.top));
+            var chain = [], p = mainInterface.parentElement;
+            while (p && p !== document.documentElement) {
+                var pcs = getComputedStyle(p);
+                chain.push((p.id ? '#' + p.id : (p.className ? '.' + String(p.className).split(' ')[0] : p.tagName)) +
+                           '(' + pcs.display + ',op=' + pcs.opacity + ',vis=' + pcs.visibility + ')');
+                p = p.parentElement;
+            }
+            console.log('[MiniChat/boot] 祖先链 | ' + chain.join(' ← '));
+            console.log('[MiniChat/boot] 视口 | ' + window.innerWidth + 'x' + window.innerHeight +
+                        ' | body尺寸=' + document.body.clientWidth + 'x' + document.body.clientHeight +
+                        ' | html高度=' + getComputedStyle(document.documentElement).height +
+                        ' | body高度=' + getComputedStyle(document.body).height);
         }
     }, DURATION + 1500);
 })();
