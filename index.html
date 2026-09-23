@@ -112,6 +112,15 @@
         .login-card .logo-area h1{font-size:17px;font-weight:700;color:var(--text-primary);margin:0}
         .login-card .auth-title{font-size:24px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
         .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:24px}
+        /* Cloudflare 风格：第三方登录按钮 + 「或」分隔线 */
+        .alt-login{margin-bottom:18px}
+        .alt-login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:13.5px;font-weight:500;font-family:inherit;cursor:pointer;transition:var(--transition)}
+        .alt-login-btn:hover{border-color:var(--accent);background:var(--bg-hover)}
+        .alt-login-btn:active{transform:scale(.985)}
+        .alt-login-logo{width:22px;height:22px;border-radius:6px;background:#0f1115;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;flex-shrink:0}
+        .alt-login-logo img{width:100%;height:100%;object-fit:contain;display:block}
+        .or-divider{display:flex;align-items:center;gap:12px;margin-top:16px;color:var(--text-muted);font-size:11.5px}
+        .or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--border-color)}
         .auth-field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
         .auth-field-label{font-size:12px;font-weight:500;color:var(--text-secondary)}
         .login-card input{width:100%;box-sizing:border-box;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;font-family:inherit;outline:none;transition:var(--transition)}
@@ -969,6 +978,13 @@
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
             <div class="auth-title" id="authTitle" data-i18n="welcome">欢迎回来</div>
             <div class="auth-sub" id="authSub" data-i18n="loginOrSignup">登录或注册账户</div>
+            <div class="alt-login" id="altLogin">
+                <button type="button" class="alt-login-btn" id="switchFloxChat" title="使用 FloxChat 登录">
+                    <span class="alt-login-logo"><img src="assets/FloxChat LOGO.svg" alt=""/></span>
+                    使用 FloxChat 登录
+                </button>
+                <div class="or-divider"><span>或</span></div>
+            </div>
             <label class="auth-field">
                 <span class="auth-field-label" data-i18n="emailLabel">电子邮箱</span>
                 <input class="auth-input" type="email" id="authEmail" data-i18n-placeholder="emailPlaceholder" placeholder="you@example.com"/>
@@ -981,9 +997,6 @@
             <button class="btn-primary" id="btnLogin" data-i18n="login">登录</button>
             <div class="auth-foot">
                 <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
-                <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat 验证码登录（摄表）" aria-label="FloxChat 验证码登录（摄表）">
-                    <span class="floxchat-entry-mask"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
-                </button>
             </div>
             <!-- FloxChat 验证码登录 -->
             <div class="floxchat-login" id="floxLogin">
@@ -1574,7 +1587,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.0';
+var APP_VERSION = '4.5.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2265,6 +2278,8 @@ function floxStartResendCountdown(seconds) {
     floxResendTimer = setInterval(function() { left--; render(); }, 1000);
 }
 function switchToFloxLogin() {
+    var altLogin = document.getElementById('altLogin');
+    if (altLogin) altLogin.style.display = 'none';
     document.querySelector('.login-card .logo-area').style.display = 'none';
     document.querySelector('.login-card .auth-title').style.display = 'none';
     document.querySelector('.login-card .auth-sub').style.display = 'none';
@@ -2290,6 +2305,8 @@ function switchToFloxLogin() {
     if (codeEl) codeEl.value = '';
 }
 function switchBackFromFlox() {
+    var altLoginBack = document.getElementById('altLogin');
+    if (altLoginBack) altLoginBack.style.display = '';
     document.querySelector('.login-card .logo-area').style.display = '';
     document.querySelector('.login-card .auth-title').style.display = '';
     document.querySelector('.login-card .auth-title').textContent = isLoginMode ? t('welcome') : t('createAccount');
@@ -2400,31 +2417,57 @@ async function ensureProfile(uid, email) {
         // 先跑完最后一拍再淡出，避免"动画没演完就消失"
         splash.classList.add('hidden');
         setTimeout(function(){ splash.remove(); }, 620);
-        if (loginOverlay) loginOverlay.classList.remove('hidden');
-        renderCaptcha('captchaBoxLogin');
+
+        var revealed = false;
+        function showLogin() {
+            if (revealed) return;
+            revealed = true;
+            if (loginOverlay) loginOverlay.classList.remove('hidden');
+            renderCaptcha('captchaBoxLogin');
+        }
+
+        var user = null;
         try {
             var raw = localStorage.getItem('minichat_user');
-            if (raw) {
-                var user = JSON.parse(raw);
-                if (user && user.email) {
-                    window.currentEmail = user.email;
-                    window.currentUserId = user.id || '';
-                    window.supabase.auth.getSession().then(function(data) {
-                        if (data.data.session && typeof window.enterChat === 'function') {
-                            hasMoreMessages = true;
-                            oldestTimestamp = null;
-                            isLoadingMore = false;
-                            unreadCount = 0;
-                            currentUserMap = {};
-                            allLoadedMessages = [];
-                            lastTimeLabel = '';
-                            lastTimeDivider = 0;
-                            window.enterChat();
-                        }
-                    });
-                }
-            }
+            if (raw) user = JSON.parse(raw);
         } catch(e) {}
+
+        // 没登录过 / 本地记录坏了 / SDK 没起来 —— 直接露登录界面
+        if (!user || !user.email || !window.supabase || !window.supabase.auth) { showLogin(); return; }
+
+        // 登录过：先【不露登录界面】，等会话确认完再决定，
+        // 否则会「登录界面闪一下 → 又切到聊天」，观感很差（原来的闪屏就是这么来的）
+        window.currentEmail = user.email;
+        window.currentUserId = user.id || '';
+        var settled = false;
+        // 兜底：3 秒还没结果就露登录界面 —— 无论如何都不能留下空白页
+        var guard = setTimeout(showLogin, 3000);
+        function fallbackToLogin(reason) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(guard);
+            if (reason) console.warn('恢复登录会话失败：', reason);
+            showLogin();
+        }
+        window.supabase.auth.getSession().then(function(data) {
+            var session = data && data.data && data.data.session;
+            if (session && typeof window.enterChat === 'function') {
+                settled = true;
+                clearTimeout(guard);
+                revealed = true;
+                hasMoreMessages = true;
+                oldestTimestamp = null;
+                isLoadingMore = false;
+                unreadCount = 0;
+                currentUserMap = {};
+                allLoadedMessages = [];
+                lastTimeLabel = '';
+                lastTimeDivider = 0;
+                window.enterChat();
+            } else {
+                fallbackToLogin('no session');
+            }
+        }, function(e) { fallbackToLogin(e && e.message); });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(hide, DURATION); });
     else setTimeout(hide, DURATION);
@@ -4571,7 +4614,13 @@ function enterChat() {
             currentConversationId = '00000000-0000-0000-0000-000000000000';
             hasMoreMessages = true; oldestTimestamp = null; isLoadingMore = false; unreadCount = 0;
             document.title = 'MiniChat';
-            loadDisplayName().then(() => {
+            // ⚠️ 这里必须接 .catch：loadDisplayName 一旦失败（网络抖动 / profile 查询出错），
+            //    原来整个 .then 都不会执行 —— 主界面框架显示出来了，但下面的
+            //    ensureGlobalConversation / loadHistory / subscribeMessages 全被跳过，
+            //    用户看到的就是「登录界面闪一下，然后一片空白」。
+            loadDisplayName().catch(function(e) {
+                console.warn('加载昵称失败，继续初始化聊天：', e && e.message);
+            }).then(() => {
                 setupPresenceChannel();
                 setupProfilesRealtime();
                 fetchAllMembers();
