@@ -57,50 +57,33 @@
         .time-divider{text-align:center;margin:16px 0 8px;font-size:12px;color:var(--text-muted);opacity:0.8}
         .time-divider span{background:var(--bg-secondary);padding:4px 12px;border-radius:10px;border:1px solid var(--border-color)}
         /* ===================== 启动画面 ===================== */
-        /* 设计主张：克制。
-           上一版堆了 8 层特效（网格/光柱/涟漪/模糊聚焦/字距展开/流光…），反而廉价。
-           这一版只留：一次淡入 + 一条真实进度线。层级 = logo → 字标 → 细线 → 进度 → 状态，
-           底部一行极暗署名。高级感来自留白、精确的排版和“几乎没动”的位移。 */
-        #splash{position:absolute;inset:0;z-index:400;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(125% 85% at 50% 0%,#0d1017 0%,#08080b 46%,#060608 100%);transition:opacity .45s cubic-bezier(.4,0,.2,1),visibility .45s}
+        /* 设计参照 Cloudflare Dashboard：极简。
+           只有两个元素 —— 居中的 logo，和它下面一条发丝进度线。
+           没有文字、没有光晕、没有装饰。
+           logo.svg 里本来就带 MiniChat 字样，外面再加一个字标是冗余的。
+           配色必须用主题变量跟随主题：默认 auto 模式白天是亮色，
+           写死深色会出现「白底闪一下再进亮色 app」。 */
+        #splash{position:absolute;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-primary,#0a0a0a);transition:opacity .4s cubic-bezier(.4,0,.2,1),visibility .4s}
         #splash.hidden{opacity:0;visibility:hidden;pointer-events:none}
 
-        .sp-main{position:relative;display:flex;flex-direction:column;align-items:center}
+        .sp-logo{height:52px;width:auto;opacity:0;animation:spLogoIn .7s cubic-bezier(.16,1,.3,1) forwards}
+        @keyframes spLogoIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 
-        /* logo：从 0.94 淡入，只有 6% 的缩放 —— 高级感来自“几乎没动” */
-        .sp-logo-wrap{position:relative;display:flex;align-items:center;justify-content:center}
-        .sp-halo{position:absolute;width:158px;height:158px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(59,130,246,.30) 0%,rgba(59,130,246,.07) 45%,transparent 68%);opacity:0;animation:spHalo 2.1s cubic-bezier(.16,1,.3,1) forwards}
-        @keyframes spHalo{0%{opacity:0;transform:scale(.86)}55%{opacity:.9;transform:scale(1)}100%{opacity:.6;transform:scale(1.06)}}
-        .sp-logo{position:relative;height:58px;width:auto;opacity:0;animation:spLogoIn .8s cubic-bezier(.16,1,.3,1) forwards}
-        @keyframes spLogoIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
-
-        /* 字标：收紧字距 + 8px 上浮（不做字距动画，那是 2015 年的做法） */
-        .sp-title{margin-top:22px;font-size:25px;font-weight:600;letter-spacing:-.01em;line-height:1;color:#f2f4f8;opacity:0;animation:spUp .7s cubic-bezier(.16,1,.3,1) .38s forwards}
-        @keyframes spUp{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
-
-        /* 1px 发丝线，由中间展开 */
-        .sp-rule{margin-top:18px;width:128px;height:1px;background:rgba(255,255,255,.08);transform:scaleX(0);animation:spRuleIn .6s cubic-bezier(.16,1,.3,1) .55s forwards}
-        @keyframes spRuleIn{to{transform:scaleX(1)}}
-
-        /* 进度线：真实填充，不是装饰条。缓动前快后慢，像真的在加载 */
-        .sp-bar{position:relative;margin-top:20px;width:184px;height:2px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;opacity:0;animation:spFadeIn .4s ease .58s forwards}
-        .sp-bar i{position:absolute;top:0;left:0;bottom:0;width:0;border-radius:2px;background:linear-gradient(90deg,rgba(59,130,246,.45),#3b82f6);box-shadow:0 0 8px rgba(59,130,246,.45);animation:spBarFill 1.25s cubic-bezier(.35,.1,.25,1) .6s forwards}
+        /* 发丝进度线：轨道用主题边框色、填充用主题主色，明暗主题下都成立 */
+        .sp-bar{position:relative;margin-top:38px;width:132px;height:2px;border-radius:1px;background:var(--border-color,#262626);overflow:hidden}
+        .sp-bar i{position:absolute;top:0;left:0;bottom:0;width:0;border-radius:1px;background:var(--accent,#3b82f6);animation:spBarFill 1.5s cubic-bezier(.4,.1,.25,1) .15s forwards}
         @keyframes spBarFill{to{width:100%}}
         @keyframes spFadeIn{to{opacity:1}}
 
-        /* 状态：小字、低对比、正常大小写（不要大写 + 宽字距，那很廉价） */
-        .sp-status{margin-top:14px;font-size:12px;font-weight:400;letter-spacing:0;color:rgba(255,255,255,.38);opacity:0;animation:spFadeIn .5s ease .85s forwards}
-
-        /* 底部署名：极小、极暗 */
-        .sp-foot{position:absolute;left:0;right:0;bottom:38px;display:flex;align-items:center;justify-content:center;gap:22px;opacity:0;animation:spFadeIn .8s ease 1.2s forwards}
-        .sp-foot img{height:12px;width:auto;filter:brightness(.5) saturate(.55)}
-        .sp-foot .sp-sep{width:1px;height:10px;background:rgba(255,255,255,.10)}
+        /* 底部署名：保留归属，但淡到几乎看不见，不干扰画面 */
+        .sp-foot{position:absolute;left:0;right:0;bottom:30px;display:flex;align-items:center;justify-content:center;gap:20px;opacity:0;animation:spFadeIn .8s ease 1.1s forwards;color:var(--text-muted,#6a6a6a)}
+        .sp-foot img{height:11px;width:auto;opacity:.22}
+        .sp-foot .sp-sep{width:1px;height:9px;background:currentColor;opacity:.18}
 
         /* 无障碍：尊重「减少动态效果」 */
         @media (prefers-reduced-motion:reduce){
           #splash *{animation:none!important}
-          #splash .sp-logo,#splash .sp-title,#splash .sp-bar,#splash .sp-status,#splash .sp-foot{opacity:1}
-          #splash .sp-halo{opacity:.6}
-          #splash .sp-rule{transform:scaleX(1)}
+          #splash .sp-logo,#splash .sp-foot{opacity:1}
           #splash .sp-bar i{width:100%}
         }
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s}
@@ -837,9 +820,8 @@
 
             /* 登录卡片 */
             .login-card { padding: 28px 20px; }
-            .sp-logo { height: 50px; }
-            .sp-halo { width: 138px; height: 138px; }
-            .sp-title { font-size: 22px; }
+            .sp-logo { height: 46px; }
+            .sp-bar { width: 118px; margin-top: 32px; }
 
             /* 设置面板全屏 */
             .settings-overlay { position: fixed !important; align-items: stretch !important; }
@@ -866,11 +848,9 @@
             .login-card h1 { font-size: 24px; }
             .auth-title { font-size: 20px; }
             .auth-sub { font-size: 14px; }
-            .sp-logo { height: 44px; }
-            .sp-halo { width: 122px; height: 122px; }
-            .sp-title { font-size: 20px; margin-top: 18px; }
-            .sp-bar { width: 156px; }
-            .sp-foot { bottom: 28px; gap: 16px; }
+            .sp-logo { height: 40px; }
+            .sp-bar { width: 104px; margin-top: 28px; }
+            .sp-foot { bottom: 22px; gap: 14px; }
             .settings-content { padding: 16px 12px; }
             .settings-group { padding: 12px; }
             .settings-group-title { font-size: 13px; }
@@ -890,17 +870,20 @@
 </head>
 <body>
 <div class="app" id="app">
-    <div id="splash">
-        <div class="sp-main">
-            <div class="sp-logo-wrap">
-                <span class="sp-halo"></span>
-                <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
-            </div>
-            <div class="sp-title">MiniChat</div>
-            <div class="sp-rule"></div>
-            <div class="sp-bar"><i></i></div>
-            <div class="sp-status" data-i18n="loading">加载中</div>
-        </div>
+    <script>
+    (function(){ try {
+        var s = localStorage.getItem("minichat_theme") || "auto";
+        var light;
+        if (s === "light") light = true;
+        else if (s === "system") light = !window.matchMedia("(prefers-color-scheme: dark)").matches;
+        else if (s === "auto") { var h = new Date().getHours(); light = !(h >= 19 || h < 6); }
+        else light = false;
+        if (light) document.body.classList.add("light-theme");
+    } catch (e) {} })();
+    </script>
+    <div id="splash" role="status" aria-label="正在加载">
+        <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
+        <div class="sp-bar"><i></i></div>
         <div class="sp-foot">
             <img src="assets/Inspired.svg" alt="Inspired"/>
             <span class="sp-sep"></span>
@@ -1395,7 +1378,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '4.2.3';
+var APP_VERSION = '4.2.4';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2179,7 +2162,7 @@ async function ensureProfile(uid, email) {
 // ===================== 启动画面 =====================
 (function() {
     // 动画总时长（CSS 里最后一层在 1.62s 出现，留出一点收尾时间）
-    var DURATION = 2100;
+    var DURATION = 1800;
     var splash = document.getElementById('splash');
     function hide() {
         if (!splash) return;
