@@ -567,6 +567,15 @@
         .credit-logo img{height:24px;width:auto;max-width:100%;object-fit:contain}
         .credit-name{font-size:12.5px;font-weight:600;color:var(--text-primary);letter-spacing:-.01em}
         .credit-desc{font-size:11px;color:var(--text-muted);line-height:1.55;margin-top:-4px}
+        .service-list{display:flex;flex-direction:column;gap:6px}
+        .service-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--radius-sm);background:var(--bg-secondary);border:1px solid var(--border-color);text-decoration:none;transition:var(--transition)}
+        .service-item:hover{border-color:var(--accent);background:var(--bg-hover)}
+        .service-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+        .service-body{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+        .service-name{font-size:12.5px;font-weight:600;color:var(--text-primary);letter-spacing:-.01em}
+        .service-desc{font-size:11px;color:var(--text-muted);line-height:1.45}
+        .service-arrow{color:var(--text-muted);flex-shrink:0;opacity:.55}
+        .service-item:hover .service-arrow{color:var(--accent);opacity:1}
         .btn-save,.btn-danger,.btn-accent{padding:6px 14px;border:none;border-radius:var(--radius-sm);font-weight:600;font-size:12px;cursor:pointer;transition:var(--transition);white-space:nowrap}
         .btn-save,.btn-accent{background:var(--accent);color:#fff}
         .btn-save:hover,.btn-accent:hover{background:var(--accent-hover)}
@@ -1303,6 +1312,56 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="settings-group">
+                            <div class="settings-group-title" data-i18n="services">服务与依赖</div>
+                            <div class="service-list">
+                                <a class="service-item" href="https://supabase.com" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#3ecf8e"></span>
+                                    <span class="service-body"><span class="service-name">Supabase</span><span class="service-desc" data-i18n="svcSupabase">数据库 · 账号 · 文件存储 · 边缘函数</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://developers.cloudflare.com/turnstile/" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#f6821f"></span>
+                                    <span class="service-body"><span class="service-name">Cloudflare Turnstile</span><span class="service-desc" data-i18n="svcTurnstile">人机验证</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://www.jsdelivr.com" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#e84d3d"></span>
+                                    <span class="service-body"><span class="service-name">jsDelivr</span><span class="service-desc" data-i18n="svcJsdelivr">CDN：加载 Supabase SDK</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://esm.sh" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#6b7280"></span>
+                                    <span class="service-body"><span class="service-name">esm.sh</span><span class="service-desc" data-i18n="svcEsmsh">CDN：Edge Function 依赖</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://ui-avatars.com" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#3b82f6"></span>
+                                    <span class="service-body"><span class="service-name">ui-avatars.com</span><span class="service-desc" data-i18n="svcUiavatar">默认头像生成</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://pages.github.com" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#24292f"></span>
+                                    <span class="service-body"><span class="service-name">GitHub Pages</span><span class="service-desc" data-i18n="svcGhpages">静态站点托管</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://github.com/cheatsnake/emojihub" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#fbbf24"></span>
+                                    <span class="service-body"><span class="service-name">EmojiHub</span><span class="service-desc" data-i18n="svcEmojihub">Emoji 数据</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://turbowarp.org" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#ff4c4c"></span>
+                                    <span class="service-body"><span class="service-name">TurboWarp</span><span class="service-desc" data-i18n="svcTurbowarp">FloxChat 运行环境</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                                <a class="service-item" href="https://lucide.dev" target="_blank" rel="noopener">
+                                    <span class="service-dot" style="background:#f56565"></span>
+                                    <span class="service-body"><span class="service-name">Lucide</span><span class="service-desc" data-i18n="svcLucide">图标</span></span>
+                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                     <div class="settings-tab-content" id="tab-terms">
                         <div class="settings-group">
@@ -1409,7 +1468,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.3.1';
+var APP_VERSION = '4.3.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2654,6 +2713,16 @@ var i18n = {
         creditThis: '本项目',
         creditInspired: '设计灵感来源',
         creditBased: '本项目基于其构建',
+        services: '服务与依赖',
+        svcSupabase: '数据库 · 账号 · 文件存储 · 边缘函数',
+        svcTurnstile: '人机验证',
+        svcJsdelivr: 'CDN：加载 Supabase SDK',
+        svcEsmsh: 'CDN：Edge Function 依赖',
+        svcUiavatar: '默认头像生成',
+        svcGhpages: '静态站点托管',
+        svcEmojihub: 'Emoji 数据',
+        svcTurbowarp: 'FloxChat 运行环境',
+        svcLucide: '图标',
         licenseInfo: '许可证信息',
         sourceCode: '源代码',
         github: 'GitHub',
@@ -3514,6 +3583,16 @@ var i18n = {
         creditThis: 'This project',
         creditInspired: 'Design inspiration',
         creditBased: 'Built upon it',
+        services: 'Services & Dependencies',
+        svcSupabase: 'Database · Auth · Storage · Edge Functions',
+        svcTurnstile: 'Human verification',
+        svcJsdelivr: 'CDN: loads the Supabase SDK',
+        svcEsmsh: 'CDN: Edge Function dependencies',
+        svcUiavatar: 'Default avatar generation',
+        svcGhpages: 'Static site hosting',
+        svcEmojihub: 'Emoji data',
+        svcTurbowarp: 'FloxChat runtime',
+        svcLucide: 'Icons',
         licenseInfo: 'License Information',
         sourceCode: 'Source Code',
         github: 'GitHub',
