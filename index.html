@@ -137,10 +137,14 @@
         .terms-link:hover{background:var(--accent);color:#fff;transform:translateX(2px)}
         .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:13px;padding:3px 5px;border-radius:4px;transition:background .2s,color .2s}
         .login-card .pwd-wrapper .toggle-pwd:hover{background:var(--bg-hover);color:var(--text-primary)}
+        /* ==================== FloxChat 验证码登录 ==================== */
         .floxchat-login{display:none}
+        .floxchat-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:12.5px;font-family:inherit;padding:4px 0;margin-bottom:18px;transition:color var(--transition-fast),gap var(--transition-fast)}
+        .floxchat-back:hover{color:var(--accent);gap:9px}
+        .floxchat-back svg{width:13px;height:13px;flex-shrink:0}
         .floxchat-login .floxchat-step1,.floxchat-login .floxchat-step2{display:flex;flex-direction:column;gap:10px}
-        .floxchat-login .floxchat-back{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:4px 0;text-align:left;margin-bottom:4px}
-        .floxchat-login .floxchat-back:hover{color:var(--accent-hover)}
+
+        /* 入口：圆形遮罩按钮 */
         .floxchat-entry{display:flex;margin:12px auto 0;padding:0;background:none;border:none;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent}
         .floxchat-entry-mask{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--flox-mask-bg);border:1px solid var(--flox-mask-border);box-shadow:var(--flox-mask-shadow);transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition),border-color var(--transition)}
         .floxchat-entry:hover .floxchat-entry-mask{transform:translateY(-1px) scale(1.05);background:var(--accent-light);border-color:var(--accent);box-shadow:var(--flox-mask-shadow-hover)}
@@ -148,9 +152,9 @@
         .floxchat-entry:focus{outline:none}
         .floxchat-entry:focus-visible .floxchat-entry-mask{outline:2px solid var(--accent);outline-offset:2px}
         .floxchat-entry-mask img{display:block;width:26px;height:26px;pointer-events:none}
-        .floxchat-login .floxchat-back{color:var(--text-secondary);transition:color var(--transition-fast);margin-bottom:16px}
-        .floxchat-login .floxchat-back:hover{color:var(--accent)}
-        .bridge-header{display:flex;flex-direction:column;align-items:center;margin:0 0 22px}
+
+        /* 顶部双标识 */
+        .bridge-header{display:flex;flex-direction:column;align-items:center;margin:0 0 20px}
         .bridge-logos{position:relative;isolation:isolate;display:flex;align-items:center;gap:16px;margin-bottom:14px}
         .bridge-logos::before{content:"";position:absolute;left:26px;right:26px;top:50%;height:1px;transform:translateY(-50%);background:linear-gradient(90deg,transparent,var(--border-color) 22%,var(--border-color) 78%,transparent);z-index:0}
         .bridge-logos::after{content:"";position:absolute;left:50%;top:50%;width:180px;height:84px;transform:translate(-50%,-50%);background:radial-gradient(ellipse at center,var(--accent-light),transparent 70%);z-index:0;pointer-events:none}
@@ -159,7 +163,46 @@
         .bridge-cross{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border-color);color:var(--accent);box-shadow:var(--flox-mask-shadow)}
         .bridge-title{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:.2px;margin-bottom:6px}
         .bridge-title em{font-style:normal;font-weight:400;color:var(--accent);margin:0 5px}
-        .rt-link-blocked{color:var(--text-muted);text-decoration:line-through;cursor:not-allowed}
+        .bridge-sub{font-size:12px;line-height:1.6;color:var(--text-secondary);text-align:center}
+
+        /* 步骤条 */
+        .flox-steps{display:flex;align-items:center;gap:9px;margin:0 0 18px}
+        .flox-step{display:flex;align-items:center;gap:7px;opacity:.42;transition:opacity var(--transition)}
+        .flox-step.is-active,.flox-step.is-done{opacity:1}
+        .flox-step-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-muted);transition:background var(--transition),border-color var(--transition),color var(--transition)}
+        .flox-step.is-active .flox-step-dot{background:var(--accent);border-color:var(--accent);color:#fff}
+        .flox-step.is-done .flox-step-dot{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+        .flox-step-label{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+        .flox-step.is-active .flox-step-label{color:var(--text-primary);font-weight:500}
+        .flox-step-line{flex:1;height:1px;background:var(--border-color);min-width:10px}
+
+        /* 带标签的输入框 */
+        .flox-field{display:flex;flex-direction:column;gap:6px}
+        .flox-field-label{font-size:11.5px;color:var(--text-muted);letter-spacing:.02em}
+        .flox-field input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;font-family:inherit;transition:border-color var(--transition),box-shadow var(--transition),background var(--transition)}
+        .flox-field input:focus{outline:none;border-color:var(--accent);background:var(--bg-card);box-shadow:0 0 0 3px var(--accent-light)}
+        .flox-field input::placeholder{color:var(--text-muted)}
+        .flox-code-input{text-align:center;letter-spacing:.5em;text-indent:.5em;font-size:19px!important;font-weight:600;font-variant-numeric:tabular-nums}
+
+        /* 重发 */
+        .flox-resend{display:flex;justify-content:center}
+        .flox-resend button{background:none;border:none;color:var(--accent);font-size:12px;font-family:inherit;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color var(--transition),background var(--transition)}
+        .flox-resend button:hover:not(:disabled){background:var(--accent-light)}
+        .flox-resend button:disabled{color:var(--text-muted);cursor:default}
+
+        /* 信任说明 + 署名 */
+        .flox-trust{display:flex;gap:8px;margin-top:16px;padding:11px 12px;border-radius:var(--radius-sm);background:var(--flox-mask-bg);border:1px solid var(--flox-mask-border);font-size:11.5px;line-height:1.65;color:var(--text-secondary)}
+        .flox-trust svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;color:var(--success)}
+        .flox-trust b{color:var(--text-primary);font-weight:600}
+        .flox-credit{margin-top:12px;text-align:center;font-size:11px;color:var(--text-muted)}
+        .flox-credit a{color:var(--accent);text-decoration:none}
+        .flox-credit a:hover{text-decoration:underline}
+
+        /* 按钮加载态 */
+        .btn-primary.is-loading{color:transparent!important;pointer-events:none;position:relative}
+        .btn-primary.is-loading::after{content:"";position:absolute;left:50%;top:50%;width:15px;height:15px;margin:-8.5px 0 0 -8.5px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:mcSpin .7s linear infinite}
+        @keyframes mcSpin{to{transform:rotate(360deg)}}
+
         .captcha-box{display:flex;justify-content:center;margin:2px 0 12px}
         .captcha-box:empty{display:none;margin:0}
         .bridge-sub{font-size:12px;line-height:1.6;color:var(--text-secondary);text-align:center}
@@ -575,6 +618,17 @@
         .service-icon{position:relative;width:22px;height:22px;flex-shrink:0}
         .service-icon svg{position:absolute;inset:0;width:100%;height:100%;fill:var(--c,currentColor);display:block}
         .service-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+        /* ---- 合作板块 ---- */
+        .partner-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--radius-sm);background:var(--bg-secondary);border:1px solid var(--border-color);text-decoration:none;transition:var(--transition)}
+        .partner-card:hover{border-color:var(--accent);background:var(--bg-hover)}
+        /* 固定深色底：FloxChat LOGO 含白色部分，浅色主题下直接放会看不见 */
+        .partner-logo{width:46px;height:46px;border-radius:12px;background:#0f1115;display:flex;align-items:center;justify-content:center;padding:9px;box-sizing:border-box;flex-shrink:0}
+        .partner-logo img{width:100%;height:100%;object-fit:contain;display:block}
+        .partner-body{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+        .partner-name{font-size:13px;font-weight:600;color:var(--text-primary);letter-spacing:-.01em}
+        .partner-desc{font-size:11.5px;line-height:1.6;color:var(--text-muted)}
+        .partner-by{font-size:11px;color:var(--text-secondary)}
+        .partner-by b{color:var(--accent);font-weight:600}
         /* GitHub Pages 的图标是近黑色、esm.sh 偏暗 —— 暗色主题下会看不见，反色处理；
            亮色主题保持原样（黑图标在白底上本来就对）。 */
         body:not(.light-theme) .service-icon--invert img{filter:brightness(0) invert(1)}
@@ -926,25 +980,45 @@
             <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
             <!-- FloxChat 验证码登录 -->
             <div class="floxchat-login" id="floxLogin">
-                <button type="button" class="floxchat-back" id="floxBack">&larr; 返回邮箱登录</button>
+                <button type="button" class="floxchat-back" id="floxBack">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    返回邮箱登录
+                </button>
                 <div class="bridge-header">
                     <div class="bridge-logos">
                         <span class="bridge-tile"><img src="assets/logo.svg" alt="MiniChat"/></span>
-                        <span class="bridge-cross" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+                        <span class="bridge-cross" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
                         <span class="bridge-tile"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
                     </div>
                     <div class="bridge-title">MiniChat <em>×</em> FloxChat</div>
-                    <div class="bridge-sub">使用 FloxChat 账号验证码安全登录</div>
+                    <div class="bridge-sub">用 FloxChat 验证码登录，无需在 MiniChat 输入密码</div>
+                </div>
+                <div class="flox-steps" id="floxSteps">
+                    <div class="flox-step is-active" id="floxStepA"><span class="flox-step-dot">1</span><span class="flox-step-label">验证邮箱</span></div>
+                    <div class="flox-step-line"></div>
+                    <div class="flox-step" id="floxStepB"><span class="flox-step-dot">2</span><span class="flox-step-label">输入验证码</span></div>
                 </div>
                 <div class="floxchat-step1" id="floxStep1">
-                    <input type="email" id="floxEmail" placeholder="FloxChat 注册邮箱"/>
+                    <label class="flox-field">
+                        <span class="flox-field-label">FloxChat 注册邮箱</span>
+                        <input type="email" id="floxEmail" placeholder="you@example.com" autocomplete="email"/>
+                    </label>
                     <button class="btn-primary" id="btnFloxSendCode">发送验证码</button>
                 </div>
                 <div class="floxchat-step2" id="floxStep2" style="display:none">
-                    <input type="text" id="floxCode" placeholder="验证码" maxlength="6"/>
+                    <label class="flox-field">
+                        <span class="flox-field-label">6 位验证码</span>
+                        <input type="text" id="floxCode" class="flox-code-input" placeholder="······" maxlength="6" inputmode="numeric" autocomplete="one-time-code"/>
+                    </label>
+                    <div class="flox-resend"><button type="button" id="btnFloxResend" disabled>重新发送</button></div>
                     <button type="button" class="btn-primary" id="btnFloxVerify">验证并登录</button>
                 </div>
                 <div class="auth-message" id="floxMsg"></div>
+                <div class="flox-trust">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    <span>FloxChat 的密钥与用户数据只存在于服务端。MiniChat <b>不读取、不存储</b>你的 FloxChat 账号数据，也不会替你注册 FloxChat 账号。</span>
+                </div>
+                <div class="flox-credit">登录能力来自 FloxChat · B站 <a href="https://space.bilibili.com/3493126347950569" target="_blank" rel="noopener">@摄表</a></div>
             </div>
             <div class="auth-message" id="authMessage"></div>
             <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat验证码登录（B站@摄表）" aria-label="FloxChat验证码登录（B站@摄表）">
@@ -1367,6 +1441,18 @@
                                 </a>
                             </div>
                         </div>
+                        <div class="settings-group">
+                            <div class="settings-group-title" data-i18n="partners">合作</div>
+                            <a class="partner-card" href="https://space.bilibili.com/3493126347950569" target="_blank" rel="noopener">
+                                <span class="partner-logo"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
+                                <span class="partner-body">
+                                    <span class="partner-name">FloxChat</span>
+                                    <span class="partner-desc" data-i18n="partnerFloxDesc">MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。</span>
+                                    <span class="partner-by" data-i18n="partnerAuthor">作者 · B站</span>
+                                </span>
+                                <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+                            </a>
+                        </div>
                     </div>
                     <div class="settings-tab-content" id="tab-terms">
                         <div class="settings-group">
@@ -1473,7 +1559,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.3.5';
+var APP_VERSION = '4.4.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2137,6 +2223,32 @@ async function doAuth(email, pwd) {
 }
 // ===================== FloxChat 验证码登录交互 =====================
 var floxEmailVal = '';
+// ---- FloxChat 登录面板：步骤条 / 重发倒计时 / 按钮加载态 ----
+var floxResendTimer = null;
+function floxSetStep(n) {
+    var a = document.getElementById('floxStepA'), b = document.getElementById('floxStepB');
+    if (!a || !b) return;
+    a.classList.toggle('is-active', n === 1);
+    a.classList.toggle('is-done', n === 2);
+    b.classList.toggle('is-active', n === 2);
+}
+function floxSetLoading(btn, on) {
+    if (!btn) return;
+    btn.classList.toggle('is-loading', !!on);
+    btn.disabled = !!on;
+}
+function floxStartResendCountdown(seconds) {
+    var btn = document.getElementById('btnFloxResend');
+    if (!btn) return;
+    if (floxResendTimer) { clearInterval(floxResendTimer); floxResendTimer = null; }
+    var left = seconds || 60;
+    var render = function() {
+        if (left > 0) { btn.disabled = true; btn.textContent = '重新发送（' + left + 's）'; }
+        else { btn.disabled = false; btn.textContent = '重新发送'; clearInterval(floxResendTimer); floxResendTimer = null; }
+    };
+    render();
+    floxResendTimer = setInterval(function() { left--; render(); }, 1000);
+}
 function switchToFloxLogin() {
     document.querySelector('.login-card .logo-area').style.display = 'none';
     document.querySelector('.login-card .auth-title').style.display = 'none';
@@ -2156,6 +2268,11 @@ function switchToFloxLogin() {
     document.getElementById('switchFloxChat').style.display = 'none';
     document.getElementById('floxMsg').textContent = '';
     document.getElementById('floxMsg').style.display = '';
+    floxSetStep(1);
+    var rs = document.getElementById('btnFloxResend');
+    if (rs) { rs.disabled = true; rs.textContent = '重新发送'; }
+    var codeEl = document.getElementById('floxCode');
+    if (codeEl) codeEl.value = '';
 }
 function switchBackFromFlox() {
     document.querySelector('.login-card .logo-area').style.display = '';
@@ -2176,8 +2293,10 @@ async function handleFloxSendCode() {
     var email = document.getElementById('floxEmail').value.trim();
     if (!email) { document.getElementById('floxMsg').textContent = '请输入邮箱'; return; }
     floxEmailVal = email;
-    document.getElementById('btnFloxSendCode').disabled = true;
-    document.getElementById('floxMsg').textContent = '发送中…';
+    var sendBtn = document.getElementById('btnFloxSendCode');
+    var msgEl0 = document.getElementById('floxMsg');
+    msgEl0.textContent = '';
+    floxSetLoading(sendBtn, true);
     try {
         var resp = await fetch('https://shebiao.dpdns.org/ces/send-code', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2187,30 +2306,40 @@ async function handleFloxSendCode() {
         if (data.message === 'Code sent') {
             document.getElementById('floxStep1').style.display = 'none';
             document.getElementById('floxStep2').style.display = 'flex';
-            document.getElementById('floxMsg').textContent = '验证码已发送';
+            floxSetStep(2);
+            floxStartResendCountdown(60);
+            msgEl0.textContent = '验证码已发送至 ' + email;
+            var codeEl2 = document.getElementById('floxCode');
+            if (codeEl2) { codeEl2.value = ''; codeEl2.focus(); }
         } else {
-            document.getElementById('floxMsg').textContent = '发送失败: ' + (data.message || data.error || '');
+            msgEl0.textContent = '发送失败：' + (data.message || data.error || '请稍后重试');
         }
     } catch(e) {
-        document.getElementById('floxMsg').textContent = '网络错误，请重试';
+        msgEl0.textContent = '网络错误，请重试';
     }
-    document.getElementById('btnFloxSendCode').disabled = false;
+    floxSetLoading(sendBtn, false);
 }
+// 重新发送 = 复用上面的流程
+document.getElementById('btnFloxResend').addEventListener('click', function() { handleFloxSendCode(); });
+// 回车提交
+document.getElementById('floxEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleFloxSendCode(); });
+document.getElementById('floxCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleFloxVerify(); });
+document.getElementById('floxCode').addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0, 6); });
 async function handleFloxVerify() {
     var code = document.getElementById('floxCode').value.trim();
     if (!code) { document.getElementById('floxMsg').textContent = '请输入验证码'; return; }
     var btn = document.getElementById('btnFloxVerify');
     var msgEl = document.getElementById('floxMsg');
-    btn.disabled = true;
-    msgEl.textContent = '验证中…';
+    msgEl.textContent = '';
+    floxSetLoading(btn, true);
     try {
         // 验证码同样交给 Edge Function 在服务端校验，避免前端伪造邮箱直接换会话
         var data = await callFloxEdge({ action: 'flox_code_login', email: floxEmailVal, code: code });
         msgEl.textContent = '登录中…';
         await applyFloxSession(data, data.email);
     } catch(e) {
-        msgEl.textContent = (e.code === 'INVALID_CODE') ? '验证码错误或已过期' : ('网络错误: ' + (e.message || '请重试'));
-        btn.disabled = false;
+        msgEl.textContent = (e.code === 'INVALID_CODE') ? '验证码错误或已过期，请重新获取' : ('网络错误：' + (e.message || '请重试'));
+        floxSetLoading(btn, false);
     }
 }
 function showTermsModal(callback) {
@@ -2710,6 +2839,9 @@ var i18n = {
         creditThis: '本项目',
         creditInspired: '设计灵感来源',
         creditBased: '本项目基于其构建',
+        partners: '合作',
+        partnerFloxDesc: 'MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。',
+        partnerAuthor: '作者 · B站',
         svcSupabase: '数据库 · 账号 · 文件存储 · 边缘函数',
         svcTurnstile: '人机验证',
         svcJsdelivr: 'CDN：加载 Supabase SDK',
@@ -3579,6 +3711,9 @@ var i18n = {
         creditThis: 'This project',
         creditInspired: 'Design inspiration',
         creditBased: 'Built upon it',
+        partners: 'Partners',
+        partnerFloxDesc: 'The FloxChat verification-code login is provided by FloxChat; FloxChat also bridges the MiniChat group chat into its own client.',
+        partnerAuthor: 'Author · Bilibili',
         svcSupabase: 'Database · Auth · Storage · Edge Functions',
         svcTurnstile: 'Human verification',
         svcJsdelivr: 'CDN: loads the Supabase SDK',
