@@ -57,30 +57,29 @@
         .time-divider{text-align:center;margin:16px 0 8px;font-size:12px;color:var(--text-muted);opacity:0.8}
         .time-divider span{background:var(--bg-secondary);padding:4px 12px;border-radius:10px;border:1px solid var(--border-color)}
         /* ===================== 启动画面 ===================== */
-        /* 设计参照 Cloudflare Dashboard：极简。
-           只有两个元素 —— 居中的 logo，和它下面一条发丝进度线。
-           三个和参照物对齐的关键点：
-             1. logo 要够大（52px 在宽屏上没有存在感，这里 64px）
-             2. 进度线是【中性灰】不是品牌蓝 —— 蓝色会把它变成"加载条"，
-                灰色才是"克制的指示"
-             3. 没有第三个元素 —— 署名之类的会变成暗底上的残影，是纯噪音
-           配色用主题变量跟随主题，避免「深色闪一下再进亮色 app」。 */
-        #splash{position:absolute;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-primary,#0a0a0a);transition:opacity .4s cubic-bezier(.4,0,.2,1),visibility .4s}
+        /* 对齐 Cloudflare Dashboard：
+             白底 + 居中 logo + 一条圆角粗线，线里一小段在轨道上来回扫（不定量进度）。
+           刻意写死亮色（不跟随主题），因为参照物就是白底。
+           注意：不要用 opacity 去调轨道深浅 —— 父元素透明度会传给子元素，
+           上一版就是这么把「已加载段」也一起变淡、导致进度完全看不出来的。 */
+        #splash{position:absolute;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#ffffff;transition:opacity .4s cubic-bezier(.4,0,.2,1),visibility .4s}
         #splash.hidden{opacity:0;visibility:hidden;pointer-events:none}
 
-        .sp-logo{height:64px;width:auto;opacity:0;animation:spLogoIn .7s cubic-bezier(.16,1,.3,1) forwards}
+        .sp-logo{height:72px;width:auto;opacity:0;animation:spLogoIn .7s cubic-bezier(.16,1,.3,1) forwards}
         @keyframes spLogoIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 
-        /* 发丝进度线：轨道极淡、填充用文字色（中性），明暗主题下都成立 */
-        .sp-bar{position:relative;margin-top:44px;width:140px;height:2px;border-radius:1px;background:rgba(127,127,127,.24);overflow:hidden}
-        .sp-bar i{position:absolute;top:0;left:0;bottom:0;width:0;border-radius:1px;background:var(--text-primary,#f1f1f1);animation:spBarFill 1.5s cubic-bezier(.4,.1,.25,1) .2s forwards}
-        @keyframes spBarFill{to{width:100%}}
+        /* 轨道：浅灰、4px 粗、全圆角 */
+        .sp-bar{position:relative;margin-top:40px;width:180px;height:4px;border-radius:2px;background:#e8e8e8;overflow:hidden}
+        /* 短的那条：占轨道 20%，用 transform 来回扫（GPU 友好）。
+           translateX(400%) —— 自身宽度是轨道的 20%，400% 正好走到轨道右端。 */
+        .sp-bar i{position:absolute;top:0;bottom:0;left:0;width:20%;border-radius:2px;background:var(--accent,#3b82f6);transform:translateX(0);animation:spSweep 1.6s cubic-bezier(.45,.05,.55,.95) infinite}
+        @keyframes spSweep{0%{transform:translateX(0)}50%{transform:translateX(400%)}100%{transform:translateX(0)}}
 
         /* 无障碍：尊重「减少动态效果」 */
         @media (prefers-reduced-motion:reduce){
           #splash *{animation:none!important}
           #splash .sp-logo{opacity:1}
-          #splash .sp-bar i{width:100%}
+          #splash .sp-bar i{width:40%}
         }
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
@@ -816,8 +815,8 @@
 
             /* 登录卡片 */
             .login-card { padding: 28px 20px; }
-            .sp-logo { height: 56px; }
-            .sp-bar { width: 124px; margin-top: 38px; }
+            .sp-logo { height: 64px; }
+            .sp-bar { width: 160px; margin-top: 34px; }
 
             /* 设置面板全屏 */
             .settings-overlay { position: fixed !important; align-items: stretch !important; }
@@ -844,8 +843,8 @@
             .login-card h1 { font-size: 24px; }
             .auth-title { font-size: 20px; }
             .auth-sub { font-size: 14px; }
-            .sp-logo { height: 48px; }
-            .sp-bar { width: 108px; margin-top: 32px; }
+            .sp-logo { height: 54px; }
+            .sp-bar { width: 136px; margin-top: 28px; }
             .settings-content { padding: 16px 12px; }
             .settings-group { padding: 12px; }
             .settings-group-title { font-size: 13px; }
@@ -1368,7 +1367,7 @@
 
 <script>
 // ===================== 版本号 =====================
-var APP_VERSION = '4.2.5';
+var APP_VERSION = '4.2.6';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
