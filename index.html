@@ -1583,7 +1583,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.8';
+var APP_VERSION = '4.5.9';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2301,6 +2301,9 @@ function switchToFloxLogin() {
     if (codeEl) codeEl.value = '';
 }
 function switchBackFromFlox() {
+    // 回到登录界面时要把 #app 容器放回来（它承载登录界面本身）
+    var appShellBack = document.getElementById('app');
+    if (appShellBack) appShellBack.style.display = '';
     var altLoginBack = document.getElementById('altLogin');
     if (altLoginBack) altLoginBack.style.display = '';
     document.querySelector('.login-card .logo-area').style.display = '';
@@ -2502,6 +2505,25 @@ async function ensureProfile(uid, email) {
                         ' display=' + cs.display + ' zIndex=' + cs.zIndex + ' animation=' + cs.animationName +
                         ' 尺寸=' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
                         '@' + Math.round(rect.left) + ',' + Math.round(rect.top));
+            // 关键：把 body 的直接子元素全部列出来，看看是谁把主界面顶下去了
+            var kids = [];
+            [].forEach.call(document.body.children, function(el) {
+                var r = el.getBoundingClientRect();
+                var c = getComputedStyle(el);
+                kids.push((el.id ? '#' + el.id : ('<' + el.tagName.toLowerCase() + ' class="' + String(el.className).split(' ')[0] + '">')) +
+                          '[disp=' + c.display + ',pos=' + c.position + ',高度=' + Math.round(r.height) +
+                          ',top=' + Math.round(r.top) + ',bottom=' + Math.round(r.bottom) + ']');
+            });
+            console.log('[MiniChat/boot] body 直接子元素 | ' + kids.join('  |  '));
+            // 顺便查:上面那些元素的总占位高度
+            var occupied = 0;
+            [].forEach.call(document.body.children, function(el) {
+                if (el === mainInterface) return;
+                var c = getComputedStyle(el);
+                if (c.display === 'none' || c.position === 'absolute' || c.position === 'fixed') return;
+                occupied += el.getBoundingClientRect().height;
+            });
+            console.log('[MiniChat/boot] 主界面之上的【在流】元素总高 = ' + Math.round(occupied) + 'px');
             var chain = [], p = mainInterface.parentElement;
             while (p && p !== document.documentElement) {
                 var pcs = getComputedStyle(p);
@@ -4654,6 +4676,12 @@ function setupProfilesRealtime() {
 function enterChat() {
             if (!loginOverlay || !mainInterface) return;
             loginOverlay.classList.add('hidden');
+            // ⚠️ 关键：#app 是启动画面 + 登录界面的容器，CSS 是 width:100vw;height:100vh。
+            //    它一直留在文档流里，会占满整个视口高度，把排在它后面的 #mainInterface
+            //    整个顶到屏幕下方 —— 表现就是"界面各项属性全对，但人看到的是一片白"。
+            //    所以进聊天时必须把它收起来。
+            var appShell = document.getElementById('app');
+            if (appShell) appShell.style.display = 'none';
             mainInterface.classList.remove('hidden');
             // 锁定全局聊天 ID，不再动态切换会话
             currentConversationId = '00000000-0000-0000-0000-000000000000';
