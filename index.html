@@ -149,14 +149,6 @@
         .floxchat-back svg{width:13px;height:13px;flex-shrink:0}
         .floxchat-login .floxchat-step1,.floxchat-login .floxchat-step2{display:flex;flex-direction:column;gap:10px}
 
-        /* 入口：圆形遮罩按钮 */
-        .floxchat-entry{display:flex;margin:0;padding:0;background:none;border:none;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent}
-        .floxchat-entry-mask{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--flox-mask-bg);border:1px solid var(--flox-mask-border);box-shadow:var(--flox-mask-shadow);transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition),border-color var(--transition)}
-        .floxchat-entry:hover .floxchat-entry-mask{transform:translateY(-1px) scale(1.05);background:var(--accent-light);border-color:var(--accent);box-shadow:var(--flox-mask-shadow-hover)}
-        .floxchat-entry:active .floxchat-entry-mask{transform:scale(0.95)}
-        .floxchat-entry:focus{outline:none}
-        .floxchat-entry:focus-visible .floxchat-entry-mask{outline:2px solid var(--accent);outline-offset:2px}
-        .floxchat-entry-mask img{display:block;width:21px;height:21px;pointer-events:none}
 
         /* 顶部双标识 */
         .bridge-header{display:flex;flex-direction:column;align-items:center;margin:0 0 20px}
@@ -1587,7 +1579,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.1';
+var APP_VERSION = '4.5.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
