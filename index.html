@@ -1579,7 +1579,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.5';
+var APP_VERSION = '4.5.6';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -7233,7 +7233,10 @@ function markMessagesRead() {
 }
 
 // ===================== v3.1.0 虚拟滚动优化 =====================
-var VIRTUAL_SCROLL_THRESHOLD = 400;
+// 虚拟滚动只在消息非常多时才值得开启（它靠 clientHeight 算可视窗口，
+// 一旦高度测量不准就会把消息全判成"屏幕外"而隐藏 → 白屏）。
+// 阈值从 400 提到 800，显著降低误触概率。
+var VIRTUAL_SCROLL_THRESHOLD = 800;
 var VIRTUAL_BUFFER = 30;
 var virtualScrollEnabled = false;
 var virtualScrollTick = false;
@@ -7243,7 +7246,14 @@ var vsBottomPadding = 0;
 function enableVirtualScroll() {
     if (virtualScrollEnabled || !messageList) return;
     virtualScrollEnabled = true;
-    messageList.style.contain = 'strict';
+    // ⚠️ 这里曾经是 contain: 'strict'，它会连 contain:size 一起打开，
+    //    意思是"不看内容也算这个元素的大小" —— 结果 messageList.clientHeight
+    //    变得不可靠（常常是 0）。而下面的 updateVirtualWindow() 正是靠
+    //    clientHeight 来算可视窗口的：
+    //        viewportBottom = scrollTop + messageList.clientHeight   // ≈ scrollTop + 0
+    //    于是所有消息都被判定在窗口之外、统统隐藏 —— 表现就是【消息区全白】。
+    //    只保留 layout/paint，去掉 size，既拿到渲染隔离的性能收益，又不会算错高度。
+    messageList.style.contain = 'layout paint';
     messageList.addEventListener('scroll', onVirtualScroll, { passive: true });
     applyContentVisibility();
 }
@@ -7251,7 +7261,10 @@ function enableVirtualScroll() {
 function checkVirtualScroll() {
     if (!messageList || virtualScrollEnabled) return;
     var msgCount = messageList.querySelectorAll('.message').length;
-    if (msgCount >= VIRTUAL_SCROLL_THRESHOLD) enableVirtualScroll();
+    if (msgCount >= VIRTUAL_SCROLL_THRESHOLD) {
+        console.log('[MiniChat/vscroll] 消息数 ' + msgCount + ' ≥ ' + VIRTUAL_SCROLL_THRESHOLD + '，启用虚拟滚动');
+        enableVirtualScroll();
+    }
 }
 
 function applyContentVisibility() {
@@ -7284,6 +7297,12 @@ function updateVirtualWindow() {
     var children = Array.from(messageList.children);
     var total = children.length;
     if (total < VIRTUAL_SCROLL_THRESHOLD) return;
+    // 防御：拿不到可视高度就【绝不能】开始隐藏消息，
+    // 否则会把整个列表都判成"屏幕外"，直接白屏（见 enableVirtualScroll 的注释）
+    if (!messageList.clientHeight) {
+        console.warn('[MiniChat/vscroll] clientHeight 为 0，跳过本轮隐藏');
+        return;
+    }
     var viewportTop = messageList.scrollTop;
     var viewportBottom = viewportTop + messageList.clientHeight;
     var bufferTop = viewportTop - 2000;
