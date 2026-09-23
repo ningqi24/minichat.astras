@@ -1311,10 +1311,7 @@
                                     <div class="credit-desc" data-i18n="creditBased">本项目基于其构建</div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="settings-group">
-                            <div class="settings-group-title" data-i18n="services">服务与依赖</div>
-                            <div class="service-list">
+                            <div class="service-list" style="margin-top:12px">
                                 <a class="service-item" href="https://supabase.com" target="_blank" rel="noopener">
                                     <span class="service-dot" style="background:#3ecf8e"></span>
                                     <span class="service-body"><span class="service-name">Supabase</span><span class="service-desc" data-i18n="svcSupabase">数据库 · 账号 · 文件存储 · 边缘函数</span></span>
@@ -1468,7 +1465,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.3.2';
+var APP_VERSION = '4.3.3';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -1970,8 +1967,7 @@ var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 // 注意：Edge Function 侧用的是 service_role，GoTrue 对 service_role 会跳过 CAPTCHA
 //      校验（internal/api/middleware.go 的 requireAdminCredentials 例外），
 //      所以 FloxChat 验证码登录这条路径不需要人机验证。
-var CAPTCHA_PROVIDER = 'turnstile';              // 'turnstile' 或 'hcaptcha'
-var CAPTCHA_SITE_KEY = '0x4AAAAAAExcrClTSiZHfYTp'; // Turnstile Site Key（公开值，放前端没问题）
+var CAPTCHA_SITE_KEY = '0x4AAAAAAExcrClTSiZHfYTp'; // Cloudflare Turnstile Site Key（公开值，放前端没问题）
 // ⚠️ Secret Key 只填在 Supabase → Authentication → Attack Protection，
 //    绝不要写进前端、仓库或任何公开位置。
 
@@ -2043,13 +2039,11 @@ async function handleAuth() {
 var captchaSlots = {};        // slotId -> { widgetId, token }
 var captchaLoadPromise = null;
 
-function captchaEnabled() { return !!(CAPTCHA_PROVIDER && CAPTCHA_SITE_KEY); }
+function captchaEnabled() { return !!CAPTCHA_SITE_KEY; }
 
 function loadCaptchaScript() {
     if (captchaLoadPromise) return captchaLoadPromise;
-    var url = CAPTCHA_PROVIDER === 'turnstile'
-        ? 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
-        : 'https://js.hcaptcha.com/1/api.js?render=explicit';
+    var url = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
     captchaLoadPromise = new Promise(function(resolve, reject) {
         var s = document.createElement('script');
         s.src = url; s.async = true; s.defer = true;
@@ -2074,11 +2068,7 @@ function renderCaptcha(slotId) {
             'error-callback': function() { captchaSlots[slotId].token = null; captchaSlots[slotId].error = true; }
         };
         var slot = captchaSlots[slotId] = captchaSlots[slotId] || { widgetId: null, token: null, error: false };
-        if (CAPTCHA_PROVIDER === 'turnstile' && window.turnstile) {
-            slot.widgetId = window.turnstile.render(box, opts);
-        } else if (CAPTCHA_PROVIDER === 'hcaptcha' && window.hcaptcha) {
-            slot.widgetId = window.hcaptcha.render(box, opts);
-        }
+        if (window.turnstile) slot.widgetId = window.turnstile.render(box, opts);
     }).catch(function(e) { console.warn('CAPTCHA 初始化失败：', e.message); });
 }
 
@@ -2094,8 +2084,7 @@ function resetCaptcha(slotId) {
     slot.token = null;
     try {
         if (slot.widgetId === null || slot.widgetId === undefined) return;
-        if (CAPTCHA_PROVIDER === 'turnstile' && window.turnstile) window.turnstile.reset(slot.widgetId);
-        else if (window.hcaptcha) window.hcaptcha.reset(slot.widgetId);
+        if (window.turnstile) window.turnstile.reset(slot.widgetId);
     } catch (e) {}
 }
 
@@ -2713,7 +2702,6 @@ var i18n = {
         creditThis: '本项目',
         creditInspired: '设计灵感来源',
         creditBased: '本项目基于其构建',
-        services: '服务与依赖',
         svcSupabase: '数据库 · 账号 · 文件存储 · 边缘函数',
         svcTurnstile: '人机验证',
         svcJsdelivr: 'CDN：加载 Supabase SDK',
@@ -3583,7 +3571,6 @@ var i18n = {
         creditThis: 'This project',
         creditInspired: 'Design inspiration',
         creditBased: 'Built upon it',
-        services: 'Services & Dependencies',
         svcSupabase: 'Database · Auth · Storage · Edge Functions',
         svcTurnstile: 'Human verification',
         svcJsdelivr: 'CDN: loads the Supabase SDK',

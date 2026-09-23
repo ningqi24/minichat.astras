@@ -238,7 +238,7 @@ minichat.astras/
 | `MINICHAT_EDGE_URL` | Edge Function 地址（`.../functions/v1/clever-task`），FloxChat 验证码登录用 | Edge Function URL used by FloxChat code login |
 | `MINICHAT_BRIDGE_SECRET` | 桥接密钥，必须与 Edge Function 的 `FLOXCHAT_BRIDGE_SECRET` 一致 | Bridge secret; must match the Edge Function's `FLOXCHAT_BRIDGE_SECRET` |
 | `PAGE_SIZE` | 历史消息每页加载数量（默认 20） | Number of historical messages per page (default 20) |
-| `CAPTCHA_PROVIDER` | 人机验证服务商（`turnstile` 或 `hcaptcha`） | Captcha provider (`turnstile` or `hcaptcha`) |
+| `CAPTCHA_SITE_KEY` | Cloudflare Turnstile 的 Site Key（公开值；留空则不启用） | Cloudflare Turnstile site key (public; leave empty to disable) |
 | `DURATION` | 启动页最短展示时间（毫秒，当前 1800） | Splash minimum display time (ms, currently 1800) |
 
 ---
