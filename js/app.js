@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.6.1';
+var APP_VERSION = '4.7.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -541,7 +541,17 @@ async function applyFloxSession(edgeData, email) {
     await checkAndRestoreMessages(email);
     // 显式持久化 minichat_user，确保刷新后可恢复
     localStorage.setItem('minichat_user', JSON.stringify({ email: email, id: edgeData.user_id }));
-    enterChat();
+    afterLoginSuccess();
+}
+
+// ===================== 分页（login.html / index.html） =====================
+// 不再靠"遮罩切换"在一个页面里切换两套界面，而是拆成两个页面。
+// 两边共用同一份 app.js，靠 body[data-page] 判断自己在哪一页。
+var IS_LOGIN_PAGE = (document.body && document.body.getAttribute('data-page')) === 'login';
+// 登录成功后的去向：登录页 -> 跳聊天页；聊天页 -> 原地进入
+function afterLoginSuccess() {
+    if (IS_LOGIN_PAGE) { location.replace('./index.html'); }
+    else { enterChat(); }
 }
 
 // ===================== 认证 =====================
@@ -660,7 +670,7 @@ async function doAuth(email, pwd) {
             setAuthMessage('登录成功','success');
             if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; }
             await checkAndRestoreMessages(u.email);
-            enterChat();
+            afterLoginSuccess();
         }
         else { setAuthMessage('注册成功！请查收邮件确认后登录。','success'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
     } catch(e) { console.error(e); setAuthMessage('网络错误，请重试','error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
@@ -856,14 +866,24 @@ async function ensureProfile(uid, email) {
             renderCaptcha('captchaBoxLogin');
         }
 
+        // ---- 登录页：这里就是终点，永远显示登录界面 ----
+        // 拆页之后登录页不再需要"会话恢复"这套逻辑，
+        // 也不再有"登录界面闪一下"的问题 —— 它本来就该显示登录界面。
+        if (IS_LOGIN_PAGE) { showLogin(); return; }
+
+        // ---- 聊天页：必须有会话，否则去登录页 ----
         var user = null;
         try {
             var raw = localStorage.getItem('minichat_user');
             if (raw) user = JSON.parse(raw);
         } catch(e) {}
 
-        // 没登录过 / 本地记录坏了 / SDK 没起来 —— 直接露登录界面
-        if (!user || !user.email || !window.supabase || !window.supabase.auth) { showLogin(); return; }
+        // 本地没有登录记录 / SDK 没起来 —— 直接跳登录页（不再原地显示登录遮罩）
+        if (!user || !user.email || !window.supabase || !window.supabase.auth) {
+            console.log('[MiniChat/boot] 聊天页无本地登录记录 → 跳转 login.html');
+            location.replace('./login.html');
+            return;
+        }
 
         // 登录过：先【不露登录界面】，等会话确认完再决定，
         // 否则会「登录界面闪一下 → 又切到聊天」，观感很差（原来的闪屏就是这么来的）
@@ -876,8 +896,9 @@ async function ensureProfile(uid, email) {
             if (settled) return;
             settled = true;
             clearTimeout(guard);
-            if (reason) console.warn('恢复登录会话失败：', reason);
-            showLogin();
+            if (reason) console.warn('[MiniChat/boot] 会话恢复失败：' + reason + ' → 跳转 login.html');
+            // 拆页后不再原地露登录遮罩，直接去登录页
+            location.replace('./login.html');
         }
         window.supabase.auth.getSession().then(function(data) {
             var session = data && data.data && data.data.session;
