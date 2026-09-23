@@ -557,6 +557,16 @@
         .about-links{display:flex;flex-wrap:wrap;gap:16px}
         .about-links a{font-size:13px;color:var(--accent);text-decoration:none;transition:var(--transition)}
         .about-links a:hover{text-decoration:underline}
+        /* ---- 致谢板块（关于页）---- */
+        .credits-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+        @media (max-width:600px){.credits-grid{grid-template-columns:1fr}}
+        .credit-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;display:flex;flex-direction:column;gap:9px;transition:var(--transition)}
+        .credit-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+        /* 固定深色底：Inspired / basied 两个标识含白色填充，浅色主题下直接放会看不见 */
+        .credit-logo{background:#0f1115;border-radius:8px;height:62px;display:flex;align-items:center;justify-content:center;padding:0 12px;overflow:hidden}
+        .credit-logo img{height:24px;width:auto;max-width:100%;object-fit:contain}
+        .credit-name{font-size:12.5px;font-weight:600;color:var(--text-primary);letter-spacing:-.01em}
+        .credit-desc{font-size:11px;color:var(--text-muted);line-height:1.55;margin-top:-4px}
         .btn-save,.btn-danger,.btn-accent{padding:6px 14px;border:none;border-radius:var(--radius-sm);font-weight:600;font-size:12px;cursor:pointer;transition:var(--transition);white-space:nowrap}
         .btn-save,.btn-accent{background:var(--accent);color:#fff}
         .btn-save:hover,.btn-accent:hover{background:var(--accent-hover)}
@@ -1273,6 +1283,26 @@
                                 <a href="https://space.bilibili.com/3493126347950569/favlist?fid=3488166369&ftype=create" target="_blank" data-i18n="bilibili">ningqi24的Bilibili账户</a>
                             </div>
                         </div>
+                        <div class="settings-group">
+                            <div class="settings-group-title" data-i18n="credits">致谢</div>
+                            <div class="credits-grid">
+                                <div class="credit-card">
+                                    <div class="credit-logo"><img src="assets/logo.svg" alt="MiniChat" loading="lazy"></div>
+                                    <div class="credit-name">MiniChat</div>
+                                    <div class="credit-desc" data-i18n="creditThis">本项目</div>
+                                </div>
+                                <div class="credit-card">
+                                    <div class="credit-logo"><img src="assets/Inspired.svg" alt="Inspired by SimpleChat" loading="lazy"></div>
+                                    <div class="credit-name">SimpleChat</div>
+                                    <div class="credit-desc" data-i18n="creditInspired">设计灵感来源</div>
+                                </div>
+                                <div class="credit-card">
+                                    <div class="credit-logo"><img src="assets/basied.svg" alt="Basied on ChatMini+" loading="lazy"></div>
+                                    <div class="credit-name">ChatMini+</div>
+                                    <div class="credit-desc" data-i18n="creditBased">本项目基于其构建</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="settings-tab-content" id="tab-terms">
                         <div class="settings-group">
@@ -1379,7 +1409,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.3.0';
+var APP_VERSION = '4.3.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2621,6 +2651,9 @@ var i18n = {
         donate: '捐赠',
         sponsors: '赞助商',
         credits: '致谢',
+        creditThis: '本项目',
+        creditInspired: '设计灵感来源',
+        creditBased: '本项目基于其构建',
         licenseInfo: '许可证信息',
         sourceCode: '源代码',
         github: 'GitHub',
@@ -3478,6 +3511,9 @@ var i18n = {
         donate: 'Donate',
         sponsors: 'Sponsors',
         credits: 'Credits',
+        creditThis: 'This project',
+        creditInspired: 'Design inspiration',
+        creditBased: 'Built upon it',
         licenseInfo: 'License Information',
         sourceCode: 'Source Code',
         github: 'GitHub',
