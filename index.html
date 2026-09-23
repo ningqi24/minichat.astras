@@ -964,7 +964,7 @@
         <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
         <div class="sp-bar"><i></i></div>
     </div>
-    <div class="login-overlay" id="loginOverlay">
+    <div class="login-overlay hidden" id="loginOverlay">
         <div class="login-card">
             <div class="login-form">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
@@ -1579,7 +1579,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.4';
+var APP_VERSION = '4.5.5';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2477,6 +2477,19 @@ async function ensureProfile(uid, email) {
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(hide, DURATION); });
     else setTimeout(hide, DURATION);
+
+    // 自检：揭幕后 1.5 秒检查一次，两个界面都不该同时不可见。
+    // 真出现这种情况（历史上就是"白屏"）就强制显示登录界面，绝不把用户留在空白页。
+    setTimeout(function() {
+        var loginHidden = !loginOverlay || loginOverlay.classList.contains('hidden');
+        var appHidden = !mainInterface || mainInterface.classList.contains('hidden');
+        console.log('[MiniChat/boot] 状态自检 | 登录界面可见=' + !loginHidden + ' 主界面可见=' + !appHidden +
+                    ' 启动画面还在=' + !!document.getElementById('splash'));
+        if (loginHidden && appHidden) {
+            console.warn('[MiniChat/boot] 两个界面都不可见 → 强制显示登录界面');
+            if (loginOverlay) loginOverlay.classList.remove('hidden');
+        }
+    }, DURATION + 1500);
 })();
 
 // ===================== 主题 =====================
