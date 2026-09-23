@@ -15,9 +15,14 @@
     <meta name="twitter:description" content="一个开源的 Supabase 聊天应用示例，提供完整代码，助你快速学习和集成实时聊天功能。" />
     <link rel="canonical" href="https://minichat.astras.cc/" />
     <link rel="manifest" href="manifest.json">
-    <!-- favicon：改用 SVG（viewBox 贴合图形、没有白边）。原来的 favicon.ico 里 logo 四周有一圈白边 -->
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
-    <link rel="alternate icon" href="./favicon.ico">
+    <!-- favicon：原来的 favicon.ico 里 logo 四周有一圈白边，已重新生成
+         （4 个尺寸 16/32/128/256，PNG 内嵌、透明通道）。
+         这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
+         但 .ico 是所有浏览器都吃的格式，最保险。
+         ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
+    <link rel="icon" href="./favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=2">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=2">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1374,7 +1379,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.2.8';
+var APP_VERSION = '4.2.9';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
