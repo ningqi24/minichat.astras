@@ -1579,7 +1579,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.3';
+var APP_VERSION = '4.5.4';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2407,13 +2407,24 @@ async function ensureProfile(uid, email) {
     function hide() {
         if (!splash) return;
         // 先跑完最后一拍再淡出，避免"动画没演完就消失"
-        splash.classList.add('hidden');
-        setTimeout(function(){ splash.remove(); }, 620);
+        // ⚠️ 关键：启动画面【不能在这里就藏掉】。
+        //    已登录时我们要等 getSession() 才有结果，如果这会儿已经把启动画面藏了、
+        //    又还没显示主界面，屏幕上就是一片白（亮色主题下 body 背景 #fafafa）——
+        //    这正是"白屏"的成因。所以改成：确定去哪个界面时再揭幕。
+        function dismissSplash() {
+            if (!splash) return;
+            splash.classList.add('hidden');
+            setTimeout(function(){ splash.remove(); }, 620);
+        }
 
         var revealed = false;
         function showLogin() {
             if (revealed) return;
             revealed = true;
+            // 登录界面也要用正确的主题（原来这里不调 loadTheme，
+            // 白天打开时登录页是深色、主界面是亮色，前后不一致）
+            loadTheme();
+            dismissSplash();
             if (loginOverlay) loginOverlay.classList.remove('hidden');
             renderCaptcha('captchaBoxLogin');
         }
@@ -2455,6 +2466,9 @@ async function ensureProfile(uid, email) {
                 allLoadedMessages = [];
                 lastTimeLabel = '';
                 lastTimeDivider = 0;
+                // 主题在启动画面还盖着的时候先切好，避免进主界面的瞬间深色闪成白色
+                loadTheme();
+                dismissSplash();
                 window.enterChat();
             } else {
                 fallbackToLogin('no session');
