@@ -15,6 +15,9 @@
     <meta name="twitter:description" content="一个开源的 Supabase 聊天应用示例，提供完整代码，助你快速学习和集成实时聊天功能。" />
     <link rel="canonical" href="https://minichat.astras.cc/" />
     <link rel="manifest" href="manifest.json">
+    <!-- favicon：改用 SVG（viewBox 贴合图形、没有白边）。原来的 favicon.ico 里 logo 四周有一圈白边 -->
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+    <link rel="alternate icon" href="./favicon.ico">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -69,7 +72,7 @@
         @keyframes spLogoIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 
         /* 轨道：浅灰、4px 粗、全圆角 */
-        .sp-bar{position:relative;margin-top:40px;width:180px;height:4px;border-radius:2px;background:#e8e8e8}
+        .sp-bar{position:relative;margin-top:40px;width:140px;height:4px;border-radius:2px;background:#e8e8e8}
         /* 短的那条：占轨道 20%，用 transform 来回扫（GPU 友好）。
            translateX(400%) —— 自身宽度是轨道的 20%，400% 正好走到轨道右端。 */
         .sp-bar i{position:absolute;top:0;bottom:0;left:0;width:12.5%;border-radius:2px;background:var(--accent,#3b82f6);box-shadow:0 0 6px rgba(59,130,246,.75),0 0 14px rgba(59,130,246,.38);transform:translateX(0);animation:spSweep 1.6s cubic-bezier(.45,.05,.55,.95) infinite}
@@ -816,7 +819,7 @@
             /* 登录卡片 */
             .login-card { padding: 28px 20px; }
             .sp-logo { height: 64px; }
-            .sp-bar { width: 160px; margin-top: 34px; }
+            .sp-bar { width: 126px; margin-top: 34px; }
 
             /* 设置面板全屏 */
             .settings-overlay { position: fixed !important; align-items: stretch !important; }
@@ -844,7 +847,7 @@
             .auth-title { font-size: 20px; }
             .auth-sub { font-size: 14px; }
             .sp-logo { height: 54px; }
-            .sp-bar { width: 136px; margin-top: 28px; }
+            .sp-bar { width: 108px; margin-top: 28px; }
             .settings-content { padding: 16px 12px; }
             .settings-group { padding: 12px; }
             .settings-group-title { font-size: 13px; }
@@ -876,7 +879,7 @@
     } catch (e) {} })();
     </script>
     <div id="splash" role="status" aria-label="正在加载">
-        <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
+        <img class="sp-logo" src="assets/basied-mark.svg" alt="MiniChat"/>
         <div class="sp-bar"><i></i></div>
     </div>
     <div class="login-overlay" id="loginOverlay">
@@ -1371,7 +1374,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.2.7';
+var APP_VERSION = '4.2.8';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
