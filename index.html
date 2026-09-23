@@ -1579,7 +1579,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.6';
+var APP_VERSION = '4.5.7';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -4651,7 +4651,8 @@ function enterChat() {
                 }).then(() => {
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
-                    if (messageList) messageList.innerHTML = '';
+                    // 这里【不清空】消息列表：清空放在 loadHistory 成功之后再统一做。
+                    // 否则一旦查询失败或超时，界面就会一直是一片空白。
                     isLoadingMore = false;   // 强制复位，避免被别处的并发调用卡住
                     loadHistory(false);
                     try { subscribeMessages(); } catch (e) { console.warn('[MiniChat/boot] 订阅消息失败', e); }
@@ -4812,11 +4813,20 @@ async function loadHistory(append, retryCount = 0) {
                 if (oldestTimestamp) {
                     query = query.lt('created_at', oldestTimestamp);
                 }
-                const { data, error } = await query;
+                console.log('[MiniChat/loadHistory] 发起查询…');
+                // 超时保护：查询挂住时不能让界面一直空着
+                const raceRes = await Promise.race([
+                    query,
+                    new Promise(function(_, rej) { setTimeout(function() { rej(new Error('查询超时（15 秒）')); }, 15000); })
+                ]);
+                const data = raceRes.data, error = raceRes.error;
+                console.log('[MiniChat/loadHistory] 查询返回 | data=' + (data ? data.length : 'null') +
+                            ' error=' + (error && error.message ? error.message : '无'));
                 if (error) throw error;
                 if (!data || data.length === 0) {
                     hasMoreMessages = false;
                     isLoadingMore = false;
+                    console.log('[MiniChat/loadHistory] 完成（无数据，显示空状态）');
                     if (!append) {
                         messageList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;">' + t('noMessages') + '</div>';
                     }
@@ -4863,6 +4873,12 @@ async function loadHistory(append, retryCount = 0) {
                 }
                 isLoadingMore = false;
                 checkVirtualScroll();
+                console.log('[MiniChat/loadHistory] 完成 | 子节点=' + messageList.children.length +
+                            ' .message=' + messageList.querySelectorAll('.message').length +
+                            ' scrollHeight=' + messageList.scrollHeight +
+                            ' clientHeight=' + messageList.clientHeight +
+                            ' display=' + getComputedStyle(messageList).display +
+                            ' 父级display=' + (messageList.parentElement ? getComputedStyle(messageList.parentElement).display : '?'));
             } catch (e) {
                 console.error('加载历史失败:', e);
                 isLoadingMore = false;
