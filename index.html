@@ -619,8 +619,7 @@
         .service-icon svg{position:absolute;inset:0;width:100%;height:100%;fill:var(--c,currentColor);display:block}
         .service-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
         /* ---- 合作板块 ---- */
-        .partner-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--radius-sm);background:var(--bg-secondary);border:1px solid var(--border-color);text-decoration:none;transition:var(--transition)}
-        .partner-card:hover{border-color:var(--accent);background:var(--bg-hover)}
+        .partner-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--radius-sm);background:var(--bg-secondary);border:1px solid var(--border-color)}
         /* 固定深色底：FloxChat LOGO 含白色部分，浅色主题下直接放会看不见 */
         .partner-logo{width:46px;height:46px;border-radius:12px;background:#0f1115;display:flex;align-items:center;justify-content:center;padding:9px;box-sizing:border-box;flex-shrink:0}
         .partner-logo img{width:100%;height:100%;object-fit:contain;display:block}
@@ -1018,10 +1017,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
                     <span>FloxChat 的密钥与用户数据只存在于服务端。MiniChat <b>不读取、不存储</b>你的 FloxChat 账号数据，也不会替你注册 FloxChat 账号。</span>
                 </div>
-                <div class="flox-credit">登录能力来自 FloxChat · B站 <a href="https://space.bilibili.com/3493126347950569" target="_blank" rel="noopener">@摄表</a></div>
+                <div class="flox-credit">登录能力来自 FloxChat · 摄表</div>
             </div>
             <div class="auth-message" id="authMessage"></div>
-            <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat验证码登录（B站@摄表）" aria-label="FloxChat验证码登录（B站@摄表）">
+            <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat 验证码登录（摄表）" aria-label="FloxChat 验证码登录（摄表）">
                 <span class="floxchat-entry-mask"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
             </button>
         </div>
@@ -1443,15 +1442,14 @@
                         </div>
                         <div class="settings-group">
                             <div class="settings-group-title" data-i18n="partners">合作</div>
-                            <a class="partner-card" href="https://space.bilibili.com/3493126347950569" target="_blank" rel="noopener">
+                            <div class="partner-card">
                                 <span class="partner-logo"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
                                 <span class="partner-body">
                                     <span class="partner-name">FloxChat</span>
                                     <span class="partner-desc" data-i18n="partnerFloxDesc">MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。</span>
-                                    <span class="partner-by" data-i18n="partnerAuthor">作者 · B站</span>
+                                    <span class="partner-by" data-i18n="partnerAuthor">作者 · 摄表</span>
                                 </span>
-                                <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
-                            </a>
+                            </div>
                         </div>
                     </div>
                     <div class="settings-tab-content" id="tab-terms">
@@ -1559,7 +1557,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.4.0';
+var APP_VERSION = '4.4.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2841,7 +2839,7 @@ var i18n = {
         creditBased: '本项目基于其构建',
         partners: '合作',
         partnerFloxDesc: 'MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。',
-        partnerAuthor: '作者 · B站',
+        partnerAuthor: '作者 · 摄表',
         svcSupabase: '数据库 · 账号 · 文件存储 · 边缘函数',
         svcTurnstile: '人机验证',
         svcJsdelivr: 'CDN：加载 Supabase SDK',
@@ -3713,7 +3711,7 @@ var i18n = {
         creditBased: 'Built upon it',
         partners: 'Partners',
         partnerFloxDesc: 'The FloxChat verification-code login is provided by FloxChat; FloxChat also bridges the MiniChat group chat into its own client.',
-        partnerAuthor: 'Author · Bilibili',
+        partnerAuthor: 'Author · Shebiao',
         svcSupabase: 'Database · Auth · Storage · Edge Functions',
         svcTurnstile: 'Human verification',
         svcJsdelivr: 'CDN: loads the Supabase SDK',

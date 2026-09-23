@@ -319,8 +319,8 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 - [TurboWarp](https://turbowarp.org) - FloxChat 桥接扩展的运行环境 | Runtime for the FloxChat bridge extension
 - **SimpleChat** - 本项目的设计灵感来源（`assets/Inspired.svg`）| Design inspiration for this project
 - **ChatMini+** - 本项目的构建基础（`assets/basied.svg`）| The project this one is built upon
-- **FloxChat**（B站 @摄表）- 验证码登录能力来源于 FloxChat。MiniChat 仅调用其验证码接口完成身份核验，不读取、不存储 FloxChat 账号数据，不提供任何形式的注册，也不代表或代替 FloxChat 官方。  
-  **FloxChat** (Bilibili @摄表) – The verification-code login capability comes from FloxChat. MiniChat only calls its code endpoint to verify identity; it never reads or stores FloxChat account data, offers no registration of any kind, and is not affiliated with or acting on behalf of FloxChat.
+- **FloxChat**（摄表）- 验证码登录能力来源于 FloxChat。MiniChat 仅调用其验证码接口完成身份核验，不读取、不存储 FloxChat 账号数据，不提供任何形式的注册，也不代表或代替 FloxChat 官方。  
+  **FloxChat** (Shebiao) – The verification-code login capability comes from FloxChat. MiniChat only calls its code endpoint to verify identity; it never reads or stores FloxChat account data, offers no registration of any kind, and is not affiliated with or acting on behalf of FloxChat.
 
 ---
 
