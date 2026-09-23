@@ -1579,7 +1579,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.5.2';
+var APP_VERSION = '4.5.3';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -4610,18 +4610,33 @@ function enterChat() {
             //    原来整个 .then 都不会执行 —— 主界面框架显示出来了，但下面的
             //    ensureGlobalConversation / loadHistory / subscribeMessages 全被跳过，
             //    用户看到的就是「登录界面闪一下，然后一片空白」。
+            console.log('[MiniChat/boot] enterChat 开始');
             loadDisplayName().catch(function(e) {
-                console.warn('加载昵称失败，继续初始化聊天：', e && e.message);
+                console.warn('[MiniChat/boot] 加载昵称失败，继续初始化聊天：', e && e.message);
             }).then(() => {
-                setupPresenceChannel();
-                setupProfilesRealtime();
-                fetchAllMembers();
+                console.log('[MiniChat/boot] 昵称加载完成');
+                try { setupPresenceChannel(); } catch (e) { console.warn('[MiniChat/boot] presence 失败', e); }
+                try { setupProfilesRealtime(); } catch (e) { console.warn('[MiniChat/boot] profiles 失败', e); }
+                try { fetchAllMembers(); } catch (e) { console.warn('[MiniChat/boot] 成员列表失败', e); }
                 // 不再加载会话列表，仅保证全局会话存在并订阅频道
-                ensureGlobalConversation().then(() => {
+                ensureGlobalConversation().catch(function(e) {
+                    console.warn('[MiniChat/boot] 全局会话准备失败（继续）', e && e.message);
+                }).then(() => {
+                    console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
+                                ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
                     if (messageList) messageList.innerHTML = '';
+                    isLoadingMore = false;   // 强制复位，避免被别处的并发调用卡住
                     loadHistory(false);
-                    subscribeMessages();
+                    try { subscribeMessages(); } catch (e) { console.warn('[MiniChat/boot] 订阅消息失败', e); }
                     highlightGlobalNav();
+                    // 自愈：4 秒后列表还是空的就再拉一次（只补一次，避免死循环）
+                    setTimeout(function() {
+                        if (messageList && messageList.children.length === 0) {
+                            console.warn('[MiniChat/boot] 消息列表仍为空，重试一次');
+                            isLoadingMore = false;
+                            loadHistory(false);
+                        }
+                    }, 4000);
                 });
             });
             localStorage.setItem('minichat_user', JSON.stringify({ email: currentEmail, id: currentUserId }));
@@ -4754,9 +4769,11 @@ function highlightGlobalNav() {
 
 // ===================== 消息加载 =====================
 async function loadHistory(append, retryCount = 0) {
-            if (!messageList) return;
-            if (isLoadingMore) return;
-            if (!hasMoreMessages && append) return;
+            console.log('[MiniChat/loadHistory] 进入 append=' + append + ' messageList=' + !!messageList +
+                        ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
+            if (!messageList) { console.warn('[MiniChat/loadHistory] 提前返回：messageList 不存在'); return; }
+            if (isLoadingMore) { console.warn('[MiniChat/loadHistory] 提前返回：上一次还在加载中'); return; }
+            if (!hasMoreMessages && append) { console.warn('[MiniChat/loadHistory] 提前返回：没有更多了'); return; }
             isLoadingMore = true;
             try {
                 let query = supabase
