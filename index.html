@@ -91,13 +91,13 @@
         }
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-        .login-card{background:var(--bg-card);padding:32px 28px;border-radius:var(--radius);width:100%;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,.7);border:1px solid var(--border-color)}
-        .login-card .logo-area{display:flex;align-items:center;gap:10px;margin-bottom:22px}
-        .login-card .logo-area img{height:34px;width:auto}
-        .login-card .logo-area h1{font-size:18px;font-weight:700;color:var(--text-primary);margin:0}
-        .login-card .auth-title{font-size:18px;font-weight:500;margin-bottom:5px}
-        .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px}
-        .login-card input{width:100%;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;outline:none;transition:var(--transition);margin-bottom:12px}
+        .login-card{background:var(--bg-card);padding:26px 26px 24px;border-radius:var(--radius);width:100%;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,.7);border:1px solid var(--border-color)}
+        .login-card .logo-area{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+        .login-card .logo-area img{height:30px;width:auto}
+        .login-card .logo-area h1{font-size:17px;font-weight:700;color:var(--text-primary);margin:0}
+        .login-card .auth-title{font-size:17px;font-weight:500;margin-bottom:4px}
+        .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:16px}
+        .login-card input{width:100%;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;outline:none;transition:var(--transition);margin-bottom:10px}
         .login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.18)}
         .login-card .btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
         .login-card .btn-primary::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .3s ease}
@@ -108,7 +108,9 @@
         .login-card .auth-message{font-size:12px;text-align:center;margin-top:14px;min-height:18px}
         .login-card .auth-message.success{color:var(--success)}
         .login-card .auth-message.error{color:var(--error)}
-        .login-card .auth-toggle{display:flex;justify-content:center;gap:16px;margin-top:12px;font-size:13px}
+        .login-card .auth-toggle{display:flex;justify-content:center;gap:16px;font-size:13px;margin:0}
+        /* 底部行：注册入口 + FloxChat 图标并排（原来 FloxChat 独占一行，白白多出约 58px 高度） */
+        .login-card .auth-foot{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px}
         .login-card .auth-toggle a{color:var(--accent);cursor:pointer;text-decoration:none;transition:color .2s}
         .login-card .auth-toggle a:hover{text-decoration:underline;color:var(--accent-hover)}
         .login-card .pwd-wrapper{position:relative}
@@ -145,13 +147,13 @@
         .floxchat-login .floxchat-step1,.floxchat-login .floxchat-step2{display:flex;flex-direction:column;gap:10px}
 
         /* 入口：圆形遮罩按钮 */
-        .floxchat-entry{display:flex;margin:12px auto 0;padding:0;background:none;border:none;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent}
-        .floxchat-entry-mask{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--flox-mask-bg);border:1px solid var(--flox-mask-border);box-shadow:var(--flox-mask-shadow);transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition),border-color var(--transition)}
+        .floxchat-entry{display:flex;margin:0;padding:0;background:none;border:none;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent}
+        .floxchat-entry-mask{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--flox-mask-bg);border:1px solid var(--flox-mask-border);box-shadow:var(--flox-mask-shadow);transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition),border-color var(--transition)}
         .floxchat-entry:hover .floxchat-entry-mask{transform:translateY(-1px) scale(1.05);background:var(--accent-light);border-color:var(--accent);box-shadow:var(--flox-mask-shadow-hover)}
         .floxchat-entry:active .floxchat-entry-mask{transform:scale(0.95)}
         .floxchat-entry:focus{outline:none}
         .floxchat-entry:focus-visible .floxchat-entry-mask{outline:2px solid var(--accent);outline-offset:2px}
-        .floxchat-entry-mask img{display:block;width:26px;height:26px;pointer-events:none}
+        .floxchat-entry-mask img{display:block;width:21px;height:21px;pointer-events:none}
 
         /* 顶部双标识 */
         .bridge-header{display:flex;flex-direction:column;align-items:center;margin:0 0 20px}
@@ -976,7 +978,12 @@
             <div class="pwd-wrapper"><input type="password" id="authPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="密码"/><button class="toggle-pwd" id="togglePwd" type="button"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <div class="captcha-box" id="captchaBoxLogin"></div>
             <button class="btn-primary" id="btnLogin" data-i18n="login">登录</button>
-            <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
+            <div class="auth-foot">
+                <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
+                <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat 验证码登录（摄表）" aria-label="FloxChat 验证码登录（摄表）">
+                    <span class="floxchat-entry-mask"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
+                </button>
+            </div>
             <!-- FloxChat 验证码登录 -->
             <div class="floxchat-login" id="floxLogin">
                 <button type="button" class="floxchat-back" id="floxBack">
@@ -1020,9 +1027,6 @@
                 <div class="flox-credit">登录能力来自 FloxChat · 摄表</div>
             </div>
             <div class="auth-message" id="authMessage"></div>
-            <button type="button" id="switchFloxChat" class="floxchat-entry" title="FloxChat 验证码登录（摄表）" aria-label="FloxChat 验证码登录（摄表）">
-                <span class="floxchat-entry-mask"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
-            </button>
         </div>
     </div>
     <div class="terms-overlay" id="termsOverlay">
@@ -1557,7 +1561,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.4.1';
+var APP_VERSION = '4.4.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
