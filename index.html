@@ -91,53 +91,47 @@
         }
         .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-        .login-card{background:var(--bg-card);padding:26px 26px 24px;border-radius:var(--radius);width:100%;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,.7);border:1px solid var(--border-color)}
-        .login-card .logo-area{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+        .login-card{display:flex;width:min(94vw,880px);max-width:880px;padding:0;overflow:hidden;border-radius:var(--radius-lg);background:var(--bg-card);border:1px solid var(--border-color);box-shadow:0 24px 64px rgba(0,0,0,.5)}
+        .login-form{flex:1 1 52%;min-width:0;padding:34px 36px;display:flex;flex-direction:column;justify-content:center}
+        /* 右侧品牌区：渐变 + 极淡斜纹，给宽屏一个视觉落点（原来卡片孤零零飘在中间） */
+        .login-brand{position:relative;flex:1 1 48%;overflow:hidden;padding:40px 36px;display:flex;flex-direction:column;justify-content:center;color:#fff;background:linear-gradient(155deg,#1e40af 0%,#2563eb 42%,#3b82f6 72%,#1d4ed8 100%)}
+        .login-brand::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 80% 16%,rgba(255,255,255,.22),transparent 52%),repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 1px,transparent 1px 9px)}
+        .brand-kicker{position:relative;font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.72;margin-bottom:16px;font-weight:500}
+        .brand-title{position:relative;font-size:28px;line-height:1.24;font-weight:700;margin:0 0 14px;letter-spacing:-.01em}
+        .brand-desc{position:relative;font-size:13px;line-height:1.8;opacity:.86;margin:0 0 22px;max-width:32ch}
+        .brand-points{position:relative;list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+        .brand-points li{font-size:11.5px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);white-space:nowrap}
+        @media (max-width:860px){
+            .login-card{flex-direction:column;width:min(94vw,420px);max-width:420px}
+            .login-brand{display:none}
+            .login-form{padding:30px 24px 26px}
+        }
+        /* ---- 表单：统一左对齐轴线 + 标签在输入框上方 ---- */
+        .login-card .logo-area{display:flex;align-items:center;gap:10px;margin-bottom:20px}
         .login-card .logo-area img{height:30px;width:auto}
         .login-card .logo-area h1{font-size:17px;font-weight:700;color:var(--text-primary);margin:0}
-        .login-card .auth-title{font-size:17px;font-weight:500;margin-bottom:4px}
-        .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:16px}
-        .login-card input{width:100%;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;outline:none;transition:var(--transition);margin-bottom:10px}
+        .login-card .auth-title{font-size:24px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+        .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:24px}
+        .auth-field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+        .auth-field-label{font-size:12px;font-weight:500;color:var(--text-secondary)}
+        .login-card input{width:100%;box-sizing:border-box;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:14px;font-family:inherit;outline:none;transition:var(--transition)}
         .login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-        .login-card .btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
+        .login-card .btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:14px;font-family:inherit;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
         .login-card .btn-primary::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .3s ease}
         .login-card .btn-primary:hover::before{left:100%}
         .login-card .btn-primary:hover{background:var(--accent-hover);box-shadow:0 3px 12px rgba(59,130,246,.25);transform:translateY(-1px)}
         .login-card .btn-primary:active{transform:scale(.97)}
         .login-card .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
-        .login-card .auth-message{font-size:12px;text-align:center;margin-top:14px;min-height:18px}
+        .login-card .auth-message{font-size:12px;margin-top:12px;min-height:18px}
         .login-card .auth-message.success{color:var(--success)}
         .login-card .auth-message.error{color:var(--error)}
-        .login-card .auth-toggle{display:flex;justify-content:center;gap:16px;font-size:13px;margin:0}
-        /* 底部行：注册入口 + FloxChat 图标并排（原来 FloxChat 独占一行，白白多出约 58px 高度） */
-        .login-card .auth-foot{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px}
+        .login-card .auth-toggle{display:flex;justify-content:flex-start;gap:16px;font-size:13px;margin:0}
+        .login-card .auth-foot{display:flex;align-items:center;justify-content:flex-start;gap:14px;margin-top:14px}
         .login-card .auth-toggle a{color:var(--accent);cursor:pointer;text-decoration:none;transition:color .2s}
         .login-card .auth-toggle a:hover{text-decoration:underline;color:var(--accent-hover)}
-        .login-card .pwd-wrapper{position:relative}
-        .terms-overlay{display:none;position:fixed;inset:0;background:var(--modal-overlay);backdrop-filter:blur(8px);justify-content:center;align-items:center;z-index:500;animation:fadeIn .2s ease}
-        .terms-overlay.active{display:flex}
-        .terms-modal{background:var(--bg-card);border-radius:16px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,.25);width:90%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
-        .terms-header{padding:20px 24px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card)}
-        .terms-header h3{margin:0;font-size:17px;font-weight:600;color:var(--text-primary)}
-        .terms-close{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:6px 10px;border-radius:6px;transition:all .2s ease}
-        .terms-close:hover{background:var(--bg-hover);color:var(--text-primary)}
-        .terms-content{flex:1;overflow-y:auto;padding:20px 24px;background:var(--bg-secondary)}
-        .terms-item{margin-bottom:10px;padding:14px 16px;background:var(--bg-card);border-radius:12px;border:1px solid var(--border-color)}
-        .terms-item:last-child{margin-bottom:0}
-        .terms-item h4{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--accent)}
-        .terms-item p{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.7}
-        .terms-item p:last-child{margin-top:6px;color:var(--text-primary)}
-        .terms-footer{padding:16px 24px;border-top:1px solid var(--border-color);background:var(--bg-card)}
-        .terms-checkbox{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-input);border-radius:8px;margin-bottom:14px;cursor:pointer;transition:background .2s}
-        .terms-checkbox:hover{background:var(--bg-hover)}
-        .terms-checkbox input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
-        .terms-checkbox span{font-size:13px;color:var(--text-secondary)}
-        .terms-footer .btn-primary{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s ease;box-shadow:0 2px 8px rgba(59,130,246,.2);font-family:inherit}
-        .terms-footer .btn-primary:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.3)}
-        .terms-footer .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
-        .terms-link{display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-weight:500;font-size:13px;padding:6px 10px;border-radius:6px;transition:all .2s;background:var(--accent-soft)}
-        .terms-link:hover{background:var(--accent);color:#fff;transform:translateX(2px)}
-        .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:13px;padding:3px 5px;border-radius:4px;transition:background .2s,color .2s}
+        .login-card .pwd-wrapper{position:relative;display:block}
+        .login-card .pwd-wrapper input{padding-right:44px}
+        .login-card .pwd-wrapper .toggle-pwd{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:7px;color:var(--text-muted);cursor:pointer;transition:background var(--transition),color var(--transition)}
         .login-card .pwd-wrapper .toggle-pwd:hover{background:var(--bg-hover);color:var(--text-primary)}
         /* ==================== FloxChat 验证码登录 ==================== */
         .floxchat-login{display:none}
@@ -971,11 +965,18 @@
     </div>
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
+            <div class="login-form">
             <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
             <div class="auth-title" id="authTitle" data-i18n="welcome">欢迎回来</div>
             <div class="auth-sub" id="authSub" data-i18n="loginOrSignup">登录或注册账户</div>
-            <input type="email" id="authEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱"/>
-            <div class="pwd-wrapper"><input type="password" id="authPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="密码"/><button class="toggle-pwd" id="togglePwd" type="button"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <label class="auth-field">
+                <span class="auth-field-label" data-i18n="emailLabel">电子邮箱</span>
+                <input class="auth-input" type="email" id="authEmail" data-i18n-placeholder="emailPlaceholder" placeholder="you@example.com"/>
+            </label>
+            <label class="auth-field">
+                <span class="auth-field-label" data-i18n="passwordLabel">密码</span>
+                <span class="pwd-wrapper"><input class="auth-input" type="password" id="authPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="••••••••"/><button class="toggle-pwd" id="togglePwd" type="button" aria-label="显示密码"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></span>
+            </label>
             <div class="captcha-box" id="captchaBoxLogin"></div>
             <button class="btn-primary" id="btnLogin" data-i18n="login">登录</button>
             <div class="auth-foot">
@@ -1027,6 +1028,18 @@
                 <div class="flox-credit">登录能力来自 FloxChat · 摄表</div>
             </div>
             <div class="auth-message" id="authMessage"></div>
+            </div>
+            <aside class="login-brand">
+                <div class="brand-kicker">MiniChat · astras.cc</div>
+                <h2 class="brand-title">轻量级<br>实时聊天</h2>
+                <p class="brand-desc">原生 HTML + Supabase，无框架依赖。实时消息、文件分享、图片压缩，还能把 MiniChat 群聊接进 FloxChat。</p>
+                <ul class="brand-points">
+                    <li>开源 · MIT</li>
+                    <li>PWA · 可离线</li>
+                    <li>FloxChat 互通</li>
+                </ul>
+            </aside>
+        </div>
         </div>
     </div>
     <div class="terms-overlay" id="termsOverlay">
@@ -1561,7 +1574,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.4.2';
+var APP_VERSION = '4.5.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2255,7 +2268,7 @@ function switchToFloxLogin() {
     document.querySelector('.login-card .logo-area').style.display = 'none';
     document.querySelector('.login-card .auth-title').style.display = 'none';
     document.querySelector('.login-card .auth-sub').style.display = 'none';
-    document.querySelector('.login-card > input').style.display = 'none';
+    document.querySelectorAll('.auth-field').forEach(function(el) { el.style.display = 'none'; });
     document.querySelector('.login-card .pwd-wrapper').style.display = 'none';
     document.getElementById('btnLogin').style.display = 'none';
     document.querySelector('.auth-toggle').style.display = 'none';
@@ -2281,7 +2294,7 @@ function switchBackFromFlox() {
     document.querySelector('.login-card .auth-title').style.display = '';
     document.querySelector('.login-card .auth-title').textContent = isLoginMode ? t('welcome') : t('createAccount');
     document.querySelector('.login-card .auth-sub').style.display = '';
-    document.querySelector('.login-card > input').style.display = '';
+    document.querySelectorAll('.auth-field').forEach(function(el) { el.style.display = ''; });
     document.querySelector('.login-card .pwd-wrapper').style.display = '';
     document.getElementById('btnLogin').style.display = '';
     document.querySelector('.auth-toggle').style.display = '';
@@ -2495,6 +2508,8 @@ var i18n = {
         hasAccount: '已有账户？<a id="switchToSignup">登录</a>',
         emailPlaceholder: '电子邮箱',
         passwordPlaceholder: '密码',
+        emailLabel: '电子邮箱',
+        passwordLabel: '密码',
         newUser: '新用户？',
         chatPlaceholder: '输入消息…（Ctrl+Enter 换行，Enter 发送）',
         globalChat: '全局聊天',
@@ -3369,6 +3384,8 @@ var i18n = {
         hasAccount: 'Already have an account? <a id="switchToSignup">Login</a>',
         emailPlaceholder: 'Email',
         passwordPlaceholder: 'Password',
+        emailLabel: 'Email',
+        passwordLabel: 'Password',
         newUser: 'New user?',
         chatPlaceholder: 'Type a message… (Ctrl+Enter newline, Enter send)',
         globalChat: 'Global Chat',
