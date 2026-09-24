@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.7.0';
+var APP_VERSION = '4.7.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -550,7 +550,8 @@ async function applyFloxSession(edgeData, email) {
 var IS_LOGIN_PAGE = (document.body && document.body.getAttribute('data-page')) === 'login';
 // 登录成功后的去向：登录页 -> 跳聊天页；聊天页 -> 原地进入
 function afterLoginSuccess() {
-    if (IS_LOGIN_PAGE) { location.replace('./index.html'); }
+    // 登录页 -> 聊天页（根路径）；聊天页 -> 原地进入
+    if (IS_LOGIN_PAGE) { location.replace('/'); }
     else { enterChat(); }
 }
 
@@ -880,8 +881,8 @@ async function ensureProfile(uid, email) {
 
         // 本地没有登录记录 / SDK 没起来 —— 直接跳登录页（不再原地显示登录遮罩）
         if (!user || !user.email || !window.supabase || !window.supabase.auth) {
-            console.log('[MiniChat/boot] 聊天页无本地登录记录 → 跳转 login.html');
-            location.replace('./login.html');
+            console.log('[MiniChat/boot] 聊天页无本地登录记录 → 跳转 /login/');
+            location.replace('/login/');
             return;
         }
 
@@ -896,9 +897,9 @@ async function ensureProfile(uid, email) {
             if (settled) return;
             settled = true;
             clearTimeout(guard);
-            if (reason) console.warn('[MiniChat/boot] 会话恢复失败：' + reason + ' → 跳转 login.html');
+            if (reason) console.warn('[MiniChat/boot] 会话恢复失败：' + reason + ' → 跳转 /login/');
             // 拆页后不再原地露登录遮罩，直接去登录页
-            location.replace('./login.html');
+            location.replace('/login/');
         }
         window.supabase.auth.getSession().then(function(data) {
             var session = data && data.data && data.data.session;

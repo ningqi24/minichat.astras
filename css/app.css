@@ -40,10 +40,11 @@
           #splash .sp-logo{opacity:1}
           #splash .sp-bar i{width:40%}
         }
-        .login-overlay{position:absolute;inset:0;background:var(--bg-overlay);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:200;transition:opacity .3s,visibility .3s}
+        .login-overlay{position:absolute;inset:0;background:var(--bg-primary);display:flex;justify-content:center;align-items:stretch;z-index:200;transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-        .login-card{display:flex;width:min(94vw,880px);max-width:880px;padding:0;overflow:hidden;border-radius:var(--radius-lg);background:var(--bg-card);border:1px solid var(--border-color);box-shadow:0 24px 64px rgba(0,0,0,.5)}
-        .login-form{flex:1 1 52%;min-width:0;padding:34px 36px;display:flex;flex-direction:column;justify-content:center}
+        .login-card{display:flex;width:100%;min-height:100vh;min-height:100dvh;padding:0;overflow:hidden;border-radius:0;background:var(--bg-primary);border:none;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+        .login-form{flex:1 1 52%;min-width:0;padding:48px 6vw;display:flex;flex-direction:column;justify-content:center;align-items:center}
+        .login-form > *{width:100%;max-width:400px}
         /* 右侧品牌区：渐变 + 极淡斜纹，给宽屏一个视觉落点（原来卡片孤零零飘在中间） */
         .login-brand{position:relative;flex:1 1 48%;overflow:hidden;padding:40px 36px;display:flex;flex-direction:column;justify-content:center;color:#fff;background:linear-gradient(155deg,#1e40af 0%,#2563eb 42%,#3b82f6 72%,#1d4ed8 100%)}
         .login-brand::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 80% 16%,rgba(255,255,255,.22),transparent 52%),repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 1px,transparent 1px 9px)}
@@ -53,9 +54,9 @@
         .brand-points{position:relative;list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
         .brand-points li{font-size:11.5px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);white-space:nowrap}
         @media (max-width:860px){
-            .login-card{flex-direction:column;width:min(94vw,420px);max-width:420px}
+            .login-card{flex-direction:column;width:100%;min-height:100vh;min-height:100dvh}
             .login-brand{display:none}
-            .login-form{padding:30px 24px 26px}
+            .login-form{padding:36px 24px 30px}
         }
         /* ---- 表单：统一左对齐轴线 + 标签在输入框上方 ---- */
         .login-card .logo-area{display:flex;align-items:center;gap:10px;margin-bottom:20px}

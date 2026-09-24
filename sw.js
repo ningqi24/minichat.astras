@@ -1,7 +1,7 @@
-const CACHE_NAME = 'minichat-v43';
+const CACHE_NAME = 'minichat-v44';
 const STATIC_ASSETS = [
   '/',
-  '/login.html',
+  '/login/',
   '/index.html',
   // CSS / JS 已从 index.html 拆成独立文件，必须一起预缓存，
   // 否则离线打开时页面在但样式和脚本都缺
