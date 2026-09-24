@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.8.7';
+var APP_VERSION = '4.8.8';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -41,7 +41,7 @@ var qjCancel = $safe('qjCancel'), qjJump = $safe('qjJump'), qjStatus = $safe('qj
 var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention');
 var searchBar = $safe('searchBar'), searchInput = $safe('searchInput'), searchStatus = $safe('searchStatus');
 var searchBtn = $safe('searchBtn'), searchPrev = $safe('searchPrev'), searchNext = $safe('searchNext'), searchClose = $safe('searchClose');
-var chatTitle = $safe('chatTitle'), allMembersNum = $safe('allMembersNum');
+var chatTitle = $safe('chatTitle');
 var customModal = $safe('customModal'), customModalOverlay = $safe('customModalOverlay');
 var customModalIcon = $safe('customModalIcon'), customModalSpinner = $safe('customModalSpinner');
 var customModalTitle = $safe('customModalTitle'), customModalMessage = $safe('customModalMessage');
@@ -4757,7 +4757,6 @@ window.recallMessage = async function(mid) {
 var totalMemberCount = 0;
 function updateOnlineUI() {
     if (onlineBadge) { onlineBadge.textContent = onlineCount; onlineBadge.classList.toggle('show', onlineCount > 0); }
-    if (allMembersNum) allMembersNum.textContent = '(' + totalMemberCount + ')';
     updateAllMembersIfOpen();
     updateBottomNavBadge();
     if (onlineStatus) {

@@ -310,7 +310,6 @@
         .chat-main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-secondary);position:relative}
         .chat-main .chat-header{padding:12px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
         .chat-main .chat-header .chat-header-left{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
-        .chat-main .chat-header .chat-title{font-size:16px;font-weight:600}
         .chat-main .chat-header .chat-title small{font-size:12px;font-weight:400;color:var(--text-secondary);margin-left:8px}
         .mobile-logo{display:none;height:24px;width:auto}
         .chat-header-right{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary)}
