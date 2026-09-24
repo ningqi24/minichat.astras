@@ -131,17 +131,21 @@
 
         /* 顶部双标识 */
         .bridge-header{display:flex;flex-direction:column;align-items:center;margin:0 0 20px}
-        .bridge-logos{position:relative;isolation:isolate;display:flex;align-items:center;gap:14px;margin-bottom:16px}
         /* 原来这里有一条 ::before 连接线，但它被左右两个方块遮住后只剩中间一小段，
    看起来像一条没画完的线，反而显脏 —— 去掉。 */
-        .bridge-logos::after{content:"";position:absolute;left:50%;top:50%;width:180px;height:84px;transform:translate(-50%,-50%);background:radial-gradient(ellipse at center,var(--accent-light),transparent 70%);z-index:0;pointer-events:none}
-        .bridge-tile{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:56px;height:56px;padding:12px;box-sizing:border-box;border-radius:17px;background:var(--bg-input);border:1px solid var(--border-color);box-shadow:var(--flox-mask-shadow)}
+        /* 一行内联组合：图标 + 名字 + × + 名字 + 图标
+   原来上面是两个大方块、下面再写一遍 "MiniChat × FloxChat" —— 信息重复，
+   看起来像两块拼在一起。现在图标直接和名字并排，紧凑且不再重复。 */
+        .bridge-lockup{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+        .bridge-logo{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:7px;box-sizing:border-box;border-radius:11px;background:var(--bg-input);border:1px solid var(--border-color);flex-shrink:0}
+        /* FloxChat 的狐狸在自己 viewBox 里留白多，减小内边距让它和左边气泡等重 */
+        .bridge-logo--flox{padding:4px}
+        .bridge-logo img{display:block;width:100%;height:100%;object-fit:contain}
+        .bridge-name{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:-.01em;white-space:nowrap}
         /* FloxChat 的狐狸在它自己的 viewBox 里留白较多，和 MiniChat 气泡同尺寸渲染时
            会显得小一圈、视觉重量不匹配。用减小内边距（而不是 transform:scale）来放大，
            这样它仍然老老实实待在方块里，不会溢出。 */
-        .bridge-tile--flox{padding:7px}
-        .bridge-tile img{display:block;width:100%;height:100%;object-fit:contain}
-        .bridge-cross{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border-color);color:var(--accent);font-size:13px;font-weight:600;line-height:1;box-shadow:var(--flox-mask-shadow)}
+        .bridge-cross{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent-light);color:var(--accent);font-size:13px;font-weight:600;line-height:1;flex-shrink:0}
         .bridge-title{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:.2px;margin-bottom:6px}
         .bridge-title em{font-style:normal;font-weight:400;color:var(--accent);margin:0 5px}
         .bridge-sub{font-size:12px;line-height:1.6;color:var(--text-secondary);text-align:center}
