@@ -373,6 +373,10 @@
         .online-user-info{display:flex;flex-direction:column;min-width:0;flex:1}
         .online-user-name{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .online-user-email{font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        /* 管理员：成员列表里的删除按钮（平时不出现，只有 isAdmin 时才由 JS 插入） */
+        .member-del-btn{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;margin-left:auto;padding:0;border:none;border-radius:8px;background:none;color:var(--text-muted);cursor:pointer;transition:background var(--transition),color var(--transition)}
+        .member-del-btn:hover{background:rgba(220,38,38,.14);color:#dc2626}
+        .member-del-btn:active{transform:scale(.94)}
         .online-empty{color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0}
         .all-members-modal{max-width:340px;max-height:480px;display:none;flex-direction:column;gap:8px}
         .member-search-wrapper{padding:8px 0;flex-shrink:0}

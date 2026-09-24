@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.8.9';
+var APP_VERSION = '4.9.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3158,6 +3158,8 @@ function enterChat() {
             }).then(() => {
                 console.log('[MiniChat/boot] 昵称加载完成');
                 try { setupPresenceChannel(); } catch (e) { console.warn('[MiniChat/boot] presence 失败', e); }
+                // 查一下自己是不是管理员（决定成员列表要不要显示删除按钮）
+                checkAdmin().catch(function(e) { console.warn('[MiniChat/admin] 查询失败', e); });
                 try { setupProfilesRealtime(); } catch (e) { console.warn('[MiniChat/boot] profiles 失败', e); }
                 try { fetchAllMembers(); } catch (e) { console.warn('[MiniChat/boot] 成员列表失败', e); }
                 // 不再加载会话列表，仅保证全局会话存在并订阅频道
@@ -4979,6 +4981,19 @@ function renderAllMembers(members) {
         em.textContent = email || '';
         info.appendChild(name); info.appendChild(em);
         it.appendChild(avatar); it.appendChild(dot); it.appendChild(info);
+        // 管理员：可以在这里直接删掉某个用户，免得再去后台写 SQL
+        if (window.isAdmin && email && email.toLowerCase() !== window.myEmail) {
+            var delBtn = document.createElement('button');
+            delBtn.className = 'member-del-btn';
+            delBtn.title = '删除该用户';
+            delBtn.setAttribute('aria-label', '删除该用户');
+            delBtn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+            delBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                deleteUserAsAdmin(m, displayName, email);
+            });
+            it.appendChild(delBtn);
+        }
         allMembersList.appendChild(it);
     }
     if (grouped.online.length) {
@@ -5534,14 +5549,65 @@ if (deleteAccountBtn) {
 }
 
 function confirmDelete() {
-    showConfirm(t('deleteConfirm'), function() {
-        supabase.auth.deleteUser().then(function() {
+    showConfirm(t('deleteConfirm'), async function() {
+        try {
+            // ⚠️ 这里原本调的是 supabase.auth.deleteUser() —— supabase-js v2 里根本没有这个方法，
+            //    删除用户需要 service_role，前端拿不到，所以那个按钮一直是坏的。
+            //    现在改走 Edge Function（服务端用 service_role 执行）。
+            var sess = await supabase.auth.getSession();
+            var token = sess && sess.data && sess.data.session ? sess.data.session.access_token : '';
+            if (!token) throw new Error('未获取到登录凭据，请重新登录后再试');
+            await callFloxEdge({ action: 'delete_self', access_token: token, anonymize: true });
             localStorage.clear();
             location.reload();
-        }).catch(function(err) {
-            showAlert(t('deleteFailed') + err.message, 'error');
-        });
+        } catch (err) {
+            showAlert(t('deleteFailed') + (err && err.message ? err.message : ''), 'error');
+        }
     });
+}
+
+// ---- 管理员：查询自己是不是管理员（决定成员列表里要不要显示删除按钮）----
+async function checkAdmin() {
+    try {
+        var sess = await supabase.auth.getSession();
+        var token = sess && sess.data && sess.data.session ? sess.data.session.access_token : '';
+        if (!token) return;
+        var me = await callFloxEdge({ action: 'whoami', access_token: token });
+        window.isAdmin = !!me.is_admin;
+        window.myUserId = me.id || '';
+        window.myEmail = (me.email || '').toLowerCase();
+        if (window.isAdmin) console.log('[MiniChat/admin] 当前账号是管理员，成员列表将显示删除按钮');
+    } catch (e) {
+        window.isAdmin = false;
+    }
+}
+
+// ---- 管理员删除指定用户 ----
+async function deleteUserAsAdmin(m, displayName, email) {
+    if (!window.isAdmin) return;
+    // 注意：showConfirm 只接受 (message, onConfirm) 两个参数，没有取消回调，
+    // 所以这里直接把它当作"确认后才执行"的入口，不要用 Promise 等取消信号，
+    // 否则用户点取消时 Promise 会永远挂着。
+    showConfirm(
+        '确定要删除用户「' + displayName + '」（' + email + '）吗？\n\n' +
+        '将同时清理：会话关系、个人资料、头像。\n' +
+        '他发送过的消息会保留，但显示为「已注销用户」。\n\n此操作不可撤销。',
+        async function() { await doAdminDelete(m, email); }
+    );
+}
+
+async function doAdminDelete(m, email) {
+    try {
+        var sess = await supabase.auth.getSession();
+        var token = sess && sess.data && sess.data.session ? sess.data.session.access_token : '';
+        if (!token) throw new Error('未获取到登录凭据');
+        var res = await callFloxEdge({ action: 'admin_delete_user', access_token: token, target_user_id: m.id, anonymize: true });
+        showAlert('已删除用户 ' + (res.email || email), 'success');
+        var members = await fetchAllMembers();
+        renderAllMembers(members);
+    } catch (err) {
+        showAlert('删除失败：' + (err && err.message ? err.message : ''), 'error');
+    }
 }
 if (allMembersBtn) {
     allMembersBtn.addEventListener('click', e => { e.stopPropagation(); showAllMembersModal(); });

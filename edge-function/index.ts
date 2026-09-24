@@ -30,6 +30,17 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+// ---- 管理员邮箱（逗号分隔），拥有「删除其他用户」的权限 ----
+// 例：MINICHAT_ADMIN_EMAILS="you@example.com,other@example.com"
+// 没配置就等于没有管理员，admin_delete_user / whoami 的 is_admin 恒为 false。
+const ADMIN_EMAILS = (Deno.env.get("MINICHAT_ADMIN_EMAILS") ?? "")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+function isAdminEmail(email?: string | null) {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
 // ---- FloxChat 验证码校验地址（服务端专用）----
 const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://shebiao.dpdns.org/ces/verify-code";
 // ---- FloxChat 发送验证码地址（服务端代理，扩展端不直接请求，避免 CORS）----
@@ -134,6 +145,9 @@ Deno.serve(async (req: Request) => {
     if (action === "get_users") return await getUsers(body);
     if (action === "upload_file") return await uploadFile(body);
     if (action === "storage_gc") return json(await storageGc(Boolean(body?.force)));
+    if (action === "whoami") return await whoami(body);
+    if (action === "delete_self") return await deleteUser(body, null);
+    if (action === "admin_delete_user") return await deleteUser(body, body?.target_user_id);
     return await login(req, body);
   } catch (e: any) {
     return json({ error: e.message }, 500);
@@ -577,6 +591,92 @@ async function ensureProfileAndConversation(
       .update({ last_login: new Date().toISOString() })
       .eq("id", uid);
   }
+}
+
+// ---- 告诉前端当前身份，以及是不是管理员（前端据此决定要不要显示删除按钮）----
+async function whoami(body: any) {
+  const user = await getUserFromBody(body);
+  if (!user) return json({ error: "unauthorized" }, 401);
+  return json({
+    id: user.id,
+    email: user.email,
+    is_admin: isAdminEmail(user.email),
+  });
+}
+
+// ---- 删除用户 ----
+// targetId 为 null 表示"删自己"（delete_self）；
+// 传了 targetId 且不是自己，则必须是管理员。
+//
+// 删除列表（顺序很重要，profiles 等有外键指向 auth.users）：
+//   1. messages                     —— 匿名化（默认）或直接删除
+//   2. conversation_participants    —— 会话关系
+//   3. profiles                     —— 资料
+//   4. storage: avatars/<uid>*      —— 头像
+//   5. auth.users                   —— 账户本体
+async function deleteUser(body: any, targetId: string | null) {
+  const caller = await getUserFromBody(body);
+  if (!caller) return json({ error: "unauthorized" }, 401);
+
+  const uid = targetId || caller.id;
+  const deletingSelf = uid === caller.id;
+  if (!deletingSelf && !isAdminEmail(caller.email)) {
+    return json({ error: "forbidden" }, 403);
+  }
+
+  // 拿到目标用户的邮箱（messages 是按 sender_email 关联的）
+  let targetEmail: string | null = null;
+  try {
+    const { data } = await supabaseAdminAuth.auth.admin.getUserById(uid);
+    targetEmail = data?.user?.email ?? null;
+  } catch { /* 下面会继续尝试，拿不到就跳过消息处理 */ }
+
+  const anonymize = body?.anonymize !== false; // 默认匿名化保留聊天记录
+  const result: Record<string, unknown> = { uid, email: targetEmail, anonymize };
+
+  if (targetEmail) {
+    if (anonymize) {
+      const { data } = await supabaseAdmin
+        .from("messages")
+        .update({ sender_email: "deleted_user", sender_name: "deleted_user" })
+        .eq("sender_email", targetEmail)
+        .select("id");
+      result.messages_anonymized = data?.length ?? 0;
+    } else {
+      const { data } = await supabaseAdmin
+        .from("messages")
+        .delete()
+        .eq("sender_email", targetEmail)
+        .select("id");
+      result.messages_deleted = data?.length ?? 0;
+    }
+  }
+
+  const part = await supabaseAdmin
+    .from("conversation_participants")
+    .delete()
+    .eq("user_id", uid)
+    .select("conversation_id");
+  result.conversations_left = part.data?.length ?? 0;
+
+  await supabaseAdmin.from("profiles").delete().eq("id", uid);
+
+  // 头像：aviator 桶里以 <uid> 打头的文件
+  try {
+    const { data: files } = await supabaseAdmin.storage
+      .from("avatars")
+      .list("", { search: uid });
+    const mine = (files ?? []).filter((x: any) => x.name?.startsWith(uid));
+    if (mine.length) {
+      await supabaseAdmin.storage.from("avatars").remove(mine.map((x: any) => x.name));
+      result.avatars_deleted = mine.length;
+    }
+  } catch { /* 头像清理失败不影响账户删除 */ }
+
+  const del = await supabaseAdminAuth.auth.admin.deleteUser(uid);
+  if (del.error) return json({ error: del.error.message }, 500);
+
+  return json({ ok: true, ...result });
 }
 
 function json(body: object, status = 200) {
