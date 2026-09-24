@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.7.1';
+var APP_VERSION = '4.7.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }

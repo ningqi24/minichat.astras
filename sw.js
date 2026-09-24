@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minichat-v44';
+const CACHE_NAME = 'minichat-v45';
 const STATIC_ASSETS = [
   '/',
   '/login/',
@@ -6,7 +6,8 @@ const STATIC_ASSETS = [
   // CSS / JS 已从 index.html 拆成独立文件，必须一起预缓存，
   // 否则离线打开时页面在但样式和脚本都缺
   '/css/app.css',
-  '/js/app.js',
+  '/js/app.js',      // 聊天页
+  '/js/login.js',    // 登录页专用（由 app.js 裁剪而来，约 60KB）
   '/assets/logo.svg',
   '/assets/favicon.svg',
   '/favicon.ico',
