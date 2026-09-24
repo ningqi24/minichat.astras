@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minichat-v48';
+const CACHE_NAME = 'minichat-v49';
 const STATIC_ASSETS = [
   '/',
   '/login/',
@@ -56,7 +56,10 @@ self.addEventListener('fetch', event => {
 
   if (isAppAsset) {
     event.respondWith(
-      fetch(req).then(res => {
+      // cache: 'no-store' 很关键：GitHub Pages 对 .css/.js 发的是
+      // cache-control: max-age=3600，浏览器会直接拿本地副本、根本不问服务器。
+      // 加了 no-store 才会真正走网络，拿到最新代码。
+      fetch(req, { cache: 'no-store' }).then(res => {
         if (res && res.ok) { const c2 = res.clone(); caches.open(CACHE_NAME).then(c => c.put(req, c2)); }
         return res;
       }).catch(() => caches.match(req).then(r => r || new Response('离线状态，请检查网络', { status: 503 })))
