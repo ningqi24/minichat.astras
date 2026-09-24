@@ -560,7 +560,18 @@ var IS_LOGIN_PAGE = (document.body && document.body.getAttribute('data-page')) =
 // 登录成功后的去向：登录页 -> 跳聊天页；聊天页 -> 原地进入
 function afterLoginSuccess() {
     // 登录页 -> 聊天页（根路径）；聊天页 -> 原地进入
-    if (IS_LOGIN_PAGE) { location.replace('/'); }
+    if (IS_LOGIN_PAGE) {
+        // ⚠️ 跳转前必须把登录信息写进 localStorage。
+        //    聊天页启动时靠它判断"是否已登录"，而这条写入原本在 enterChat() 里 ——
+        //    登录页走的是跳转分支、根本执行不到 enterChat()，
+        //    于是聊天页以为没登录又把用户踢回 /login/，来回死循环。
+        try {
+            if (window.currentEmail) {
+                localStorage.setItem('minichat_user', JSON.stringify({ email: window.currentEmail, id: window.currentUserId || '' }));
+            }
+        } catch (e) {}
+        location.replace('/');
+    }
     else { enterChat(); }
 }
 

@@ -873,23 +873,31 @@ async function ensureProfile(uid, email) {
         if (IS_LOGIN_PAGE) { showLogin(); return; }
 
         // ---- 聊天页：必须有会话，否则去登录页 ----
+        // ⚠️ 不要只看 localStorage 里的 minichat_user 就决定去留。
+        //    真正的凭据是 Supabase 自己持久化的会话，前者只是个缓存副本，
+        //    历史上就漏写过（登录页跳转分支没执行到 enterChat），
+        //    只认副本会导致"登录成功后又被踢回登录页"的死循环。
+        //    所以：本地记录有就先用，没有也继续往下查会话；只有确实没有会话才跳登录页。
         var user = null;
         try {
             var raw = localStorage.getItem('minichat_user');
             if (raw) user = JSON.parse(raw);
         } catch(e) {}
 
-        // 本地没有登录记录 / SDK 没起来 —— 直接跳登录页（不再原地显示登录遮罩）
-        if (!user || !user.email || !window.supabase || !window.supabase.auth) {
-            console.log('[MiniChat/boot] 聊天页无本地登录记录 → 跳转 /login/');
+        if (!window.supabase || !window.supabase.auth) {
+            console.log('[MiniChat/boot] Supabase SDK 未就绪 → 跳转 /login/');
             location.replace('/login/');
             return;
         }
 
         // 登录过：先【不露登录界面】，等会话确认完再决定，
         // 否则会「登录界面闪一下 → 又切到聊天」，观感很差（原来的闪屏就是这么来的）
-        window.currentEmail = user.email;
-        window.currentUserId = user.id || '';
+        if (user && user.email) {
+            window.currentEmail = user.email;
+            window.currentUserId = user.id || '';
+        } else {
+            console.log('[MiniChat/boot] 本地无登录记录，改用 Supabase 会话判断');
+        }
         var settled = false;
         // 兜底：3 秒还没结果就露登录界面 —— 无论如何都不能留下空白页
         var guard = setTimeout(showLogin, 3000);
@@ -907,6 +915,17 @@ async function ensureProfile(uid, email) {
                 settled = true;
                 clearTimeout(guard);
                 revealed = true;
+                // 会话在，但本地记录可能缺失（例如登录时没写成功）——
+                // 这里从会话里补回来并重新持久化，避免下次刷新又走一遍弯路
+                if (!window.currentEmail && session.user) {
+                    window.currentEmail = session.user.email || '';
+                    window.currentUserId = session.user.id || '';
+                }
+                try {
+                    if (window.currentEmail) {
+                        localStorage.setItem('minichat_user', JSON.stringify({ email: window.currentEmail, id: window.currentUserId || '' }));
+                    }
+                } catch (e) {}
                 hasMoreMessages = true;
                 oldestTimestamp = null;
                 isLoadingMore = false;
