@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minichat-v45';
+const CACHE_NAME = 'minichat-v46';
 const STATIC_ASSETS = [
   '/',
   '/login/',
@@ -35,28 +35,42 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 拦截请求，优先使用缓存，网络失败时回退
+// 拦截请求
+//
+// ⚠️ 这里原本是「一律缓存优先」：只要缓存里有就直接返回。
+//    后果是 sw.js 换新版本以后，用户浏览器里的 js/app.js / login.js / app.css
+//    仍然是旧的（典型症状：应用内显示"当前版本 4.7.0"，而 vision.json 已是 4.7.2）。
+//    所以改成：
+//      · 同源页面与脚本样式（导航请求 + .js/.css/.html）→ 网络优先，失败才回退缓存
+//      · 其它资源（图片、字体、第三方 SDK）→ 缓存优先，保持离线可用
 self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+  const isAppAsset = sameOrigin && (
+    req.mode === 'navigate' ||
+    url.pathname === '/' || url.pathname.endsWith('/') ||
+    /\.(js|css|html)$/.test(url.pathname)
+  );
+
+  if (isAppAsset) {
+    event.respondWith(
+      fetch(req).then(res => {
+        if (res && res.ok) { const c2 = res.clone(); caches.open(CACHE_NAME).then(c => c.put(req, c2)); }
+        return res;
+      }).catch(() => caches.match(req).then(r => r || new Response('离线状态，请检查网络', { status: 503 })))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // 如果缓存命中，直接返回
-        if (response) return response;
-        // 否则发起网络请求
-        return fetch(event.request)
-          .then(networkResponse => {
-            // 可选：将成功的响应缓存起来（仅对同源资源）
-            if (event.request.url.startsWith(self.location.origin)) {
-              const clone = networkResponse.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            // 网络失败时，可返回一个离线页面（可选）
-            // 这里简单返回一个提示
-            return new Response('离线状态，请检查网络', { status: 503 });
-          });
-      })
+    caches.match(req).then(r => {
+      if (r) return r;
+      return fetch(req).then(res => {
+        if (res && res.ok && sameOrigin) { const c2 = res.clone(); caches.open(CACHE_NAME).then(c => c.put(req, c2)); }
+        return res;
+      }).catch(() => new Response('离线状态，请检查网络', { status: 503 }));
+    })
   );
 });
