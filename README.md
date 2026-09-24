@@ -52,6 +52,21 @@
 - **PWA 支持**：可安装为桌面/移动应用，支持离线缓存。  
   **PWA support** – Installable as desktop/mobile app with offline caching.
 
+- **表情与颜文字**：内置 Emoji 与颜文字面板，共 **29 个分类**（8 个 Emoji + 21 个颜文字大类）。
+  数据按分类拆分，**打开面板才拉分类清单、点了某个分类才拉那一个文件** —— 页面加载时零开销。  
+  **Emoji & kaomoji** – A 29-category picker. Data is split per category and loaded **on demand**:
+  nothing on page load, only the index when the panel opens, only one file per clicked category.
+
+- **管理员删除用户**：配置 `MINICHAT_ADMIN_EMAILS` 后，管理员可在"所有成员"列表里直接删除用户
+  （连同会话关系、资料、头像一起清理），不需要登 Supabase 后台写 SQL。  
+  **Admin user deletion** – With `MINICHAT_ADMIN_EMAILS` configured, admins can delete users
+  directly from the member list (cleaning up conversations, profile and avatar), no SQL needed.
+
+- **两页架构**：聊天页（`/`）与登录页（`/login/`）分离，登录页只加载自己需要的脚本
+  （60 KB，而非整个聊天模块的 290 KB）。  
+  **Two-page architecture** – Chat (`/`) and login (`/login/`) are separate; the login page ships
+  only what it needs (60 KB instead of the full 290 KB chat bundle).
+
 ---
 
 ## 技术栈 | Tech Stack
@@ -137,13 +152,19 @@ The source lives in `edge-function/index.ts`. Deploy it as a function named `cle
 supabase functions deploy clever-task --no-verify-jwt
 supabase secrets set FLOXCHAT_BRIDGE_SECRET=<与前端 MINICHAT_BRIDGE_SECRET 保持一致>
 supabase secrets set MINICHAT_BRIDGE_PEPPER=<一段独立的随机串>
+# 可选：管理员邮箱，配置后才能用"删除用户"功能
+supabase secrets set MINICHAT_ADMIN_EMAILS="you@example.com"
 ```
+
+> **改了 Edge Function 一定要重新部署**（`supabase functions deploy clever-task --no-verify-jwt`），
+> 前端只负责调用，权限判断与删除动作都在服务端。
 
 | 环境变量 | 必填 | 说明 | Description |
 |----------|------|------|-------------|
-| `FLOXCHAT_BRIDGE_SECRET` | 是 | 桥接密钥，必须与 `index.html` 中的 `MINICHAT_BRIDGE_SECRET` 完全一致 | Bridge secret; must match `MINICHAT_BRIDGE_SECRET` in `index.html` |
+| `FLOXCHAT_BRIDGE_SECRET` | 是 | 桥接密钥，必须与前端 `js/app.js` 里的 `MINICHAT_BRIDGE_SECRET` 完全一致 | Bridge secret; must match `MINICHAT_BRIDGE_SECRET` in `js/app.js` in `index.html` |
 | `MINICHAT_BRIDGE_PEPPER` | 建议 | 独立随机串，用于派生自动创建的 MiniChat 账号口令；未设置时回退为 `FLOXCHAT_BRIDGE_SECRET` | Independent random string used to derive the auto-created MiniChat account password |
 | `FLOXCHAT_VERIFY_URL` | 否 | 验证码校验接口地址，默认使用 FloxChat 官方接口 | Endpoint used to verify the code; defaults to the official FloxChat endpoint |
+| `MINICHAT_ADMIN_EMAILS` | 否 | 管理员邮箱（逗号分隔）。配置后这些账号可在成员列表里删除其他用户；不配置则没人有该权限 | Comma-separated admin emails. When set, those accounts can delete other users from the member list; unset means nobody can |
 
 **部署顺序：先 Edge Function，后前端**，否则验证码登录会直接报错。  
 **Deploy order: Edge Function first, frontend second**, otherwise code login fails.
@@ -161,8 +182,12 @@ Find the following in your project settings:
 **方式一：直接部署（推荐）**  
 **Option 1: Direct deployment (recommended)**
 
-- Fork 本仓库，修改 `index.html` 中的 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY` 为你的值。  
-  Fork this repo, replace `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `index.html` with your own.
+- Fork 本仓库，修改 **`js/app.js`** 顶部的 `SUPABASE_URL`、`SUPABASE_ANON_KEY`、`MINICHAT_EDGE_URL`、
+  `MINICHAT_BRIDGE_SECRET`、`CAPTCHA_SITE_KEY` 为你的值。  
+  Fork this repo and replace `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `MINICHAT_EDGE_URL`,
+  `MINICHAT_BRIDGE_SECRET` and `CAPTCHA_SITE_KEY` at the top of **`js/app.js`**.
+  （`js/login.js` 是它的裁剪版，同样几项在文件顶部）  
+  (`js/login.js` is its trimmed sibling and carries the same constants)
 - 将整个项目部署到静态托管平台（Vercel/Netlify 等）。  
   Deploy the entire project to a static hosting platform (Vercel/Netlify, etc.).
 
@@ -183,8 +208,12 @@ Then configure the environment variables on your platform.
 **方式三：本地运行**  
 **Option 3: Run locally**
 
-直接打开 `index.html` 即可（但需要修改 Supabase 配置），或使用任何静态服务器（如 `npx serve .`）。  
-Simply open `index.html` (but you must modify Supabase config) or use any static server (e.g., `npx serve .`).
+用任意静态服务器起在**仓库根目录**（如 `npx serve .`），然后访问 `/` 或 `/login/`。  
+Serve the **repository root** with any static server (e.g. `npx serve .`), then open `/` or `/login/`.
+
+> ⚠️ 不要用 `file://` 直接打开：两个页面里的资源路径都是绝对路径（`/css/app.css` 等），
+> 而且登录页在 `login/` 子目录下，用相对路径会解析错。
+> Don't open via `file://` — asset paths are absolute and the login page lives in a subdirectory.
 
 ---
 
@@ -192,39 +221,63 @@ Simply open `index.html` (but you must modify Supabase config) or use any static
 
 ```
 minichat.astras/
-├── index.html          # 主应用（HTML + CSS + JS）| Main application
-├── agreements/         # 服务协议页面 | Service agreement page
-│   └── index.html
+│
+│   ── 页面（两页共用同一套 CSS 与大部分逻辑）──
+├── index.html          # 聊天页（/）| Chat page
+├── login/
+│   └── index.html      # 登录页（/login/）| Login page
+├── css/
+│   └── app.css         # 两页共用的样式 | Shared stylesheet
+├── js/
+│   ├── app.js          # 聊天页脚本 | Chat page script
+│   └── login.js        # 登录页脚本（由 app.js 裁剪生成，见 tools/）| Login page script (trimmed from app.js)
+│
+│   ── 其它页面与配置 ──
+├── agreements/
+│   └── index.html      # 服务协议页面 | Service agreement page
 ├── manifest.json       # PWA 配置 | PWA manifest
-├── sw.js               # Service Worker（离线缓存）| Service Worker
+├── sw.js               # Service Worker | Service Worker
 ├── CNAME               # DNS 配置 | DNS configuration
 ├── favicon.ico         # 站点图标 | Favicon
 ├── sitemap.xml         # 站点地图 | Sitemap
-├── Floxchat-Bridge/    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop (extension + patch scripts)
-│   ├── minichat-bridge.js      # TurboWarp 扩展 | TurboWarp extension
-│   ├── minichat-avatar-150.svg # 群聊列表头像（150px，圆形）| Group avatar (150px, round)
-│   ├── floxchat-patch.js       # FloxChat 工程补丁脚本 | FloxChat project patcher
-│   ├── floxchat-validate.js    # 补丁后校验 | Post-patch validator
-│   ├── build-floxchat.ps1      # 一键迁移：复制→打补丁→校验→打包 | One-command migration
-│   └── README.md               # 桥接技术细节与迁移清单 | Bridge internals & migration checklist
-├── edge-function/      # Supabase Edge Function | Supabase Edge Function
-│   └── index.ts        # clever-task：验证码登录 / 消息代理 | code login & message proxy
-├── supabase/           # 数据库安全配置 | Database security
+│
+│   ── 后端 ──
+├── edge-function/
+│   └── index.ts        # Supabase Edge Function：clever-task
+│                       #   验证码登录 / 消息代理 / 头像上传 / 用户删除
+├── supabase/
 │   └── security-hardening.sql  # RLS 与存储桶策略 | RLS & storage policies
-├── LICENSE
-├── README.md
-├── assets/             # 图标资源 | Icon assets
-│   ├── logo.svg        # 主 Logo（启动画面 / PWA 图标）
+│
+│   ── 数据 ──
+├── data/
+│   ├── vision.json     # 版本检测数据（需与 APP_VERSION 一致）| Version check data
+│   ├── emoji-index.json        # 表情分类清单（3.7 KB ｜ 29 个分类）
+│   ├── emoji/<英文名>.json      # 8 个 emoji 分类
+│   └── kaomoji/<英文名>.json    # 21 个颜文字大类
+│
+│   ── 资源与工具 ──
+├── assets/
+│   ├── logo.svg        # 主 Logo（带字，启动画面用）
+│   ├── minichat-mark.svg  # 无字标记（小尺寸场合用，如 FloxChat 面板）
 │   ├── favicon.svg     # 站点图标（SVG，无白边；favicon.ico 由它生成）
 │   ├── Inspired.svg    # 致谢标识：Inspired by SimpleChat
 │   ├── basied.svg      # 致谢标识：Basied on ChatMini+
 │   └── FloxChat LOGO.svg  # FloxChat 标识
-├── data/               # 数据文件 | Data files
-│   ├── vision.json     # 版本检测数据（需与 APP_VERSION 一致）| Version check data (must match APP_VERSION)
-│   ├── kaomoji.json    # 颜文字数据
-│   └── emojihub-all.json # Emoji 数据
-└── lib/                # 第三方库 | Third-party libraries
-    └── supabase.min.js # Supabase SDK
+├── lib/
+│   └── supabase.min.js # Supabase SDK
+├── tools/
+│   └── emoji-split/    # 表情数据拆分工具（规则 + 脚本 + 说明）
+│
+├── Floxchat-Bridge/    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop
+│   ├── minichat-bridge.js      # TurboWarp 扩展 | TurboWarp extension
+│   ├── minichat-avatar-150.svg # 群聊列表头像（150px，圆形）
+│   ├── floxchat-patch.js       # FloxChat 工程补丁脚本
+│   ├── floxchat-validate.js    # 补丁后校验
+│   ├── build-floxchat.ps1      # 一键迁移：复制→打补丁→校验→打包
+│   └── README.md               # 桥接技术细节与迁移清单
+│
+├── LICENSE
+└── README.md
 ```
 
 ---
@@ -240,6 +293,91 @@ minichat.astras/
 | `PAGE_SIZE` | 历史消息每页加载数量（默认 20） | Number of historical messages per page (default 20) |
 | `CAPTCHA_SITE_KEY` | Cloudflare Turnstile 的 Site Key（公开值；留空则不启用） | Cloudflare Turnstile site key (public; leave empty to disable) |
 | `DURATION` | 启动页最短展示时间（毫秒，当前 1800） | Splash minimum display time (ms, currently 1800) |
+| `APP_VERSION` | 应用版本号。**改版本号时共 7 处必须同步**，见下方「版本号维护」 | App version. **7 places must stay in sync** — see "Version Maintenance" |
+| `MINICHAT_ADMIN_EMAILS` | 管理员邮箱（逗号分隔），**只在 Edge Function 侧配置**。留空 = 无管理员 | Admin emails (comma-separated), **Edge Function side only**. Empty = no admins |
+
+---
+
+## 📐 架构说明 | Architecture
+
+### 两页结构 | Two Pages
+
+应用拆成两个页面，共用同一套 `css/app.css`：
+
+| 路径 | 文件 | 脚本 | 说明 |
+|------|------|------|------|
+| `/` | `index.html` | `js/app.js` | 聊天页 |
+| `/login/` | `login/index.html` | `js/login.js` | 登录页 |
+
+**为什么用目录形式而不是 `/login.html`**：GitHub Pages 不支持 URL 重写，
+但目录形式天然响应 `/login/`（`/login` 会自动 301 到 `/login/`）。
+
+**跳转规则**（都在 `js/app.js` 与 `js/login.js` 里）：
+
+```js
+location.replace('/')        // 登录成功 → 聊天页
+location.replace('/login/')  // 聊天页发现没有会话 → 登录页
+```
+
+**两个页面靠 `<body data-page="...">` 分流**，脚本里用 `IS_LOGIN_PAGE` 判断。
+
+> ⚠️ **子目录页面的资源路径必须用绝对路径**。登录页在 `login/` 下，
+> 如果写 `assets/logo.svg` 会被解析成 `/login/assets/logo.svg` → 404。
+> 曾经因为漏改 `lib/supabase.min.js` 的相对路径，导致登录页**整页脚本挂掉、永远卡在启动画面**。
+
+### 登录页脚本的来历 | Where `js/login.js` Comes From
+
+`js/login.js` 是从 `js/app.js` **裁剪**出来的：保留登录相关代码，丢弃聊天部分，
+并把 i18n 字典从 858 个键裁到 136 个（65 KB → 9.5 KB），总体约 268 KB → 60 KB。
+
+> ⚠️ 它是**快照**，不是构建产物 —— 如果改了 `js/app.js` 里的登录逻辑（认证、验证码、
+> FloxChat 绑定等），**必须同步改 `js/login.js`**，否则登录页会悄悄过期。
+>
+> 裁剪时最容易漏的三类东西（都真实发生过）：
+> 1. **变量声明**（如 `authToggle` / `togglePwd`）—— 漏了会在 `if` 里抛 `ReferenceError`，整页脚本挂掉
+> 2. **事件绑定**（住在聊天区段的 `setupGlobalEventListeners` 里，但绑的是登录页的元素）
+> 3. **资源路径**（见上）
+
+### 版本号维护 | Version Maintenance
+
+改版本号时，以下 **7 处**必须同步，否则会出现"当前版本 X / 最新版本 Y"的提示：
+
+```
+1. js/app.js            var APP_VERSION = 'x.y.z';
+2. js/login.js          var APP_VERSION = 'x.y.z';
+3. data/vision.json     { "version": "x.y.z" }
+4. index.html           <meta name="version" content="x.y.z">
+5. login/index.html     <meta name="version" content="x.y.z">
+6. index.html / login/index.html 里的资源引用 ?v=x.y.z
+7. sw.js                const CACHE_NAME = 'minichat-vNN';
+```
+
+其中 1–3 由 `checkForUpdate()` 比对，不一致会弹更新提示；6 是为了顶掉浏览器缓存
+（GitHub Pages 的 `max-age=3600` 很顽固）；7 决定 Service Worker 何时清理旧缓存。
+
+### 表情数据懒加载 | Lazy Emoji Data
+
+聊天页曾经在脚本加载时就拉 `emojihub-all.json`（249 KB）+ `kaomoji.json`（1388 KB），
+合计约 **1.6 MB**，与用户是否使用表情面板无关。
+
+现在：**页面加载 0 字节** → 首次打开面板只拉 `emoji-index.json`（3.7 KB）
+→ 点某个分类才拉那一个文件（2.1 ~ 183.6 KB）。
+
+拆分与归类规则见 [`tools/emoji-split/`](tools/emoji-split/)。
+
+### 管理员删除用户 | Admin User Deletion
+
+删除用户需要 **service_role**，前端拿不到，因此全部放在 Edge Function 里：
+
+| 动作 | 说明 |
+|------|------|
+| `whoami` | 返回身份与 `is_admin`，前端据此决定要不要显示删除按钮 |
+| `delete_self` | 删除调用者自己的账号（"设置 → 注销账户"走这条） |
+| `admin_delete_user` | 删除指定用户，要求调用者邮箱在 `MINICHAT_ADMIN_EMAILS` 里 |
+
+删除顺序（`profiles` 等有外键指向 `auth.users`，顺序不能反）：
+`messages`（默认匿名化保留聊天记录）→ `conversation_participants`
+→ `profiles` → `storage: avatars/<uid>*` → `auth.users`。
 
 ---
 
@@ -270,8 +408,20 @@ minichat.astras/
   If the user has granted notification permission, a desktop notification pops up.
 
 ### PWA 离线支持 | PWA Offline Support
-- 通过 Service Worker 缓存核心资源，支持离线访问。  
-  Core resources are cached via Service Worker for offline access.
+
+Service Worker 按资源类型分两条路：
+
+| 资源 | 策略 | 原因 |
+|------|------|------|
+| 同源页面与脚本样式（导航请求、`.js` / `.css` / `.html`） | **网络优先**，失败回退缓存 | 保证每次都能拿到最新代码 |
+| 其它同源资源（图片、表情分片…） | 缓存优先 | 保持离线可用 |
+| 第三方 SDK（jsDelivr） | 缓存优先 | 首次联网后可离线 |
+
+> ⚠️ 这里曾经是**一律缓存优先**，后果是 `sw.js` 换了新版本，用户浏览器里的
+> `js/app.js` / `css/app.css` 仍然是旧的 —— 典型症状是"代码明明改了、用户却看不到变化"。
+> 另外取应用资源时用的是 `fetch(req, { cache: 'no-store' })`，因为 GitHub Pages 对
+> `.css` / `.js` 发的是 `cache-control: max-age=3600`，不绕过的话连网络优先都会命中 HTTP 缓存。
+
 - 网络恢复后自动同步消息。  
   Messages sync automatically when network is restored.
 
