@@ -12,7 +12,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.8.6';  // ⚠️ 本文件由 js/app.js 裁剪生成，改版本号时两处都要同步
+var APP_VERSION = '4.8.7';  // ⚠️ 本文件由 js/app.js 裁剪生成，改版本号时两处都要同步
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -1385,6 +1385,9 @@ if (_togglePwd) _togglePwd.addEventListener('click', function() {
     if (!authPassword) return;
     var t2 = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
     authPassword.setAttribute('type', t2);
+    this.classList.toggle("is-visible", t2 === "text");
+    this.setAttribute("aria-pressed", t2 === "text" ? "true" : "false");
+    this.setAttribute("aria-label", t2 === "text" ? "隐藏密码" : "显示密码");
 });
 var _switchToSignup = document.getElementById('switchToSignup');
 if (_switchToSignup) _switchToSignup.addEventListener('click', function(e) {
