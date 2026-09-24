@@ -14,15 +14,15 @@
     <meta name="twitter:title" content="MiniChat - 开源 Supabase 聊天 Demo" />
     <meta name="twitter:description" content="一个开源的 Supabase 聊天应用示例，提供完整代码，助你快速学习和集成实时聊天功能。" />
     <link rel="canonical" href="https://minichat.astras.cc/" />
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <!-- favicon：原来的 favicon.ico 里 logo 四周有一圈白边，已重新生成
          （4 个尺寸 16/32/128/256，PNG 内嵌、透明通道）。
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=2" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=2">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=2">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
+    <link rel="apple-touch-icon" href="/favicon.ico?v=2">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,8 +30,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.8.0" />
-    <script src="lib/supabase.min.js"></script>
+    <meta name="version" content="4.8.1" />
+    <script src="/lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
           "@context": "https://schema.org",
@@ -49,7 +49,24 @@
     <link rel="stylesheet" href="/css/app.css">
 <base target="_blank">
 </head>
-<body data-page="login">
+<body data-page="login">    <script>
+    // 安全网：登录页的脚本一旦加载失败或运行出错，启动画面会一直卡着、
+    // 用户看到的就是一个永远转不完的加载动画。这里兜底把界面露出来。
+    (function(){
+      function reveal(why) {
+        try {
+          var s = document.getElementById("splash");
+          if (s) { s.classList.add("hidden"); setTimeout(function(){ s.remove(); }, 620); }
+          var l = document.getElementById("loginOverlay");
+          if (l) l.classList.remove("hidden");
+        } catch(e) {}
+        if (why) console.error("[login] " + why);
+      }
+      window.addEventListener("error", function(e){ reveal("脚本出错: " + (e.message||"") + " @ " + (e.filename||"") + ":" + (e.lineno||"")); });
+      // 4 秒后启动画面还在，说明脚本八成没跑起来
+      setTimeout(function(){ if (document.getElementById("splash")) reveal("启动画面 4 秒未消失（脚本可能未加载）"); }, 4000);
+    })();
+    </script>
 <div class="app" id="app">
     <script>
     (function(){ try {
@@ -63,18 +80,18 @@
     } catch (e) {} })();
     </script>
     <div id="splash" role="status" aria-label="正在加载">
-        <img class="sp-logo" src="assets/logo.svg" alt="MiniChat"/>
+        <img class="sp-logo" src="/assets/logo.svg" alt="MiniChat"/>
         <div class="sp-bar"><i></i></div>
     </div>
     <div class="login-overlay hidden" id="loginOverlay">
         <div class="login-card">
             <div class="login-form">
-            <div class="logo-area"><img src="assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
+            <div class="logo-area"><img src="/assets/logo.svg" alt="Logo"/><h1>MiniChat</h1></div>
             <div class="auth-title" id="authTitle" data-i18n="welcome">欢迎回来</div>
             <div class="auth-sub" id="authSub" data-i18n="loginOrSignup">登录或注册账户</div>
             <div class="alt-login" id="altLogin">
                 <button type="button" class="alt-login-btn" id="switchFloxChat" title="使用 FloxChat 登录">
-                    <span class="alt-login-logo"><img src="assets/FloxChat LOGO.svg" alt=""/></span>
+                    <span class="alt-login-logo"><img src="/assets/FloxChat LOGO.svg" alt=""/></span>
                     使用 FloxChat 登录
                 </button>
                 <div class="or-divider"><span>或</span></div>
@@ -100,9 +117,9 @@
                 </button>
                 <div class="bridge-header">
                     <div class="bridge-logos">
-                        <span class="bridge-tile"><img src="assets/logo.svg" alt="MiniChat"/></span>
+                        <span class="bridge-tile"><img src="/assets/logo.svg" alt="MiniChat"/></span>
                         <span class="bridge-cross" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
-                        <span class="bridge-tile"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
+                        <span class="bridge-tile"><img src="/assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
                     </div>
                     <div class="bridge-title">MiniChat <em>×</em> FloxChat</div>
                     <div class="bridge-sub">用 FloxChat 验证码登录，无需在 MiniChat 输入密码</div>
@@ -166,7 +183,7 @@
                 </div>
                 <div class="terms-item">
                     <h4 data-i18n="fullAgreementLinkTitle">完整服务协议</h4>
-                    <p><a href="agreements/" target="_blank" rel="noopener" class="terms-link" data-i18n="viewFullAgreement">查看完整服务协议 →</a></p>
+                    <p><a href="/agreements/" target="_blank" rel="noopener" class="terms-link" data-i18n="viewFullAgreement">查看完整服务协议 →</a></p>
                 </div>
             </div>
             <div class="terms-footer">
