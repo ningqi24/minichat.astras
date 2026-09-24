@@ -1,10 +1,19 @@
 // ==========================================================================
-// MiniChat 登录页专用脚本（由 js/app.js 抽取而来）
+// MiniChat 登录页专用脚本
 //
-// 说明：登录相关的代码【逐字保留】，只做了两件事：
-//   1. 丢弃聊天页的顶层代码（约 4800 行）
-//   2. i18n 字典只保留登录页用到的键（原 65KB -> 几 KB）
-// 这样登录页只下载登录所需的代码，不再附带整个聊天模块。
+// ⚠️ 本文件是【生成产物】，请勿手工编辑 —— 改这里会被下一次生成覆盖。
+//     要改内容改 js/app.js 或 tools/login-page-bindings.js，然后执行：
+//         node tools/build-login.mjs
+//     核对是否与 app.js 同步：
+//         node tools/check-login.mjs
+//
+// 生成来源：
+//   · 代码主体  —— js/app.js 开头到 i18n 字典之前的全部内容（逐字）
+//   · i18n 字典 —— 从 js/app.js 裁剪，只保留登录页用到的键
+//   · 辅助函数  —— js/app.js 的 getCurrentLang / t / loadLanguage（逐字）
+//   · 页面绑定  —— tools/login-page-bindings.js
+//
+// APP_VERSION 与 js/app.js 保持一致（当前 4.11.0）
 // ==========================================================================
 
 // ===================== 版本号 =====================
@@ -12,7 +21,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.10.2';  // ⚠️ 本文件由 js/app.js 裁剪生成，改版本号时两处都要同步
+var APP_VERSION = '4.11.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -50,7 +59,7 @@ var qjCancel = $safe('qjCancel'), qjJump = $safe('qjJump'), qjStatus = $safe('qj
 var contextMenu = $safe('contextMenu'), ctxMention = $safe('ctxMention');
 var searchBar = $safe('searchBar'), searchInput = $safe('searchInput'), searchStatus = $safe('searchStatus');
 var searchBtn = $safe('searchBtn'), searchPrev = $safe('searchPrev'), searchNext = $safe('searchNext'), searchClose = $safe('searchClose');
-var chatTitle = $safe('chatTitle'), allMembersNum = $safe('allMembersNum');
+var chatTitle = $safe('chatTitle');
 var customModal = $safe('customModal'), customModalOverlay = $safe('customModalOverlay');
 var customModalIcon = $safe('customModalIcon'), customModalSpinner = $safe('customModalSpinner');
 var customModalTitle = $safe('customModalTitle'), customModalMessage = $safe('customModalMessage');
@@ -560,18 +569,7 @@ var IS_LOGIN_PAGE = (document.body && document.body.getAttribute('data-page')) =
 // 登录成功后的去向：登录页 -> 跳聊天页；聊天页 -> 原地进入
 function afterLoginSuccess() {
     // 登录页 -> 聊天页（根路径）；聊天页 -> 原地进入
-    if (IS_LOGIN_PAGE) {
-        // ⚠️ 跳转前必须把登录信息写进 localStorage。
-        //    聊天页启动时靠它判断"是否已登录"，而这条写入原本在 enterChat() 里 ——
-        //    登录页走的是跳转分支、根本执行不到 enterChat()，
-        //    于是聊天页以为没登录又把用户踢回 /login/，来回死循环。
-        try {
-            if (window.currentEmail) {
-                localStorage.setItem('minichat_user', JSON.stringify({ email: window.currentEmail, id: window.currentUserId || '' }));
-            }
-        } catch (e) {}
-        location.replace('/');
-    }
+    if (IS_LOGIN_PAGE) { location.replace('/'); }
     else { enterChat(); }
 }
 
@@ -893,23 +891,31 @@ async function ensureProfile(uid, email) {
         if (IS_LOGIN_PAGE) { showLogin(); return; }
 
         // ---- 聊天页：必须有会话，否则去登录页 ----
+        // ⚠️ 不要只看 localStorage 里的 minichat_user 就决定去留。
+        //    真正的凭据是 Supabase 自己持久化的会话，前者只是个缓存副本，
+        //    历史上就漏写过（登录页跳转分支没执行到 enterChat），
+        //    只认副本会导致"登录成功后又被踢回登录页"的死循环。
+        //    所以：本地记录有就先用，没有也继续往下查会话；只有确实没有会话才跳登录页。
         var user = null;
         try {
             var raw = localStorage.getItem('minichat_user');
             if (raw) user = JSON.parse(raw);
         } catch(e) {}
 
-        // 本地没有登录记录 / SDK 没起来 —— 直接跳登录页（不再原地显示登录遮罩）
-        if (!user || !user.email || !window.supabase || !window.supabase.auth) {
-            console.log('[MiniChat/boot] 聊天页无本地登录记录 → 跳转 /login/');
+        if (!window.supabase || !window.supabase.auth) {
+            console.log('[MiniChat/boot] Supabase SDK 未就绪 → 跳转 /login/');
             location.replace('/login/');
             return;
         }
 
         // 登录过：先【不露登录界面】，等会话确认完再决定，
         // 否则会「登录界面闪一下 → 又切到聊天」，观感很差（原来的闪屏就是这么来的）
-        window.currentEmail = user.email;
-        window.currentUserId = user.id || '';
+        if (user && user.email) {
+            window.currentEmail = user.email;
+            window.currentUserId = user.id || '';
+        } else {
+            console.log('[MiniChat/boot] 本地无登录记录，改用 Supabase 会话判断');
+        }
         var settled = false;
         // 兜底：3 秒还没结果就露登录界面 —— 无论如何都不能留下空白页
         var guard = setTimeout(showLogin, 3000);
@@ -927,6 +933,17 @@ async function ensureProfile(uid, email) {
                 settled = true;
                 clearTimeout(guard);
                 revealed = true;
+                // 会话在，但本地记录可能缺失（例如登录时没写成功）——
+                // 这里从会话里补回来并重新持久化，避免下次刷新又走一遍弯路
+                if (!window.currentEmail && session.user) {
+                    window.currentEmail = session.user.email || '';
+                    window.currentUserId = session.user.id || '';
+                }
+                try {
+                    if (window.currentEmail) {
+                        localStorage.setItem('minichat_user', JSON.stringify({ email: window.currentEmail, id: window.currentUserId || '' }));
+                    }
+                } catch (e) {}
                 hasMoreMessages = true;
                 oldestTimestamp = null;
                 isLoadingMore = false;
@@ -1063,12 +1080,11 @@ setInterval(checkAutoTheme, 60000);
 
 // ===================== 国际化（i18n） =====================
 
-// 只保留登录页用到的键（原字典约 65KB，这里约几 KB）
+// 只保留登录页用到的键（原字典约 65KB）
 var i18n = {
   zh: {
     login: "登录",
     register: "注册",
-    forgotPassword: "忘记密码？",
     welcome: "欢迎回来",
     loginOrSignup: "登录或注册账户",
     createAccount: "创建账户",
@@ -1080,18 +1096,8 @@ var i18n = {
     passwordPlaceholder: "密码",
     emailLabel: "电子邮箱",
     passwordLabel: "密码",
-    chatPlaceholder: "输入消息…（Ctrl+Enter 换行，Enter 发送）",
-    globalChat: "全局聊天",
-    allMembers: "# 所有成员",
-    online: "在线",
     agreeTerms: "我已阅读并同意上述服务协议",
     confirm: "确定",
-    settings: "设置",
-    profile: "个人资料",
-    general: "通用设置",
-    account: "账户",
-    about: "关于",
-    terms: "服务协议",
     noticeBeforeUse: "使用前须知",
     welcomeMiniChat: "欢迎使用 MiniChat",
     noticeDesc1: "在您注册账户前，请仔细阅读 MiniChat 的完整服务协议。注册即表示您已知悉并同意以下内容：",
@@ -1099,106 +1105,20 @@ var i18n = {
     quickAgreementNotice: "您应年满 13 周岁；不发送违法、违规或恶意内容；妥善保管账户密码；尊重其他用户合法权益；遵守相关法律法规。",
     fullAgreementLinkTitle: "完整服务协议",
     viewFullAgreement: "查看完整服务协议 →",
-    quickAgreement: "简易服务协议",
-    quickAgreementDesc: "查看服务协议的简要版本",
-    fullAgreement: "具体服务协议",
-    fullAgreementDesc: "查看完整的服务协议详情",
-    view: "查看",
-    avatar: "头像",
-    uploadAvatar: "点击上传新头像",
-    displayName: "显示昵称",
-    displayNameDesc: "其他成员将看到这个名字",
-    save: "保存",
-    theme: "主题",
-    themeMode: "主题模式",
-    themeDesc: "选择界面外观模式",
-    darkMode: "深色模式",
-    lightMode: "浅色模式",
-    systemMode: "跟随系统",
-    autoMode: "自动",
-    language: "语言",
-    interfaceLanguage: "界面语言",
-    languageDesc: "选择应用界面语言",
-    chinese: "中文",
-    accountInfo: "账户信息",
-    accountEmail: "邮箱",
-    emailDesc: "您的登录邮箱",
-    resetPassword: "重置密码",
-    resetPasswordDesc: "重置您的账户密码",
-    accountActions: "账户操作",
-    logout: "退出登录",
-    logoutDesc: "退出后需重新登录",
-    logoutBtn: "退出",
-    deleteAccount: "注销账户",
-    deleteAccountDesc: "永久删除您的账户和所有数据",
-    versionCheck: "版本检测",
-    checkUpdate: "手动检查更新",
-    checkUpdateDesc: "检查是否有新版本可用",
-    checkUpdateBtn: "检测更新",
-    version: "版本",
-    developer: "开发者",
-    license: "许可证",
-    githubRepo: "GitHub 仓库",
-    feedback: "反馈问题",
-    bilibili: "ningqi24的Bilibili账户",
-    inputSettings: "输入框设置",
-    inputAutoHide: "输入框显示",
-    inputAutoHideDesc: "控制输入框的显示方式",
-    inputAuto: "自动",
-    inputAlwaysShow: "始终显示",
-    inputAlwaysHide: "始终隐藏",
-    notifications: "通知",
-    desktopNotifications: "桌面通知",
-    desktopNotificationsDesc: "收到新消息时显示桌面通知",
-    soundEnabled: "启用声音",
-    soundEnabledDesc: "收到新消息时播放提示音",
-    mentionNotifications: "提及通知",
-    mentionNotificationsDesc: "被@时发送通知",
     loading: "加载中…",
-    searchPlaceholder: "搜索消息…",
-    quoteMessage: "引用消息",
-    quoteAuthor: "作者",
-    quoteTime: "时间",
-    quoteContent: "引用内容",
     cancel: "取消",
     ok: "确定",
     success: "成功",
     error: "错误",
     info: "提示",
-    jumpToOriginal: "跳转到原文",
-    mention: "@提及",
-    viewProfile: "查看资料",
-    mobileChat: "聊天",
-    mobileMembers: "成员",
-    mobileSettings: "设置",
     newVersionAvailable: "发现新版本",
     currentVersion: "当前版本",
     newestVersion: "最新版本",
     updateAvailable: "有更新可用",
     remindLater: "稍后提醒",
     refreshNow: "立即刷新",
-    selectingFile: "正在选择文件...",
-    selectFileHint: "请从系统对话框中选择图片或音频",
     today: "今天",
     yesterday: "昨天",
-    upload: "上传",
-    nickname: "昵称",
-    credits: "致谢",
-    creditThis: "本项目",
-    creditInspired: "设计灵感来源",
-    creditBased: "本项目基于其构建",
-    partners: "合作",
-    partnerFloxDesc: "MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。",
-    partnerAuthor: "作者 · 摄表",
-    svcSupabase: "数据库 · 账号 · 文件存储 · 边缘函数",
-    svcTurnstile: "人机验证",
-    svcJsdelivr: "CDN：加载 Supabase SDK",
-    svcEsmsh: "CDN：Edge Function 依赖",
-    svcUiavatar: "默认头像生成",
-    svcGhpages: "静态站点托管",
-    svcEmojihub: "Emoji 数据",
-    svcTurbowarp: "FloxChat 运行环境",
-    svcLucide: "图标",
     alreadyLatest: "当前已是最新版本",
     restoredMessages: "已恢复 {count} 条消息。",
     sensitiveWordTip: "消息包含敏感词（\"{word}\"），请修改后重试"
@@ -1206,7 +1126,6 @@ var i18n = {
   en: {
     login: "Login",
     register: "Register",
-    forgotPassword: "Forgot Password?",
     welcome: "Welcome back",
     loginOrSignup: "登录或注册账户",
     createAccount: "Create Account",
@@ -1218,18 +1137,8 @@ var i18n = {
     passwordPlaceholder: "Password",
     emailLabel: "Email",
     passwordLabel: "Password",
-    chatPlaceholder: "Enter message… (Ctrl+Enter newline, Enter send)",
-    globalChat: "Global Chat",
-    allMembers: "# All Members",
-    online: "Online",
     agreeTerms: "I have read and agree to the above terms of service",
     confirm: "Confirm",
-    settings: "Settings",
-    profile: "Profile",
-    general: "General",
-    account: "Account",
-    about: "About",
-    terms: "Terms of Service",
     noticeBeforeUse: "Notice Before Use",
     welcomeMiniChat: "Welcome to MiniChat",
     noticeDesc1: "Before creating an account, please read the full MiniChat Service Agreement. By registering, you acknowledge and agree to the following:",
@@ -1237,112 +1146,25 @@ var i18n = {
     quickAgreementNotice: "You must be at least 13 years old; do not send illegal, non-compliant, or malicious content; keep your account credentials secure; respect the legitimate rights of other users; and comply with applicable laws and regulations.",
     fullAgreementLinkTitle: "Full Service Agreement",
     viewFullAgreement: "View Full Service Agreement →",
-    quickAgreement: "Quick Service Agreement",
-    quickAgreementDesc: "View a simplified version of the Service Agreement",
-    fullAgreement: "Full Service Agreement",
-    fullAgreementDesc: "View the complete Service Agreement details",
-    view: "View",
-    avatar: "Avatar",
-    uploadAvatar: "Click to upload new avatar",
-    displayName: "Display Name",
-    displayNameDesc: "Other members will see this name",
-    save: "Save",
-    theme: "Theme",
-    themeMode: "Theme Mode",
-    themeDesc: "Choose interface appearance mode",
-    darkMode: "Dark Mode",
-    lightMode: "Light Mode",
-    systemMode: "Follow System",
-    autoMode: "Auto",
-    language: "Language",
-    interfaceLanguage: "Interface Language",
-    languageDesc: "Choose app interface language",
-    chinese: "中文",
-    accountInfo: "Account Info",
-    accountEmail: "Email",
-    emailDesc: "Your login email",
-    resetPassword: "Reset Password",
-    resetPasswordDesc: "Reset your account password",
-    accountActions: "Account Actions",
-    logout: "Logout",
-    logoutDesc: "You will need to login again",
-    logoutBtn: "Logout",
-    deleteAccount: "Delete Account",
-    deleteAccountDesc: "Permanently delete your account and all data",
-    versionCheck: "Version Check",
-    checkUpdate: "Check for Updates",
-    checkUpdateDesc: "Check if a new version is available",
-    checkUpdateBtn: "Check Updates",
-    version: "Version",
-    developer: "Developer",
-    license: "License",
-    githubRepo: "GitHub Repository",
-    feedback: "Feedback",
-    bilibili: "ningqi24's Bilibili",
-    inputSettings: "Input Settings",
-    inputAutoHide: "Input Display",
-    inputAutoHideDesc: "Control input area display",
-    inputAuto: "Auto",
-    inputAlwaysShow: "Always Show",
-    inputAlwaysHide: "Always Hide",
-    notifications: "Notifications",
-    desktopNotifications: "Desktop Notifications",
-    desktopNotificationsDesc: "Show desktop notifications for new messages",
-    soundEnabled: "Sound Enabled",
-    soundEnabledDesc: "Play sound for new messages",
-    mentionNotifications: "Mention Notifications",
-    mentionNotificationsDesc: "Notify when mentioned",
     loading: "Loading…",
-    searchPlaceholder: "Search messages…",
-    quoteMessage: "Quote Message",
-    quoteAuthor: "Author",
-    quoteTime: "Time",
-    quoteContent: "Quote content",
     cancel: "Cancel",
     ok: "OK",
     success: "Success",
     error: "Error",
     info: "Info",
-    jumpToOriginal: "Jump to original",
-    mention: "@Mention",
-    viewProfile: "View Profile",
-    mobileChat: "Chat",
-    mobileMembers: "Members",
-    mobileSettings: "Settings",
     newVersionAvailable: "New version available",
     currentVersion: "Current Version",
     newestVersion: "Latest Version",
     updateAvailable: "Update available",
     remindLater: "Remind me later",
     refreshNow: "Refresh now",
-    selectingFile: "Selecting file...",
-    selectFileHint: "Please select images or audio from the system dialog",
     today: "Today",
     yesterday: "Yesterday",
-    upload: "Upload",
-    nickname: "Nickname",
-    credits: "Credits",
-    creditThis: "This project",
-    creditInspired: "Design inspiration",
-    creditBased: "Built upon it",
-    partners: "Partners",
-    partnerFloxDesc: "The FloxChat verification-code login is provided by FloxChat; FloxChat also bridges the MiniChat group chat into its own client.",
-    partnerAuthor: "Author · Shebiao",
-    svcSupabase: "Database · Auth · Storage · Edge Functions",
-    svcTurnstile: "Human verification",
-    svcJsdelivr: "CDN: loads the Supabase SDK",
-    svcEsmsh: "CDN: Edge Function dependencies",
-    svcUiavatar: "Default avatar generation",
-    svcGhpages: "Static site hosting",
-    svcEmojihub: "Emoji data",
-    svcTurbowarp: "FloxChat runtime",
-    svcLucide: "Icons",
     alreadyLatest: "Already the latest version",
     restoredMessages: "Restored {count} messages.",
     sensitiveWordTip: "Message contains sensitive word (\"{word}\"), please modify and retry"
   }
 };
-
 function getCurrentLang() {
     var saved = localStorage.getItem('minichat_lang') || 'system';
     if (saved === 'system') {
@@ -1357,47 +1179,116 @@ function t(key) {
 }
 function loadLanguage() {
     var lang = getCurrentLang();
-    document.querySelectorAll("[data-i18n]").forEach(function(el) {
-        var k = el.getAttribute("data-i18n");
-        if (k && i18n[lang] && i18n[lang][k]) el.textContent = i18n[lang][k];
+    localStorage.setItem('minichat_lang', lang === 'system' ? 'system' : lang);
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+        var key = el.getAttribute('data-i18n');
+        if (key && i18n[lang] && i18n[lang][key]) {
+            el.textContent = i18n[lang][key];
+        }
     });
-    document.querySelectorAll("[data-i18n-html]").forEach(function(el) {
-        var k = el.getAttribute("data-i18n-html");
-        if (k && i18n[lang] && i18n[lang][k]) el.innerHTML = i18n[lang][k];
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+        var key = el.getAttribute('data-i18n-html');
+        if (key && i18n[lang] && i18n[lang][key]) {
+            el.innerHTML = i18n[lang][key];
+        }
     });
-    document.querySelectorAll("[data-i18n-placeholder]").forEach(function(el) {
-        var k = el.getAttribute("data-i18n-placeholder");
-        if (k && i18n[lang] && i18n[lang][k]) el.setAttribute("placeholder", i18n[lang][k]);
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+        var key = el.getAttribute('data-i18n-placeholder');
+        if (key && i18n[lang] && i18n[lang][key]) {
+            el.placeholder = i18n[lang][key];
+        }
     });
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+        var key = el.getAttribute('data-i18n-title');
+        if (key && i18n[lang] && i18n[lang][key]) {
+            el.title = i18n[lang][key];
+        }
+    });
+    document.querySelectorAll('.time-label[data-time]').forEach(function(el) {
+        var t = el.querySelector('span');
+        if (t) t.textContent = formatTimeLine(el.dataset.time);
+    });
+    document.querySelectorAll('.time-divider[data-time]').forEach(function(el) {
+        var t = el.querySelector('span');
+        if (t) t.textContent = formatTimeShort(el.dataset.time);
+    });
+    document.querySelectorAll('.message[data-created-at] .time').forEach(function(el) {
+        var msgEl = el.closest('.message');
+        if (msgEl && msgEl.dataset.createdAt) el.textContent = formatTimeShort(msgEl.dataset.createdAt);
+    });
+    var langDropdownBtn = document.getElementById('languageDropdownBtn');
+    var savedLang = localStorage.getItem('minichat_lang') || 'system';
+    if (langDropdownBtn) {
+        var span = langDropdownBtn.querySelector('.lang-name');
+        if (span) {
+            var displayLang = savedLang === 'system' ? (navigator.language || navigator.userLanguage || 'zh').startsWith('zh') ? 'zh' : 'en' : savedLang;
+            span.textContent = displayLang === 'zh' ? i18n.zh.chinese : i18n.en.english;
+        }
+    }
 }
 loadLanguage();
 
-// ---- 登录页专属绑定（原来这些在聊天页的 setupGlobalEventListeners 里）----
-// 注意：这几个元素变量原本声明在 app.js 的聊天区段（5576 行附近），
-// 抽取登录代码时没有带过来，所以这里必须用 $safe() 自己取。
-// 直接写裸变量名会在 if 判断时抛 ReferenceError（未声明变量），
-// 那样整页脚本会挂掉 —— 登录功能直接不可用。
+// ==========================================================================
+// 登录页专属绑定
+//
+// 这些绑定原本住在 js/app.js 的 setupGlobalEventListeners()（聊天区段）里，
+// 但绑的是登录页上的元素。裁剪出 js/login.js 时会丢掉，所以在这里显式维护，
+// 由 tools/build-login.mjs 追加到生成结果末尾。
+//
+// ⚠️ 手工维护清单 —— 新增登录页元素时，别忘了在这里补绑定。
+//    跑 `node tools/check-login.mjs` 会核对"登录页上每个可交互元素是否都有监听器"。
+// ==========================================================================
+
+// ---- 主按钮 ----
 if (btnLogin) btnLogin.addEventListener('click', handleAuth);
-var _authToggle = document.querySelector('.auth-toggle');
-if (_authToggle) _authToggle.addEventListener('click', handleAuthToggleClick);
-var _togglePwd = document.getElementById('togglePwd');
-if (_togglePwd) _togglePwd.addEventListener('click', function() {
-    if (!authPassword) return;
-    var t2 = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-    authPassword.setAttribute('type', t2);
-    this.classList.toggle("is-visible", t2 === "text");
-    this.setAttribute("aria-pressed", t2 === "text" ? "true" : "false");
-    this.setAttribute("aria-label", t2 === "text" ? "隐藏密码" : "显示密码");
-});
+
+// ---- 「注册 / 登录」切换 ----
 var _switchToSignup = document.getElementById('switchToSignup');
 if (_switchToSignup) _switchToSignup.addEventListener('click', function(e) {
     e.preventDefault();
     switchMode(isLoginMode ? 'signup' : 'login');
 });
-// 下面两个是「使用 FloxChat 登录」入口与「返回邮箱登录」，
-// 原本绑定在 app.js 的 setupGlobalEventListeners 里（5591-5594 行，聊天区段），
-// 抽取登录代码时没带过来 —— 结果就是点「使用 FloxChat 登录」完全没反应。
+
+// ---- 密码显示 / 隐藏（含图标切换）----
+// 注意：app.js 里这段用的是 this.innerHTML 换 SVG；这里改用 CSS 类切换，
+//       因为登录页的按钮里本来就放了 .icon-eye / .icon-eye-off 两个 SVG。
+var _togglePwd = document.getElementById('togglePwd');
+if (_togglePwd) _togglePwd.addEventListener('click', function() {
+    if (!authPassword) return;
+    var t2 = authPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+    authPassword.setAttribute('type', t2);
+    this.classList.toggle('is-visible', t2 === 'text');
+    this.setAttribute('aria-pressed', t2 === 'text' ? 'true' : 'false');
+    this.setAttribute('aria-label', t2 === 'text' ? '隐藏密码' : '显示密码');
+});
+
+// ---- FloxChat 面板：入口 / 返回 / 发送验证码 / 验证登录 ----
+// ⚠️ 这四个都在 app.js 的 setupGlobalEventListeners() 里（约 5678-5685 行）。
+//    漏掉前面两个的症状是"点入口没反应"；漏掉后面两个的症状更隐蔽 ——
+//    面板能打开、能输入邮箱，但「发送验证码」和「验证并登录」点了毫无反应。
+//    这四项是靠 tools/check-login.mjs 的监听器覆盖检查发现的。
 var _switchFlox = document.getElementById('switchFloxChat');
 if (_switchFlox) _switchFlox.addEventListener('click', switchToFloxLogin);
 var _floxBack = document.getElementById('floxBack');
 if (_floxBack) _floxBack.addEventListener('click', switchBackFromFlox);
+var _btnFloxSend = document.getElementById('btnFloxSendCode');
+if (_btnFloxSend) _btnFloxSend.addEventListener('click', handleFloxSendCode);
+var _btnFloxVerify = document.getElementById('btnFloxVerify');
+if (_btnFloxVerify) _btnFloxVerify.addEventListener('click', handleFloxVerify);
+
+// ---- 通用弹窗（showAlert / showConfirm 用，登录页也会用到）----
+// app.js 里这段在 bindCustomModal()（约 5731 行），同样不在裁剪范围内。
+// 注意：确认按钮【不】在这里绑 —— showConfirm/showCustomModal 会给它赋 onclick，
+//      再挂一个 addEventListener 会导致回调执行两次。
+var _customModalCancel = document.getElementById('customModalCancel');
+if (_customModalCancel) _customModalCancel.addEventListener('click', closeCustomModal);
+var _customModalOverlay = document.getElementById('customModalOverlay');
+if (_customModalOverlay) _customModalOverlay.addEventListener('click', closeCustomModal);
+
+// ---- 主题 / 语言切换 ----
+var _themeOptions = document.querySelectorAll('.theme-option');
+if (_themeOptions && _themeOptions.length) {
+    _themeOptions.forEach(function(btn) {
+        btn.addEventListener('click', function() { setTheme(this.getAttribute('data-theme')); });
+    });
+}

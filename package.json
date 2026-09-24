@@ -1,0 +1,11 @@
+{
+  "name": "minichat.astras",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MiniChat —— 轻量级实时聊天应用（静态 PWA + Supabase）",
+  "scripts": {
+    "build:login": "node tools/build-login.mjs",
+    "check": "node tools/check-login.mjs",
+    "build:emoji": "node tools/emoji-split/split.mjs"
+  }
+}

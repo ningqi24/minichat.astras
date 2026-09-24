@@ -266,8 +266,11 @@ minichat.astras/
 ├── lib/
 │   └── supabase.min.js # Supabase SDK
 ├── tools/
-│   └── emoji-split/    # 表情数据拆分工具（规则 + 脚本 + 说明）
-│
+│   ├── build-login.mjs           # 生成 js/login.js（从 js/app.js 裁剪）
+│   ├── login-page-bindings.js    # 登录页专属事件绑定（手工维护）
+│   ├── check-login.mjs           # 登录页自检（同步性 / i18n / 路径 / 绑定 / 版本号）
+│   ├── login-build-manifest.json # 生成指纹（自检用来判断是否已过期）
+│   └── emoji-split/              # 表情数据拆分工具（规则 + 脚本 + 说明）
 ├── Floxchat-Bridge/    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop
 │   ├── minichat-bridge.js      # TurboWarp 扩展 | TurboWarp extension
 │   ├── minichat-avatar-150.svg # 群聊列表头像（150px，圆形）
@@ -325,18 +328,55 @@ location.replace('/login/')  // 聊天页发现没有会话 → 登录页
 > 如果写 `assets/logo.svg` 会被解析成 `/login/assets/logo.svg` → 404。
 > 曾经因为漏改 `lib/supabase.min.js` 的相对路径，导致登录页**整页脚本挂掉、永远卡在启动画面**。
 
-### 登录页脚本的来历 | Where `js/login.js` Comes From
+### 登录页脚本是生成产物 | `js/login.js` Is Generated
 
-`js/login.js` 是从 `js/app.js` **裁剪**出来的：保留登录相关代码，丢弃聊天部分，
-并把 i18n 字典从 858 个键裁到 136 个（65 KB → 9.5 KB），总体约 268 KB → 60 KB。
+`js/login.js` **不要手工编辑** —— 它是从 `js/app.js` 生成出来的：
 
-> ⚠️ 它是**快照**，不是构建产物 —— 如果改了 `js/app.js` 里的登录逻辑（认证、验证码、
-> FloxChat 绑定等），**必须同步改 `js/login.js`**，否则登录页会悄悄过期。
->
-> 裁剪时最容易漏的三类东西（都真实发生过）：
-> 1. **变量声明**（如 `authToggle` / `togglePwd`）—— 漏了会在 `if` 里抛 `ReferenceError`，整页脚本挂掉
-> 2. **事件绑定**（住在聊天区段的 `setupGlobalEventListeners` 里，但绑的是登录页的元素）
-> 3. **资源路径**（见上）
+```bash
+node tools/build-login.mjs     # 生成 js/login.js
+node tools/check-login.mjs     # 自检（含"是否与 app.js 同步"）
+npm run check                  # 同上；package.json 无依赖，只放脚本入口
+```
+
+| 来源 | 说明 |
+|------|------|
+| 代码主体 | `js/app.js` 开头到 i18n 字典之前的全部内容（**逐字**） |
+| i18n 字典 | 从 `js/app.js` 裁剪，只保留登录页用到的键（858 → 39） |
+| 辅助函数 | `js/app.js` 的 `getCurrentLang` / `t` / `loadLanguage`（**逐字**） |
+| 页面绑定 | `tools/login-page-bindings.js`（手工维护，见下） |
+
+约 271 KB → 60 KB。
+
+**为什么要脚本化**：它原先是我手工裁剪的一次性快照，结果反复漂移，
+每次都表现为登录页某个功能默默失效：
+
+| # | 漏掉的东西 | 症状 |
+|---|-----------|------|
+| ① | `authToggle` / `togglePwd` 变量声明 | `if (未声明变量)` 抛 `ReferenceError`，整页脚本挂掉 |
+| ② | `lib/supabase.min.js` 用了相对路径 | `/login/` 下 404 → `supabase` 未定义 → 整页脚本挂掉，**永远卡在启动画面** |
+| ③ | `switchFloxChat` / `floxBack` 绑定 | 点「使用 FloxChat 登录」没反应 |
+| ④ | 眼睛按钮的图标切换 | 图标永远不变 |
+| ⑤ | `btnFloxSendCode` / `btnFloxVerify` 绑定 | 面板能开、能填邮箱，但「发送验证码」「验证并登录」点不动 |
+| ⑥ | `customModalCancel` 绑定 | 通用弹窗的取消按钮没用 |
+
+其中 ⑤ ⑥ 是加上 `npm run check` 之后**自动发现**的 —— 它的「监听器覆盖」检查会
+逐个核对登录页上每个可点击元素是否都有绑定。
+
+> **绑定为什么单独放一个文件**：这些绑定原本住在 `js/app.js` 的
+> `setupGlobalEventListeners()`（聊天区段）里，裁剪时拿不到，所以显式维护在
+> `tools/login-page-bindings.js`，由生成脚本追加到末尾。
+
+### 自检脚本 | `tools/check-login.mjs`
+
+| 检查项 | 说明 |
+|--------|------|
+| 1. 同步性 | 重算指纹并与 `tools/login-build-manifest.json` 比对 —— **改了 app.js 忘了重新生成会直接报错** |
+| 2. i18n 完整性 | 登录页所有 `data-i18n*` 的键在 `login.js` 字典里都存在 |
+| 3. 资源引用 | 登录页无相对路径（子目录下会 404） |
+| 4. 监听器覆盖 | 每个可点击元素都有绑定（会跟随 `var x = $safe('id')` 这类别名） |
+| 5. 版本号 | 五处 `APP_VERSION` + 两页资源缓存串一致 |
+
+退出码非 0 表示有失败项，可以直接接 CI。
 
 ### 版本号维护 | Version Maintenance
 
