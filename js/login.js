@@ -12,7 +12,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.8.1';  // ⚠️ 本文件由 js/app.js 裁剪生成，改版本号时两处都要同步
+var APP_VERSION = '4.8.2';  // ⚠️ 本文件由 js/app.js 裁剪生成，改版本号时两处都要同步
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -1380,3 +1380,10 @@ if (_switchToSignup) _switchToSignup.addEventListener('click', function(e) {
     e.preventDefault();
     switchMode(isLoginMode ? 'signup' : 'login');
 });
+// 下面两个是「使用 FloxChat 登录」入口与「返回邮箱登录」，
+// 原本绑定在 app.js 的 setupGlobalEventListeners 里（5591-5594 行，聊天区段），
+// 抽取登录代码时没带过来 —— 结果就是点「使用 FloxChat 登录」完全没反应。
+var _switchFlox = document.getElementById('switchFloxChat');
+if (_switchFlox) _switchFlox.addEventListener('click', switchToFloxLogin);
+var _floxBack = document.getElementById('floxBack');
+if (_floxBack) _floxBack.addEventListener('click', switchBackFromFlox);

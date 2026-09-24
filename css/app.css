@@ -40,11 +40,15 @@
           #splash .sp-logo{opacity:1}
           #splash .sp-bar i{width:40%}
         }
-        .login-overlay{position:absolute;inset:0;background:var(--bg-primary);display:flex;justify-content:center;align-items:stretch;z-index:200;transition:opacity .3s,visibility .3s}
+        .login-overlay{position:absolute;inset:0;background:var(--bg-primary);display:flex;justify-content:center;align-items:stretch;overflow-y:auto;z-index:200;transition:opacity .3s,visibility .3s}
         .login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-        .login-card{display:flex;width:100%;min-height:100vh;min-height:100dvh;padding:0;overflow:hidden;border-radius:0;background:var(--bg-primary);border:none;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+        .login-card{display:flex;width:100%;min-height:100vh;min-height:100dvh;padding:0;overflow:visible;border-radius:0;background:var(--bg-primary);border:none;box-shadow:0 24px 64px rgba(0,0,0,.5)}
         .login-form{flex:1 1 52%;min-width:0;padding:48px 6vw;display:flex;flex-direction:column;justify-content:center;align-items:center}
-        .login-form > *{width:100%;max-width:400px}
+        .login-form > *{width:100%;max-width:400px;flex-shrink:0}
+        /* flex-shrink:0 很重要：.login-form 是 flex 列容器，
+           登录卡片内容（含 Cloudflare 人机验证）通常高于一屏，
+           默认的 flex-shrink:1 会把每个子项等比压扁 —— 表现就是
+           「登录」按钮被压成一条细蓝条、文字被截断。 */
         /* 右侧品牌区：渐变 + 极淡斜纹，给宽屏一个视觉落点（原来卡片孤零零飘在中间） */
         .login-brand{position:relative;flex:1 1 48%;overflow:hidden;padding:40px 36px;display:flex;flex-direction:column;justify-content:center;color:#fff;background:linear-gradient(155deg,#1e40af 0%,#2563eb 42%,#3b82f6 72%,#1d4ed8 100%)}
         .login-brand::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 80% 16%,rgba(255,255,255,.22),transparent 52%),repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 1px,transparent 1px 9px)}
