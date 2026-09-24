@@ -383,7 +383,11 @@
         .member-search-input{width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:13px;outline:none;transition:var(--transition);box-sizing:border-box}
         .member-search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
         .member-search-input::placeholder{color:var(--text-muted)}
-        .members-section-header{padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg-card);border-bottom:1px solid var(--border-color);display:flex;align-items:center;position:sticky;top:0;z-index:1;flex-shrink:0}
+        /* ⚠️ 这里原本是 position:sticky;top:0 —— 分组标题会钉在滚动容器顶部不动，
+           而且因为真正的滚动容器不是它的直属父级，它还会压住下面第一个成员
+           （表现就是「在线 (1)」那一条盖在第一个人的头像上）。
+           分组标题本来就应该跟着列表一起滚，去掉 sticky。 */
+        .members-section-header{padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg-card);border-bottom:1px solid var(--border-color);display:flex;align-items:center}
         .members-section-header::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-right:6px}
         .members-section-header-offline::before{background:var(--text-muted)}
         .members-section-header.offline-header::before{background:var(--text-muted)}
