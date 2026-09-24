@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.9.1';
+var APP_VERSION = '4.10.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -2909,96 +2909,91 @@ var EMOJI_FALLBACK = {
     '颜文字': ['(^_^)', '(^^)', '(^_^;)', '(;^_^)', '(^^;)', '(^-^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^;)', '(;^-^)', '(^^)', '(^_^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^)', '(^_^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^)', '(^_^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^)', '(^_^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^)', '(^_^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^)', '(^_^)', '(^o^)', '(^▽^)', '(^.^)', '(^-^)'],
     '符号': ['❤️','✨','🌟','⭐','🔥','💯','💪','🎉','🎊','🎁','🎈','🎀','🏆','🎯','🎲','🎸','🎹','🎺','🎻','🎷','🎤','🎧','📱','💻','🖥️','⌚','📷','📸','📹','🎥','📺','📻','📡','💾','💿','📀','📼','📞','☎️','📟','📠','📡','🔋','🔌','🔍','🔎','🧭','🧪','🧫','🧬','📊','📈','📉','📋','📌','📍','📍','📎','📏','📐','✂️','🔗','🖇️','📕','📖','📗','📘','📙','📚','📓','📔','📒','📑','📰','📈','📉','📊','📋','📌','🔖','🏷️','💎','👑','🎖️','⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🏒','🏑','🥍','🎳','⛳','🚵','🚴','🏂','⛷️','🎿','🛷','⛸️','🚣','🏊','🤽','🤾','🎽','🎿','🛷','⛸️','🚣','🏊','🤽','🤾','🎽','🎿','🛷','⛸️','🚣','🏊','🤽','🤾','🎽','🎿','🛷','⛸️','🚣','🏊','🤽','🤾','🎽']
 };
-async function loadEmojiData(retry) {
-            retry = retry || 0;
-            try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 15000);
-                const headers = { 'Cache-Control': 'no-cache, no-store' };
-                const ts = Date.now() + '_' + Math.random();
-                const [emojiRes, kaoRes] = await Promise.all([
-                    fetch('./data/emojihub-all.json?t=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
-                        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                        .catch(() => null),
-                    fetch('./data/kaomoji.json?t=' + ts, { signal: controller.signal, headers: headers, cache: 'no-store' })
-                        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                        .catch(() => null)
-                ]);
-                clearTimeout(timeout);
-                const emojiGroups = {};
-                if (emojiRes && Array.isArray(emojiRes)) {
-                    emojiRes.forEach(item => {
-                        const cat = item.category || '其他';
-                        if (!emojiGroups[cat]) emojiGroups[cat] = [];
-                        let unicodeStr = item.unicode;
-                        if (Array.isArray(unicodeStr)) unicodeStr = unicodeStr[0];
-                        if (unicodeStr) {
-                            emojiGroups[cat].push(toEmojiChar(unicodeStr));
-                        } else if (item.htmlCode && item.htmlCode.length) {
-                            let htmlStr = Array.isArray(item.htmlCode) ? item.htmlCode[0] : item.htmlCode;
-                            emojiGroups[cat].push({ __html: htmlStr });
-                        }
-                    });
-                } else if (emojiRes && typeof emojiRes === 'object') {
-                    Object.entries(emojiRes).forEach(([cat, list]) => { emojiGroups[cat] = list; });
-                }
-                const kaoGroups = {};
-                if (kaoRes && typeof kaoRes === 'object') {
-                    for (const [cat, list] of Object.entries(kaoRes)) {
-                        const decodedList = list.map(item => decodeHtmlEntities(item));
-                        kaoGroups['颜文字_' + cat] = decodedList;
-                    }
-                }
-                if (Object.keys(emojiGroups).length === 0) {
-                    Object.assign(emojiGroups, EMOJI_FALLBACK);
-                }
-                if (Object.keys(kaoGroups).length === 0) {
-                    kaoGroups['颜文字'] = EMOJI_FALLBACK['颜文字'];
-                }
-                allEmojiData = { ...emojiGroups, ...kaoGroups };
-                renderTabs();
-                emojiLoadFailed = false;
-            } catch(e) {
-                console.warn('表情加载失败:', e.message);
-                if (retry < 2) {
-                    console.log('表情加载超时，尝试重试', retry+1);
-                    setTimeout(() => loadEmojiData(retry+1), 2000);
-                    return;
-                }
-                allEmojiData = EMOJI_FALLBACK;
-                renderTabs();
-                emojiLoadFailed = true;
-            }
+// ===================== 表情数据（按分类懒加载）=====================
+// 原来是一上来就把 emojihub-all.json(249KB) + kaomoji.json(1.39MB) 全拉下来，
+// 合计约 1.6MB，和用户有没有打开表情面板完全无关。
+// 现在拆成：
+//   data/emoji-index.json      只有分类清单（名称/图标/文件路径/数量）
+//   data/emoji/<分类>.json      每个分类一个文件
+//   data/kaomoji/<分类>.json
+// 打开面板时只拉索引；点某个分类才拉那个分类的文件，拉过的缓存在内存里。
+// 最坏情况（点了最大的分类）也只下 100KB 出头，而不是 1.6MB。
+var allEmojiData = {};       // 已加载的分类数据缓存 { 分类名: [条目] }
+var emojiIndex = null;       // 分类清单
+var emojiIndexPromise = null; // 防止并发重复拉索引
+
+async function loadEmojiIndex() {
+    if (emojiIndex) return emojiIndex;
+    if (emojiIndexPromise) return emojiIndexPromise;
+    emojiIndexPromise = (async function() {
+        try {
+            const r = await fetch('/data/emoji-index.json?v=' + APP_VERSION);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const data = await r.json();
+            emojiIndex = (data && data.groups) || [];
+            emojiLoadFailed = false;
+        } catch (e) {
+            console.warn('表情索引加载失败:', e.message);
+            emojiIndex = [];
+            emojiLoadFailed = true;
         }
+        return emojiIndex;
+    })();
+    return emojiIndexPromise;
+}
+
+// 拉某个分类的数据（带竞态保护：期间用户可能又点了别的分类）
+async function loadEmojiCategory(label) {
+    if (allEmojiData[label]) return allEmojiData[label];
+    const g = (emojiIndex || []).find(function(x) { return x.label === label; });
+    if (!g) return [];
+    const r = await fetch(g.file + '?v=' + APP_VERSION);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const items = await r.json();
+    allEmojiData[label] = Array.isArray(items) ? items : [];
+    return allEmojiData[label];
+}
+
         function renderTabs() {
     if (!emojiTabs || !emojiGrid) return;
     emojiTabs.innerHTML = '';
-    const cats = Object.keys(allEmojiData);
-    if (cats.length === 0) { emojiGrid.innerHTML = '<div class="emoji-loading">'+t('noEmojiData')+'</div>'; return; }
-    cats.forEach(cat => {
+    const groups = emojiIndex || [];
+    if (groups.length === 0) {
+        emojiGrid.innerHTML = '<div class="emoji-loading">' + (emojiLoadFailed ? t('noEmojiData') : t('loading')) + '</div>';
+        return;
+    }
+    groups.forEach(g => {
         const btn = document.createElement('button');
         btn.className = 'emoji-tab';
-        const firstItem = allEmojiData[cat][0];
-        let exampleChar = '';
-        if (typeof firstItem === 'string') {
-            exampleChar = firstItem;
-        } else if (firstItem && firstItem.__html) {
-            exampleChar = firstItem.__html.replace(/<[^>]*>/g, '');
-        }
-        if (exampleChar) btn.textContent = exampleChar;
-        else btn.textContent = cat;
-        btn.title = cat;
-        btn.addEventListener('click', () => switchCategory(cat));
+        btn.textContent = g.icon || g.label;
+        btn.title = g.label;
+        btn.addEventListener('click', () => switchCategory(g.label));
         emojiTabs.appendChild(btn);
     });
-    if (cats.length) switchCategory(cats[0]);
+    switchCategory(groups[0].label);
 }
-function switchCategory(cat) {
+var currentEmojiCat = null;
+async function switchCategory(cat) {
     if (!emojiTabs || !emojiGrid) return;
+    currentEmojiCat = cat;
     document.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
     const tab = [...emojiTabs.children].find(t => t.title === cat);
     if (tab) tab.classList.add('active');
-    renderGrid(allEmojiData[cat] || []);
+
+    // 已经拉过 → 直接用缓存
+    if (allEmojiData[cat]) { renderGrid(allEmojiData[cat]); return; }
+
+    emojiGrid.innerHTML = '<div class="emoji-loading">' + t('loading') + '</div>';
+    try {
+        const items = await loadEmojiCategory(cat);
+        // 竞态保护：等数据这段时间用户可能又点了别的分类
+        if (currentEmojiCat !== cat) return;
+        renderGrid(items);
+    } catch (e) {
+        if (currentEmojiCat !== cat) return;
+        console.warn('表情分类加载失败:', cat, e.message);
+        emojiGrid.innerHTML = '<div class="emoji-loading">' + t('noEmoji') + '</div>';
+    }
 }
 function renderGrid(items) {
     if (!emojiGrid) return;
@@ -3029,6 +3024,12 @@ if (emojiBtn) {
         e.stopPropagation();
         emojiVisible = !emojiVisible;
         if (emojiPanel) emojiPanel.classList.toggle('active', emojiVisible);
+        // 首次打开面板时才拉分类索引（几 KB）
+        if (emojiVisible && !emojiIndex && !emojiIndexPromise) {
+            loadEmojiIndex().then(function() {
+                if (emojiVisible) renderTabs();
+            });
+        }
     });
 }
 document.addEventListener('click', function(e) {
@@ -3037,7 +3038,9 @@ document.addEventListener('click', function(e) {
         emojiVisible = false;
     }
 });
-loadEmojiData();
+// 注意：这里【不再】开机就拉表情数据。
+// 原来这里会立刻下载约 1.6MB 的 emoji/颜文字 JSON，与用户是否使用表情面板无关。
+// 改成打开面板时只拉几 KB 的分类索引，点分类才拉对应文件。
 
 // ===================== 独立 Presence 频道 =====================
 function setupPresenceChannel() {
