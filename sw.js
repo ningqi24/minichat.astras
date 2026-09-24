@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minichat-v49';
+const CACHE_NAME = 'minichat-v50';
 const STATIC_ASSETS = [
   '/',
   '/login/',
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/js/app.js',      // 聊天页
   '/js/login.js',    // 登录页专用（由 app.js 裁剪而来，约 60KB）
   '/assets/logo.svg',
+  '/assets/minichat-mark.svg',   // 小尺寸场合用的无字标记
   '/assets/favicon.svg',
   '/favicon.ico',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
