@@ -337,7 +337,7 @@ create table if not exists public.rate_limit (
   reset_at timestamptz not null
 );
 
-comment on table public.rate_limit is 'Edge Function 全局限流计数；key 形如 sendcode:email:xxx'
+comment on table public.rate_limit is 'Edge Function 全局限流计数；key 形如 sendcode:email:xxx';
 
 -- 只给 service_role 用。开启 RLS 且不建任何策略 = anon / authenticated 一律不可读写。
 alter table public.rate_limit enable row level security;
