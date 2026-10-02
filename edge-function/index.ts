@@ -5,7 +5,14 @@
 // 环境变量：
 //   FLOXCHAT_BRIDGE_SECRET  必填，前端/扩展的桥接密钥（沿用现有）
 //   MINICHAT_BRIDGE_PEPPER  建议设置：独立随机串，用于派生 MiniChat 账号口令，勿与其它密钥复用
-//   FLOXCHAT_VERIFY_URL     可选，FloxChat 验证码校验地址（默认 https://shebiao.dpdns.org/ces/verify-code）
+//   FLOXCHAT_VERIFY_URL     可选，FloxChat 验证码校验地址
+//   FLOXCHAT_SEND_URL       可选，FloxChat 发送验证码地址
+//       ⚠️ 这两个默认值仍指向旧域名 shebiao.dpdns.org。
+//          FloxChat 在 P2.5.3 前后换过服务器与域名，旧域名已不再指向其服务
+//          （TLS 证书变成自签名 CN=localhost），因此换域名时：
+//            要么 supabase secrets set FLOXCHAT_SEND_URL=... FLOXCHAT_VERIFY_URL=...
+//            要么改下面的默认值后重新 supabase functions deploy clever-task
+//          前端那一侧对应 js/app.js 的 FLOXCHAT_BASE_URL（改完要 npm run build:login）
 //
 // 动作（全部需要请求体里的 secret）：
 //   flox_code_login  { email, code }              服务端校验 FloxChat 验证码后签发 MiniChat 会话

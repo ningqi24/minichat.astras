@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.11.0';
+var APP_VERSION = '4.11.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -499,6 +499,15 @@ if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABAS
 var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
 var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 
+// ⚠️ FloxChat 服务端地址 —— 【换域名只改这一行】
+//    FloxChat 更新过服务器与域名（P2.5.3 前后），旧域名 shebiao.dpdns.org 已不再指向其服务
+//    （TLS 证书变成自签名 CN=localhost），所以这里必须跟着改。
+//    改完之后：
+//      1. 跑 node tools/build-login.mjs 重新生成 js/login.js（它会从本文件带上这个值）
+//      2. Edge Function 那边【不用改代码】—— 它有 FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL 两个环境变量，
+//         要么把新地址写进 supabase secrets，要么改 index.ts 里的默认值后重新 deploy
+var FLOXCHAT_BASE_URL = "https://shebiao.dpdns.org";
+
 // ===================== 人机验证（CAPTCHA）配置 =====================
 // 留空 = 不启用。填上 site key 后会自动加载对应提供商的脚本，
 // 并在登录 / 注册 / 重置密码时附带 captchaToken。
@@ -760,7 +769,7 @@ async function handleFloxSendCode() {
     msgEl0.textContent = '';
     floxSetLoading(sendBtn, true);
     try {
-        var resp = await fetch('https://shebiao.dpdns.org/ces/send-code', {
+        var resp = await fetch(FLOXCHAT_BASE_URL + '/ces/send-code', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email })
         });
