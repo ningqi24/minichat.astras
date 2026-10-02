@@ -7,9 +7,9 @@
 //   MINICHAT_BRIDGE_PEPPER  建议设置：独立随机串，用于派生 MiniChat 账号口令，勿与其它密钥复用
 //   FLOXCHAT_VERIFY_URL     可选，FloxChat 验证码校验地址
 //   FLOXCHAT_SEND_URL       可选，FloxChat 发送验证码地址
-//       ⚠️ 这两个默认值仍指向旧域名 shebiao.dpdns.org。
-//          FloxChat 在 P2.5.3 前后换过服务器与域名，旧域名已不再指向其服务
-//          （TLS 证书变成自签名 CN=localhost），因此换域名时：
+//       默认值已更新为 FloxChat 新域名 https://ces.flarefox.top（路径 /ces/ 未变）。
+//          旧域名 shebiao.dpdns.org 已失效（TLS 证书变成自签名 CN=localhost）。
+//          再换域名时：
 //            要么 supabase secrets set FLOXCHAT_SEND_URL=... FLOXCHAT_VERIFY_URL=...
 //            要么改下面的默认值后重新 supabase functions deploy clever-task
 //          前端那一侧对应 js/app.js 的 FLOXCHAT_BASE_URL（改完要 npm run build:login）
@@ -49,9 +49,9 @@ function isAdminEmail(email?: string | null) {
 }
 
 // ---- FloxChat 验证码校验地址（服务端专用）----
-const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://shebiao.dpdns.org/ces/verify-code";
+const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://ces.flarefox.top/ces/verify-code";
 // ---- FloxChat 发送验证码地址（服务端代理，扩展端不直接请求，避免 CORS）----
-const FLOXCHAT_SEND_URL = Deno.env.get("FLOXCHAT_SEND_URL") ?? "https://shebiao.dpdns.org/ces/send-code";
+const FLOXCHAT_SEND_URL = Deno.env.get("FLOXCHAT_SEND_URL") ?? "https://ces.flarefox.top/ces/send-code";
 // MiniChat 侧账号口令由服务端密钥派生，客户端无法推算（部署时请设置独立随机值）
 const MINICHAT_BRIDGE_PEPPER = Deno.env.get("MINICHAT_BRIDGE_PEPPER") ?? SHARED_SECRET;
 if (!Deno.env.get("MINICHAT_BRIDGE_PEPPER")) {

@@ -293,7 +293,7 @@ minichat.astras/
 | `SUPABASE_ANON_KEY` | Supabase 匿名密钥（公开） | Supabase anon public key |
 | `MINICHAT_EDGE_URL` | Edge Function 地址（`.../functions/v1/clever-task`），FloxChat 验证码登录用 | Edge Function URL used by FloxChat code login |
 | `MINICHAT_BRIDGE_SECRET` | 桥接密钥，必须与 Edge Function 的 `FLOXCHAT_BRIDGE_SECRET` 一致 | Bridge secret; must match the Edge Function's `FLOXCHAT_BRIDGE_SECRET` |
-| `FLOXCHAT_BASE_URL` | FloxChat 服务端地址（前端调用 `/ces/send-code` 用）。**FloxChat 换域名时只改这一行**，然后 `npm run build:login` 重新生成 login.js | Base URL of the FloxChat server. **Change only this line when FloxChat moves domains**, then run `npm run build:login` |
+| `FLOXCHAT_BASE_URL` | FloxChat 服务端地址（前端调用 `/ces/send-code` 用）。**FloxChat 换域名时只改这一行**，然后 `npm run build:login` 重新生成 login.js。当前值：`https://ces.flarefox.top`（FloxChat 新域名，路径 `/ces/` 未变；旧域名 `shebiao.dpdns.org` 已失效） | Base URL of the FloxChat server. **Change only this line when FloxChat moves domains**, then run `npm run build:login`. Current: `https://ces.flarefox.top` |
 | `PAGE_SIZE` | 历史消息每页加载数量（默认 20） | Number of historical messages per page (default 20) |
 | `CAPTCHA_SITE_KEY` | Cloudflare Turnstile 的 Site Key（公开值；留空则不启用） | Cloudflare Turnstile site key (public; leave empty to disable) |
 | `DURATION` | 启动页最短展示时间（毫秒，当前 1800） | Splash minimum display time (ms, currently 1800) |

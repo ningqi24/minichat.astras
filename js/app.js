@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.11.1';
+var APP_VERSION = '4.11.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -500,13 +500,21 @@ var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/c
 var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 
 // ⚠️ FloxChat 服务端地址 —— 【换域名只改这一行】
-//    FloxChat 更新过服务器与域名（P2.5.3 前后），旧域名 shebiao.dpdns.org 已不再指向其服务
-//    （TLS 证书变成自签名 CN=localhost），所以这里必须跟着改。
-//    改完之后：
-//      1. 跑 node tools/build-login.mjs 重新生成 js/login.js（它会从本文件带上这个值）
-//      2. Edge Function 那边【不用改代码】—— 它有 FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL 两个环境变量，
-//         要么把新地址写进 supabase secrets，要么改 index.ts 里的默认值后重新 deploy
-var FLOXCHAT_BASE_URL = "https://shebiao.dpdns.org";
+//
+// 变更记录：
+//   · 旧：https://shebiao.dpdns.org  —— 已失效（该域名指向的机器换了服务，
+//        TLS 证书变成自签名 CN=localhost；实测 /ces/send-code 已连不上）
+//   · 新：https://ces.flarefox.top    —— FloxChat 新域名家族 *.flarefox.top，
+//        验证码接口挂在 ces 子域上；路径前缀 /ces/ 没有变。
+//        实测：POST /ces/send-code → 200 {"message":"Code sent","expiresIn":300}
+//              POST /ces/verify-code → 403 {"success":false,"error":"Wrong code"}（接口存在）
+//
+// 改完之后：
+//   1. 跑 node tools/build-login.mjs 重新生成 js/login.js（它会从本文件带上这个值）
+//   2. Edge Function 那边【不用改代码】—— 它有 FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL 两个环境变量，
+//      要么把新地址写进 supabase secrets，要么改 index.ts 里的默认值后重新 deploy
+//      （index.ts 的默认值已同步改为新域名）
+var FLOXCHAT_BASE_URL = "https://ces.flarefox.top";
 
 // ===================== 人机验证（CAPTCHA）配置 =====================
 // 留空 = 不启用。填上 site key 后会自动加载对应提供商的脚本，
