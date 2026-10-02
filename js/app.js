@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.11.2';
+var APP_VERSION = '4.12.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -499,22 +499,21 @@ if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABAS
 var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
 var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 
-// ⚠️ FloxChat 服务端地址 —— 【换域名只改这一行】
+// ⚠️ FloxChat 服务端地址【不再放在前端】
 //
-// 变更记录：
-//   · 旧：https://shebiao.dpdns.org  —— 已失效（该域名指向的机器换了服务，
-//        TLS 证书变成自签名 CN=localhost；实测 /ces/send-code 已连不上）
-//   · 新：https://ces.flarefox.top    —— FloxChat 新域名家族 *.flarefox.top，
-//        验证码接口挂在 ces 子域上；路径前缀 /ces/ 没有变。
-//        实测：POST /ces/send-code → 200 {"message":"Code sent","expiresIn":300}
-//              POST /ces/verify-code → 403 {"success":false,"error":"Wrong code"}（接口存在）
+// 历史：这里曾有一个 FLOXCHAT_BASE_URL，前端拿它直连 FloxChat 的 /ces/send-code。
+// 已经移除，原因是"发验证码"是唯一会消耗 FloxChat 真实资源的动作（发真邮件），
+// 前端直连会绕过 MiniChat 自己的限流，等于对方替我们承担滥用风险。
 //
-// 改完之后：
-//   1. 跑 node tools/build-login.mjs 重新生成 js/login.js（它会从本文件带上这个值）
-//   2. Edge Function 那边【不用改代码】—— 它有 FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL 两个环境变量，
-//      要么把新地址写进 supabase secrets，要么改 index.ts 里的默认值后重新 deploy
-//      （index.ts 的默认值已同步改为新域名）
-var FLOXCHAT_BASE_URL = "https://ces.flarefox.top";
+// 现在发送与校验都走 Edge Function 代理，地址只存在于服务端：
+//   环境变量 FLOXCHAT_SEND_URL   = https://ces.flarefox.top/ces/send-code
+//   环境变量 FLOXCHAT_VERIFY_URL = https://ces.flarefox.top/ces/verify-code
+//   （edge-function/index.ts 里有默认值；换域名改那里或改 supabase secrets 即可）
+//
+// 地址变更记录：
+//   · 旧 https://shebiao.dpdns.org 已失效（TLS 变成自签名 CN=localhost，接口连不上）
+//   · 新 https://ces.flarefox.top  —— 域名家族 *.flarefox.top，验证码接口在 ces 子域，
+//     路径前缀 /ces/ 没变；实测 send-code 返回 {"message":"Code sent","expiresIn":300}。
 
 // ===================== 人机验证（CAPTCHA）配置 =====================
 // 留空 = 不启用。填上 site key 后会自动加载对应提供商的脚本，
@@ -777,24 +776,23 @@ async function handleFloxSendCode() {
     msgEl0.textContent = '';
     floxSetLoading(sendBtn, true);
     try {
-        var resp = await fetch(FLOXCHAT_BASE_URL + '/ces/send-code', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email })
-        });
-        var data = await resp.json();
-        if (data.message === 'Code sent') {
-            document.getElementById('floxStep1').style.display = 'none';
-            document.getElementById('floxStep2').style.display = 'flex';
-            floxSetStep(2);
-            floxStartResendCountdown(60);
-            msgEl0.textContent = '验证码已发送至 ' + email;
-            var codeEl2 = document.getElementById('floxCode');
-            if (codeEl2) { codeEl2.value = ''; codeEl2.focus(); }
-        } else {
-            msgEl0.textContent = '发送失败：' + (data.message || data.error || '请稍后重试');
-        }
+        // ⚠️ 这里【必须走 Edge Function 代理】，不要改回前端直连 FloxChat。
+        //    原因：发验证码是【唯一会消耗 FloxChat 真实资源】的动作（发一封真邮件）。
+        //    直连的话，MiniChat 侧的限流完全拦不到 —— 万一有人拿这个入口滥用，
+        //    打的是 FloxChat 的服务器与发信配额。走代理后，Edge Function 的双维度限流
+        //    （按收件邮箱 3 次/10 分钟 + 按来源 IP 10 次/10 分钟）等于替对方挡了一层。
+        //    FloxChat 的服务端地址因此只存在于 Edge Function（FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL）。
+        await callFloxEdge({ action: 'flox_send_code', email: email });
+        document.getElementById('floxStep1').style.display = 'none';
+        document.getElementById('floxStep2').style.display = 'flex';
+        floxSetStep(2);
+        floxStartResendCountdown(60);
+        msgEl0.textContent = '验证码已发送至 ' + email;
+        var codeEl2 = document.getElementById('floxCode');
+        if (codeEl2) { codeEl2.value = ''; codeEl2.focus(); }
     } catch(e) {
-        msgEl0.textContent = '网络错误，请重试';
+        // callFloxEdge 在响应非 2xx 或带 error 字段时抛错，err.message 就是服务端给的中文提示
+        msgEl0.textContent = '发送失败：' + ((e && e.message) ? e.message : '请稍后重试');
     }
     floxSetLoading(sendBtn, false);
 }

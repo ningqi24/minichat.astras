@@ -406,6 +406,46 @@ npm run check                  # 同上；package.json 无依赖，只放脚本�
 
 拆分与归类规则见 [`tools/emoji-split/`](tools/emoji-split/)。
 
+### FloxChat 互通 | FloxChat Interop
+
+MiniChat 与 FloxChat 有两个方向的互通，**两者的实现方式完全不同**，不要混淆：
+
+| 方向 | 实现 | 位置 |
+|------|------|------|
+| 用 FloxChat 验证码登录 MiniChat | MiniChat 调 FloxChat 的验证码接口 | `edge-function/index.ts` |
+| 在 FloxChat 里收发 MiniChat 群聊 | FloxChat 客户端里的 TurboWarp 扩展注入 | `Floxchat-Bridge/` |
+
+#### FloxChat 验证码登录
+
+**只需两个接口**（都在 FloxChat 的 `ces` 子域下）：
+
+```
+POST https://ces.flarefox.top/ces/send-code     { email }        → { "message": "Code sent", "expiresIn": 300 }
+POST https://ces.flarefox.top/ces/verify-code   { email, code }  → 校验结果
+```
+
+**调用方式（重要）**：前端**不直连** FloxChat，两个动作都走 Edge Function 代理。原因：
+
+- 发验证码是**唯一会消耗 FloxChat 真实资源**的动作（发一封真邮件）；
+- 直连会绕过 MiniChat 自己的限流，等于让对方替我们承担滥用风险；
+- 走代理后，Edge Function 的双维度限流（按收件邮箱 3 次/10 分钟 + 按来源 IP 10 次/10 分钟）
+  顺带替 FloxChat 挡了一层。
+
+所以 **FloxChat 的地址只存在于服务端**（`FLOXCHAT_SEND_URL` / `FLOXCHAT_VERIFY_URL` 两个环境变量，
+有默认值）。换域名只改那里或改 secrets，前端不用动。
+
+> ⚠️ **这是 FloxChat 的内部接口，不是对外发布的 API。** 使用前应与 FloxChat 作者沟通并取得同意；
+> MiniChat 侧不做任何写入（不建/改/删 FloxChat 账号，不读其用户表），只做验证码发送与校验。
+> 另外发信配额是与 FloxChat 共享的，用量大了值得知会作者。
+
+#### 在 FloxChat 里显示 MiniChat 群聊
+
+走 `Floxchat-Bridge/` 里的 TurboWarp 扩展（客户端注入），细节见 `Floxchat-Bridge/README.md` 与
+根目录的 `FloxChat改版说明.md`。注意这一路依赖 FloxChat 的内部变量名，
+FloxChat 大改版后要用 `floxchat-patch.js` 对着新版工程重新打补丁。
+
+---
+
 ### 管理员删除用户 | Admin User Deletion
 
 删除用户需要 **service_role**，前端拿不到，因此全部放在 Edge Function 里：

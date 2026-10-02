@@ -100,6 +100,38 @@ function rateLimit(key: string, max: number, windowMs: number): boolean {
   }
   return true;
 }
+// ---- 全局限流（跨 Edge 实例）----
+// 上面的 rateLimit 是【实例内存】计数：Edge Function 是无状态多实例的，
+// 内存计数不跨实例共享，实际配额会被放大若干倍（代码原来也标注了这一点）。
+// 这里用 Postgres 的原子自增做真正的全局窗口计数，SQL 见
+// supabase/security-hardening.sql 里的 rate_limit_hit()。
+//
+// 失败时【放行】并记日志：限流是防滥用的闸门，不应因为计数表出问题就把登录整个卡死。
+// 想更严格的话把下面两处 return true 改成 return false 即可（fail-closed）。
+async function rateLimitGlobal(key: string, max: number, windowMs: number): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseAdmin.rpc("rate_limit_hit", {
+      p_key: key,
+      p_max: max,
+      p_window_ms: windowMs,
+    });
+    if (error) {
+      console.warn("[rate-limit] 全局计数失败，本次放行:", error.message);
+      return true;
+    }
+    return data === true;
+  } catch (e: any) {
+    console.warn("[rate-limit] 全局计数异常，本次放行:", e?.message ?? e);
+    return true;
+  }
+}
+
+// 本地预检（快、挡突发）+ 全局窗口（准、跨实例），两者都过才算通过
+async function rateLimitAll(key: string, max: number, windowMs: number): Promise<boolean> {
+  if (!rateLimit(key, max, windowMs)) return false;
+  return await rateLimitGlobal(key, max, windowMs);
+}
+
 function clientIp(req: Request): string {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
     req.headers.get("cf-connecting-ip") ||
@@ -169,7 +201,7 @@ async function login(req: Request, body: any) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "invalid_email", code: "INVALID_EMAIL" }, 400);
   }
-  if (!rateLimit(`login:${clientIp(req)}`, 20, 60_000)) {
+  if (!(await rateLimitAll(`login:${clientIp(req)}`, 20, 60_000))) {
     return json({ error: "too_many_requests", code: "RATE_LIMITED" }, 429);
   }
   // 客户端传来的 password 一律忽略：口令只由服务端密钥派生
@@ -226,8 +258,8 @@ async function floxSendCode(req: Request, body: any) {
     return json({ error: "invalid_email", code: "INVALID_EMAIL" }, 400);
   }
   if (
-    !rateLimit(`sendcode:email:${email}`, 3, 10 * 60_000) ||
-    !rateLimit(`sendcode:ip:${clientIp(req)}`, 10, 10 * 60_000)
+    !(await rateLimitAll(`sendcode:email:${email}`, 3, 10 * 60_000)) ||
+    !(await rateLimitAll(`sendcode:ip:${clientIp(req)}`, 10, 10 * 60_000))
   ) {
     return json({ error: "发送过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
   }
@@ -264,8 +296,8 @@ async function floxCodeLogin(req: Request, body: any) {
   }
   // 限流：验证码只有 6 位，不限流可被离线爆破
   if (
-    !rateLimit(`code:email:${email}`, 5, 10 * 60_000) ||
-    !rateLimit(`code:ip:${clientIp(req)}`, 20, 10 * 60_000)
+    !(await rateLimitAll(`code:email:${email}`, 5, 10 * 60_000)) ||
+    !(await rateLimitAll(`code:ip:${clientIp(req)}`, 20, 10 * 60_000))
   ) {
     return json({ error: "尝试过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
   }
