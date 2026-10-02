@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.1';
+var APP_VERSION = '4.12.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -508,7 +508,7 @@ var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 // 现在发送与校验都走 Edge Function 代理，地址只存在于服务端：
 //   环境变量 FLOXCHAT_SEND_URL   = https://ces.flarefox.top/ces/send-code
 //   环境变量 FLOXCHAT_VERIFY_URL = https://ces.flarefox.top/ces/verify-code
-//   （edge-function/index.ts 里有默认值；换域名改那里或改 supabase secrets 即可）
+//   （supabase/functions/clever-task/index.ts 里有默认值；换域名改那里或改 supabase secrets 即可）
 //
 // 地址变更记录：
 //   · 旧 https://shebiao.dpdns.org 已失效（TLS 变成自签名 CN=localhost，接口连不上）

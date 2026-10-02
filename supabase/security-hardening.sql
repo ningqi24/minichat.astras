@@ -323,7 +323,7 @@ where schemaname in ('public','storage') order by 1,2;
 --   supabaseAdmin.rpc('rate_limit_hit', { p_key, p_max, p_window_ms })
 --   返回 true = 未超限（放行），false = 已超限（应返回 429）
 --
--- 键的命名约定（与 edge-function/index.ts 保持一致）：
+-- 键的命名约定（与 supabase/functions/clever-task/index.ts 保持一致）：
 --   login:<ip>                     登录，20 次/分钟
 --   sendcode:email:<邮箱>          发验证码，3 次/10 分钟
 --   sendcode:ip:<ip>               发验证码，10 次/10 分钟

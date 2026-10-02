@@ -145,8 +145,8 @@ ALTER TABLE profiles REPLICA IDENTITY FULL;
 > 仅在使用 FloxChat 验证码登录时需要；只做邮箱注册/登录可跳过。  
 > Only required for FloxChat code login; skip it if you only use email sign-up / sign-in.
 
-源码位于 `edge-function/index.ts`，部署为名为 `clever-task` 的函数，并关闭 JWT 校验（鉴权改用请求体中的 `secret`）：  
-The source lives in `edge-function/index.ts`. Deploy it as a function named `clever-task` with JWT verification disabled (auth is done with the `secret` field in the request body):
+源码位于 `supabase/functions/clever-task/index.ts`（Supabase CLI 要求的标准布局），部署为名为 `clever-task` 的函数，并关闭 JWT 校验（鉴权改用请求体中的 `secret`）：  
+The source lives in `supabase/functions/clever-task/index.ts`. Deploy it as a function named `clever-task` with JWT verification disabled (auth is done with the `secret` field in the request body):
 
 ```bash
 supabase functions deploy clever-task --no-verify-jwt
@@ -242,10 +242,12 @@ minichat.astras/
 ├── sitemap.xml         # 站点地图 | Sitemap
 │
 │   ── 后端 ──
-├── edge-function/
-│   └── index.ts        # Supabase Edge Function：clever-task
-│                       #   验证码登录 / 消息代理 / 头像上传 / 用户删除
 ├── supabase/
+│   ├── functions/
+│   │   └── clever-task/
+│   │       └── index.ts        # Edge Function：验证码登录 / 消息代理 / 头像上传 / 用户删除
+│   │                           # （CLI 要求的标准布局，部署见 README 的部署一节）
+│   ├── rate-limit.sql          # 全局限流：表 + 两个函数（可直接整段粘贴执行）
 │   └── security-hardening.sql  # RLS 与存储桶策略 | RLS & storage policies
 │
 │   ── 数据 ──
@@ -412,7 +414,7 @@ MiniChat 与 FloxChat 有两个方向的互通，**两者的实现方式完全�
 
 | 方向 | 实现 | 位置 |
 |------|------|------|
-| 用 FloxChat 验证码登录 MiniChat | MiniChat 调 FloxChat 的验证码接口 | `edge-function/index.ts` |
+| 用 FloxChat 验证码登录 MiniChat | MiniChat 调 FloxChat 的验证码接口 | `supabase/functions/clever-task/index.ts` |
 | 在 FloxChat 里收发 MiniChat 群聊 | FloxChat 客户端里的 TurboWarp 扩展注入 | `Floxchat-Bridge/` |
 
 #### FloxChat 验证码登录

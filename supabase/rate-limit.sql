@@ -13,7 +13,7 @@
 -- 不跑会怎样：Edge Function 里的全局限流会调用失败，但它是 fail-open 的
 --       （失败时放行并打日志），所以【不跑也不会坏】，只是退回原来的实例内存限流。
 --
--- 配合的代码：edge-function/index.ts 的 rateLimitGlobal() / rateLimitAll()。
+-- 配合的代码：supabase/functions/clever-task/index.ts 的 rateLimitGlobal() / rateLimitAll()。
 -- 键的命名约定：
 --   login:<ip>            登录，20 次/分钟
 --   sendcode:email:<邮箱>  发验证码，3 次/10 分钟
