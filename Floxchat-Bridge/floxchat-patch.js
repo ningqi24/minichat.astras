@@ -68,16 +68,43 @@ function findVarSetter(t, varName, valueIsVariable) {
   }
   return null;
 }
+// 在「某个 if / if_else 的 SUBSTACK 里」找目标块。
+//
+// 两遍扫描：
+//   第一遍只看 SUBSTACK 的【首块】—— 老版本（P2.5.1 及以前）目标块就在首块，行为与以前完全一致。
+//   第二遍顺 SUBSTACK 链往下找 —— 新版本（P2.5.3 起）在目标块前面插了别的东西
+//     （实测：那个 if 从 control_if 变成了 control_if_else，SUBSTACK 首块变成了一个
+//      data_setvariableto），只看首块就永远找不到，补丁 3 会直接抛「未找到 HTTP 分支」。
+//   找到后返回的 headId 是目标块本身，守卫就从它开始包，前面被让出去的那几块留在守卫外面 ——
+//   对补丁 3 来说这没问题，因为它本来就会在守卫外面补一个「当前实际显示的群聊 = 当前显示的群聊ID」。
 function findIfWithSubstackHead(t, headOpcode, varName) {
+  const pick = (h) => {
+    if (headOpcode && h.opcode === headOpcode) return true;
+    if (varName && h.opcode === 'data_setvariableto' && h.fields.VARIABLE && h.fields.VARIABLE[0] === varName) return true;
+    return false;
+  };
+  const cands = [];
   for (const id in t.blocks) {
     const b = t.blocks[id];
     if (b.opcode !== 'control_if' && b.opcode !== 'control_if_else') continue;
     const v = b.inputs && b.inputs.SUBSTACK;
     if (!v || typeof v[1] !== 'string') continue;
-    const h = t.blocks[v[1]];
-    if (!h) continue;
-    if (headOpcode && h.opcode === headOpcode) return { ifId: id, headId: v[1] };
-    if (varName && h.opcode === 'data_setvariableto' && h.fields.VARIABLE && h.fields.VARIABLE[0] === varName) return { ifId: id, headId: v[1] };
+    cands.push({ ifId: id, head: v[1] });
+  }
+  // 第一遍：只看首块
+  for (const c of cands) {
+    const h = t.blocks[c.head];
+    if (h && pick(h)) return { ifId: c.ifId, headId: c.head };
+  }
+  // 第二遍：顺链往下找
+  for (const c of cands) {
+    let cur = c.head;
+    for (let i = 0; cur && i < 12; i++) {
+      const h = t.blocks[cur];
+      if (!h) break;
+      if (pick(h)) return { ifId: c.ifId, headId: cur };
+      cur = h.next;
+    }
   }
   return null;
 }
