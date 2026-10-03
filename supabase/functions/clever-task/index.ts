@@ -169,6 +169,33 @@ async function ticketTake(email: string, ip: string): Promise<boolean> {
   }
 }
 
+// ---- 来源白名单 ----
+// 目的：把"随手拿到密钥就能从任何地方调"抬高到"得先知道要伪造 Origin 头"。
+// ⚠️ 说清楚它的边界：Origin 头【可以伪造】（curl 加一行就行），所以这不是绝对防线，
+//    只是提高门槛。真正的防线仍然是：双维度全局限流 + 发码票据 + RLS。
+//
+// 允许的来源：
+//   https://minichat.astras.cc            网页端
+//   *.turbowarp.org                       TurboWarp 网页播放器里跑的扩展
+//   null / 缺失                            TurboWarp Desktop(Electron) 与 file:// 场景，
+//                                          以及同源直连（这种请求本来就拿不到跨站数据）
+//   http://localhost:* / 127.0.0.1:*      本地开发
+//
+// 关闭方式：把环境变量 MINICHAT_ORIGIN_GUARD 设为 "off" 即可整体关掉，
+//          不用改代码、不用重新部署逻辑（改 secrets 后立即生效），万一误伤能马上回滚。
+const ORIGIN_ALLOW = [
+  /^https:\/\/minichat\.astras\.cc$/i,
+  /^https:\/\/([a-z0-9-]+\.)*turbowarp\.org$/i,
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i,
+];
+
+function originAllowed(req: Request): { ok: boolean; origin: string | null } {
+  const raw = req.headers.get("origin");
+  if (!raw || raw === "null") return { ok: true, origin: raw };
+  for (const re of ORIGIN_ALLOW) if (re.test(raw)) return { ok: true, origin: raw };
+  return { ok: false, origin: raw };
+}
+
 function clientIp(req: Request): string {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
     req.headers.get("cf-connecting-ip") ||
@@ -212,6 +239,15 @@ Deno.serve(async (req: Request) => {
     // 统一密钥校验（verify_jwt 已关闭，靠 secret 保护）
     if (secret !== SHARED_SECRET) {
       return json({ error: "unauthorized" }, 403);
+    }
+
+    // 来源白名单（说明见 originAllowed）。MINICHAT_ORIGIN_GUARD=off 可整体关闭。
+    if (Deno.env.get("MINICHAT_ORIGIN_GUARD") !== "off") {
+      const o = originAllowed(req);
+      if (!o.ok) {
+        console.warn("[origin] 拒绝来源:", o.origin, "| action:", action);
+        return json({ error: "forbidden_origin", code: "FORBIDDEN_ORIGIN" }, 403);
+      }
     }
 
     if (action === "flox_send_code") return await floxSendCode(req, body);
