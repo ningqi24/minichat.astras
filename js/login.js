@@ -13,7 +13,7 @@
 //   · 辅助函数  —— js/app.js 的 getCurrentLang / t / loadLanguage（逐字）
 //   · 页面绑定  —— tools/login-page-bindings.js
 //
-// APP_VERSION 与 js/app.js 保持一致（当前 4.12.3）
+// APP_VERSION 与 js/app.js 保持一致（当前 4.12.4）
 // ==========================================================================
 
 // ===================== 版本号 =====================
@@ -21,7 +21,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.3';
+var APP_VERSION = '4.12.4';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -515,7 +515,7 @@ if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABAS
 // 安全约定：FloxChat 的共享密钥与用户表只存在于 Edge Function 服务端；
 // 浏览器端既不接触密钥，也拿不到 FloxChat 用户数据，更不会注册 FloxChat 账号。
 var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
-var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
+var MINICHAT_BRIDGE_SECRET = "flox-ee4cfcf741e6e528a333abec";
 
 // ⚠️ FloxChat 服务端地址【不再放在前端】
 //

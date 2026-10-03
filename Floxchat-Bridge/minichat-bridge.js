@@ -8,7 +8,7 @@
   var SUPABASE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co";
   var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM";
   var EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
-  var SECRET = "flox-meow-2024";
+  var SECRET = "flox-ee4cfcf741e6e528a333abec";
 
   // 「这个账号还没开通 MiniChat」时的中文提示（游客账号是最常见的触发场景）
   var FLOX_NEED_OPEN_HINT =
