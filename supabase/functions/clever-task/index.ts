@@ -132,6 +132,43 @@ async function rateLimitAll(key: string, max: number, windowMs: number): Promise
   return await rateLimitGlobal(key, max, windowMs);
 }
 
+
+// ---- 发码票据：把「校验」绑到「同一来源刚发过码」----
+// 背景（2026-10-03 实际发生）：flox_code_login 原先不要求先发过码，可以拿任意邮箱 + 任意码去校验；
+//   而这个动作只校验请求体里的 secret，secret 在前端是公开的 —— 于是它等于一个
+//   「可对任意邮箱做验证码校验」的公开代理，只是被限流卡住了量。
+//   当天攻击者直连 FloxChat 被 429 之后，就是从 MiniChat 的 Edge Function 绕道校验，
+//   借 Supabase 的出口 IP 规避对方按 IP 的限流。
+// 做法：发码成功登记 (email -> ip) 票据，时效取 FloxChat 的 expiresIn；校验时要求同邮箱同 IP 且一次性消费。
+// 对正常用户无感（真实登录总是先发后验、同一网络）。失败一律放行（fail-open），
+// 所以「SQL 没跑」不会把登录卡死，只是退回没有这层约束的状态。
+const TICKET_TTL_MS = 5 * 60 * 1000; // 与 FloxChat 的 expiresIn=300 一致
+
+async function ticketPut(email: string, ip: string): Promise<void> {
+  try {
+    const { error } = await supabaseAdmin.rpc("verify_ticket_put", {
+      p_email: email, p_ip: ip, p_ttl_ms: TICKET_TTL_MS,
+    });
+    if (error) console.warn("[ticket] 登记失败，放行:", error.message);
+  } catch (e: any) {
+    console.warn("[ticket] 登记异常，放行:", e?.message ?? e);
+  }
+}
+
+// 返回 true 表示票据有效（同邮箱 + 同 IP + 未过期），且已被一次性消费
+async function ticketTake(email: string, ip: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseAdmin.rpc("verify_ticket_take", {
+      p_email: email, p_ip: ip,
+    });
+    if (error) { console.warn("[ticket] 核销失败，放行:", error.message); return true; }
+    return data === true;
+  } catch (e: any) {
+    console.warn("[ticket] 核销异常，放行:", e?.message ?? e);
+    return true;
+  }
+}
+
 function clientIp(req: Request): string {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
     req.headers.get("cf-connecting-ip") ||
@@ -277,6 +314,7 @@ async function floxSendCode(req: Request, body: any) {
         code: "FLOX_SEND_FAILED",
       }, 502);
     }
+    await ticketPut(email, clientIp(req));
     return json({ ok: true });
   } catch (e: any) {
     return json({ error: `FloxChat 发送服务暂不可用: ${e.message}`, code: "FLOX_UNAVAILABLE" }, 502);
@@ -300,6 +338,11 @@ async function floxCodeLogin(req: Request, body: any) {
     !(await rateLimitAll(`code:ip:${clientIp(req)}`, 20, 10 * 60_000))
   ) {
     return json({ error: "尝试过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
+  }
+
+  // 要求「同一来源刚为这个邮箱发过码」——否则等于对外开放了任意邮箱的校验能力
+  if (!(await ticketTake(email, clientIp(req)))) {
+    return json({ error: "请先获取验证码", code: "NO_TICKET" }, 400);
   }
 
   let text = "";
