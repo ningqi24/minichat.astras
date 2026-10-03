@@ -13,7 +13,7 @@
 //   · 辅助函数  —— js/app.js 的 getCurrentLang / t / loadLanguage（逐字）
 //   · 页面绑定  —— tools/login-page-bindings.js
 //
-// APP_VERSION 与 js/app.js 保持一致（当前 4.12.2）
+// APP_VERSION 与 js/app.js 保持一致（当前 4.12.3）
 // ==========================================================================
 
 // ===================== 版本号 =====================
@@ -21,7 +21,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.2';
+var APP_VERSION = '4.12.3';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -519,19 +519,18 @@ var MINICHAT_BRIDGE_SECRET = "flox-meow-2024";
 
 // ⚠️ FloxChat 服务端地址【不再放在前端】
 //
-// 历史：这里曾有一个 FLOXCHAT_BASE_URL，前端拿它直连 FloxChat 的 /ces/send-code。
-// 已经移除，原因是"发验证码"是唯一会消耗 FloxChat 真实资源的动作（发真邮件），
-// 前端直连会绕过 MiniChat 自己的限流，等于对方替我们承担滥用风险。
+// 历史：这里曾有一个 FLOXCHAT_BASE_URL，前端拿它直连 FloxChat 的验证码接口。
+// 已经移除，原因有两条：
+//   1. 发验证码是唯一会消耗 FloxChat 真实资源的动作（发真邮件），前端直连会绕过
+//      MiniChat 自己的限流，等于让它替我们承担滥用风险；
+//   2. 本仓库与本站都是公开的，把接口地址写在前端等于对外公布。
 //
-// 现在发送与校验都走 Edge Function 代理，地址只存在于服务端：
-//   环境变量 FLOXCHAT_SEND_URL   = https://ces.flarefox.top/ces/send-code
-//   环境变量 FLOXCHAT_VERIFY_URL = https://ces.flarefox.top/ces/verify-code
-//   （supabase/functions/clever-task/index.ts 里有默认值；换域名改那里或改 supabase secrets 即可）
+// 现在发送与校验都走 Edge Function 代理，地址只存在于服务端的环境变量
+// （见 supabase/functions/clever-task/index.ts 的 FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL；
+//  换域名改环境变量即可，前端不用动）。
 //
-// 地址变更记录：
-//   · 旧 https://shebiao.dpdns.org 已失效（TLS 变成自签名 CN=localhost，接口连不上）
-//   · 新 https://ces.flarefox.top  —— 域名家族 *.flarefox.top，验证码接口在 ces 子域，
-//     路径前缀 /ces/ 没变；实测 send-code 返回 {"message":"Code sent","expiresIn":300}。
+// ⚠️ 维护约定：不要往这个文件里写 FloxChat 的域名、接口路径，或任何密钥。
+//    它会以源码形式公开（仓库公开 + 站点直接可读），写在这里等于公开。
 
 // ===================== 人机验证（CAPTCHA）配置 =====================
 // 留空 = 不启用。填上 site key 后会自动加载对应提供商的脚本，
