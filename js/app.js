@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.14.2';
+var APP_VERSION = '4.15.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3148,9 +3148,10 @@ function setupProfilesRealtime() {
         }
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(function() {
-            fetchAllMembers().then(function(members) {
+            fetchConversationMembers().then(function(members) {
                 if (allMembersModal && allMembersModal.classList.contains('active')) {
                     renderAllMembers(members);
+                    applyMembersTitle(members.length);
                 }
             });
         }, 500);
@@ -4125,6 +4126,28 @@ function setupFriendsRealtime() {
         console.log('[MiniChat/friends] 订阅状态: ' + status);
     });
 }
+
+// 个性标签：失焦或回车时保存。profiles 的更新策略只允许改自己的行（与改昵称同一套）。
+(function wireBioInput() {
+    var el = document.getElementById('bioInput');
+    var msg = document.getElementById('bioMessage');
+    if (!el) return;
+    var save = async function () {
+        if (!currentUserId) return;
+        var v = (el.value || '').trim().slice(0, 60);
+        try {
+            var r = await supabase.from('profiles').update({ bio: v || null }).eq('id', currentUserId);
+            if (r.error) throw r.error;
+            currentUserMap[currentEmail] = Object.assign({}, currentUserMap[currentEmail] || {}, { bio: v });
+            if (msg) { msg.textContent = '已保存'; msg.style.color = ''; setTimeout(function () { if (msg.textContent === '已保存') msg.textContent = ''; }, 2000); }
+        } catch (e) {
+            console.warn('[MiniChat/profile] 个性标签保存失败:', e && e.message);
+            if (msg) { msg.textContent = '保存失败：' + (e && e.message ? e.message : ''); msg.style.color = '#ef4444'; }
+        }
+    };
+    el.addEventListener('blur', save);
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+})();
 
 (function wireFriendsUI() {
     var b = document.getElementById('btnFriends');
@@ -5253,6 +5276,109 @@ async function fetchUserProfiles(emails) {
     data.forEach(r => { m[r.email] = { display_name: r.display_name, avatar_url: r.avatar_url }; });
     return m;
 }
+// ===================== 第 2 期：资料卡增强（个性标签 + 好友操作）=====================
+// 服务端：get_user_card(p_user_id) 一次返回 昵称/邮箱/头像/bio/注册时间 + 是否好友 + 我是否拉黑了他。
+// 注意资料卡是按【email】打开的（历史原因，头像点击处传的是 email），
+// 而好友类 RPC 需要 user_id，所以这里先解析 id，优先用 currentUserMap 里缓存的。
+async function resolveUserIdByEmail(email) {
+    var cached = currentUserMap[email];
+    if (cached && cached.id) return cached.id;
+    try {
+        var res = await supabase.from('profiles').select('id').eq('email', email).maybeSingle();
+        if (res && res.data && res.data.id) {
+            currentUserMap[email] = Object.assign({}, currentUserMap[email] || {}, { id: res.data.id });
+            return res.data.id;
+        }
+    } catch (e) { console.warn('[MiniChat/profile] 解析 user_id 失败:', e && e.message); }
+    return null;
+}
+
+function pcButton(text, cls, fn) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pc-btn' + (cls ? ' ' + cls : '');
+    b.textContent = text;
+    b.addEventListener('click', fn);
+    return b;
+}
+
+async function loadProfileCardExtras(email) {
+    var bioEl = document.getElementById('profileCardBio');
+    var actEl = document.getElementById('profileCardActions');
+    if (bioEl) bioEl.textContent = '';
+    if (actEl) actEl.innerHTML = '';
+    if (!email) return;
+
+    var uid = await resolveUserIdByEmail(email);
+    if (!uid) return;
+
+    var card = null;
+    try {
+        var res = await supabase.rpc('get_user_card', { p_user_id: uid });
+        if (res.error) throw res.error;
+        card = (res.data && res.data[0]) || null;
+    } catch (e) {
+        console.warn('[MiniChat/profile] 资料卡加载失败:', e && e.message);
+    }
+
+    // 个性标签：优先用 RPC 返回的，退回到缓存
+    var bio = (card && card.bio) || (currentUserMap[email] && currentUserMap[email].bio) || '';
+    if (bioEl) bioEl.textContent = bio || '';
+
+    // 自己的资料卡不放好友操作
+    if (email === currentEmail || !actEl) return;
+
+    var isFriend = !!(card && card.is_friend);
+    var iBlocked = !!(card && card.i_blocked);
+    var name = (currentUserMap[email] && currentUserMap[email].display_name) || email.split('@')[0];
+    var after = function () { loadFriends(); loadFriendRequests(); loadBlocks(); loadProfileCardExtras(email); };
+
+    if (!isFriend) {
+        actEl.appendChild(pcButton('加好友', 'pc-btn-primary', async function () {
+            try {
+                var r = await supabase.rpc('send_friend_request', { p_to_id: uid, p_message: null });
+                if (r.error) throw r.error;
+                alert(r.data === 'already_friends' ? '你们已经是好友了'
+                    : r.data === 'accepted_each_other' ? '对方之前也申请过，已直接成为好友'
+                    : '好友请求已发送');
+                after();
+            } catch (e) { alert('发送失败：' + (e && e.message ? e.message : e)); }
+        }));
+    } else {
+        actEl.appendChild(pcButton('发消息', 'pc-btn-primary', function () {
+            alert('私聊正在做，第 3 期上线。');
+        }));
+    }
+
+    if (iBlocked) {
+        actEl.appendChild(pcButton('取消拉黑', '', async function () {
+            var r = await supabase.rpc('unblock_user', { p_user_id: uid });
+            if (r.error) { alert('操作失败：' + r.error.message); return; }
+            after();
+        }));
+    } else {
+        actEl.appendChild(pcButton('加入黑名单', 'pc-btn-danger', async function () {
+            if (!confirm('把「' + name + '」加入黑名单？' + String.fromCharCode(10, 10)
+                + '加入后：' + String.fromCharCode(10)
+                + '· 对方搜不到你，你也搜不到对方' + String.fromCharCode(10)
+                + '· 对方无法再向你发好友请求' + String.fromCharCode(10)
+                + '· 第 3 期的私聊会禁止你们互相发起')) return;
+            var r = await supabase.rpc('block_user', { p_user_id: uid });
+            if (r.error) { alert('操作失败：' + r.error.message); return; }
+            after();
+        }));
+    }
+
+    if (isFriend) {
+        actEl.appendChild(pcButton('删除好友', 'pc-btn-danger', async function () {
+            if (!confirm('删除好友「' + name + '」？')) return;
+            var r = await supabase.rpc('remove_friend', { p_friend_id: uid });
+            if (r.error) { alert('删除失败：' + r.error.message); return; }
+            after();
+        }));
+    }
+}
+
 function showUserProfile(email) { showProfileCard(email); }
 // v3.1.0 资料卡：昵称 / 邮箱 / 注册时间 / 消息总数 / 在线状态（在线 - 在线；离线 - 5分钟内 - 最近活跃）
 function showProfileCard(email) {
@@ -5279,6 +5405,7 @@ function showProfileCard(email) {
     if (profileCardJoined) profileCardJoined.textContent = t('joinedAt') + ': ' + (info.created_at ? formatTime(info.created_at) : t('unknown'));
     if (profileCardMessages) profileCardMessages.textContent = t('messagesCount') + ': ' + t('loading');
     profileCard.classList.add('active');
+    loadProfileCardExtras(email);
     // 取注册时间和消息总数
     try {
         supabase.from('profiles').select('created_at').eq('email', email).maybeSingle().then(function(res){
@@ -5300,7 +5427,7 @@ function showProfileCard(email) {
 async function loadDisplayName() {
             if (!currentUserId) return;
             try {
-                var data = (await supabase.from('profiles').select('display_name,avatar_url').eq('id', currentUserId).single()).data;
+                var data = (await supabase.from('profiles').select('display_name,avatar_url,bio').eq('id', currentUserId).single()).data;
                 if (data) { currentDisplayName = data.display_name || currentEmail.split('@')[0]; currentAvatarUrl = data.avatar_url || getDefaultAvatar(currentEmail); }
                 else { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
             } catch(e) { currentDisplayName = currentEmail.split('@')[0]; currentAvatarUrl = getDefaultAvatar(currentEmail); }
@@ -5308,6 +5435,8 @@ async function loadDisplayName() {
             delete failedAvatars[currentEmail];
             avatarCache = {};
             if (displayNameInput) displayNameInput.value = currentDisplayName;
+            var _bioInput = document.getElementById('bioInput');
+            if (_bioInput) _bioInput.value = (data && data.bio) || '';
             if (sidebarUserEmail) sidebarUserEmail.textContent = currentDisplayName;
             if (sidebarUserAvatar) {
                 sidebarUserAvatar.src = currentAvatarUrl;
@@ -5653,6 +5782,7 @@ function updateAllMembersIfOpen() {
     if (!allMembersModal || !allMembersModal.classList.contains('active')) return;
     if (!allMembersCache.length) return;
     renderAllMembers(allMembersCache);
+    applyMembersTitle(allMembersCache.length);
 }
 function groupMembersByStatus(members) {
     var onlineEmails = {};
@@ -5672,12 +5802,12 @@ async function fetchAllMembers() {
     if (!supabase) return [];
     try {
         var result = await supabase.from('profiles')
-            .select('id,email,display_name,avatar_url,created_at')
+            .select('id,email,display_name,avatar_url,created_at,bio')
             .order('display_name', { ascending: true });
         if (result.error) throw result.error;
         var members = result.data || [];
         totalMemberCount = members.length;
-        members.forEach(function(m) { if (m.email) currentUserMap[m.email] = { display_name: m.display_name, avatar_url: m.avatar_url }; });
+        members.forEach(function(m) { if (m.email) currentUserMap[m.email] = { id: m.id, display_name: m.display_name, avatar_url: m.avatar_url, bio: m.bio }; });
         updateOnlineUI();
         return members;
     } catch (e) { console.error('fetchAllMembers failed:', e); return []; }
@@ -5888,13 +6018,45 @@ function renderAllMembers(members) {
         grouped.offline.forEach(function(m) { appendItem(m, false); });
     }
 }
+// 会话成员：走 list_conversation_members(p_conversation_id)。
+// 为什么必须走 RPC：conversation_participants 的 RLS 是 user_id = auth.uid()，
+// 前端直接查只能看到自己那一行，看不到同群其他人。
+// 全局聊天例外：它没有"成员"概念上的额外信息，继续用全部 profiles，
+// 这样在线状态统计与总数逻辑跟以前一致。
+async function fetchConversationMembers() {
+    if (!currentConversationId) return [];
+    if (currentConversationId === GLOBAL_CONVERSATION_ID) return await fetchAllMembers();
+    try {
+        var res = await supabase.rpc('list_conversation_members', { p_conversation_id: currentConversationId });
+        if (res.error) throw res.error;
+        var list = res.data || [];
+        // 会话成员也要补进 currentUserMap（资料卡要靠它按 email 找 id 和 bio）
+        list.forEach(function (m) {
+            if (m.email) currentUserMap[m.email] = { id: m.user_id, display_name: m.display_name, avatar_url: m.avatar_url, bio: m.bio };
+        });
+        return list.map(function (m) { return { id: m.user_id, email: m.email, display_name: m.display_name, avatar_url: m.avatar_url, bio: m.bio, created_at: m.joined_at }; });
+    } catch (e) {
+        console.warn('[MiniChat/members] 会话成员加载失败，退回全部用户:', e && e.message);
+        return await fetchAllMembers();
+    }
+}
+
+function applyMembersTitle(count) {
+    if (!allMembersTitle) return;
+    var c = (typeof currentConversation === 'function') ? currentConversation() : null;
+    var label = (c && c.type !== 'global') ? conversationTitle(c) : t('allMembers');
+    allMembersTitle.textContent = label + ' · ' + count;
+}
+
 async function showAllMembersModal() {
     if (!allMembersModal) return;
     allMembersModal.classList.add('active');
     allMembersList.innerHTML = '<div class="online-empty">'+t('loading')+'</div>';
     try {
-        var members = await fetchAllMembers();
+        // 按【当前会话】取成员（全局聊天则仍是全部用户）
+        var members = await fetchConversationMembers();
         renderAllMembers(members);
+        applyMembersTitle(members.length);
     } catch(err) {
         console.error('showAllMembersModal failed:', err);
         allMembersList.innerHTML = '<div class="online-empty">'+t('noMembersFound')+'</div>';

@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.14.2" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.14.2">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.14.2">
+    <link rel="icon" href="./favicon.ico?v=4.15.0" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.15.0">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.15.0">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.14.2" />
+    <meta name="version" content="4.15.0" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.14.2">
+    <link rel="stylesheet" href="/css/app.css?v=4.15.0">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -357,6 +357,13 @@
                                 <div class="setting-control" style="flex:1;max-width:260px">
                                     <div class="nickname-row"><input type="text" id="displayNameInput" placeholder="输入昵称" maxlength="20" data-i18n-placeholder="nickname"/><button class="btn-save" id="saveDisplayName" style="padding:10px 16px" data-i18n="save">保存</button></div>
                                     <div class="nickname-msg" id="displayNameMessage"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div><div class="setting-label">个性标签</div><div class="setting-desc">显示在资料卡上，最多 60 字</div></div>
+                                <div class="setting-control" style="flex:1;max-width:260px">
+                                    <div class="nickname-row"><input type="text" id="bioInput" placeholder="写点什么介绍自己" maxlength="60" /></div>
+                                    <div class="nickname-msg" id="bioMessage"></div>
                                 </div>
                             </div>
                         </div>
@@ -749,13 +756,15 @@
             <div class="display-name" id="profileCardName">昵称</div>
             <div class="email" id="profileCardEmail">邮箱</div>
             <div class="status" id="profileCardStatus">离线</div>
+            <div class="bio" id="profileCardBio"></div>
             <div class="meta" id="profileCardJoined">注册时间: --</div>
             <div class="meta" id="profileCardMessages">消息数: --</div>
+            <div class="pc-actions" id="profileCardActions"></div>
             <button class="close-btn" id="profileCardClose">关闭</button>
         </div>
     </div>
 </div>
 
-<script src="/js/app.js?v=4.14.2" defer></script>
+<script src="/js/app.js?v=4.15.0" defer></script>
 </body>
 </html>
