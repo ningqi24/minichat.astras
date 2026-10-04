@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.13.4" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.13.4">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.13.4">
+    <link rel="icon" href="./favicon.ico?v=4.14.0" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.14.0">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.14.0">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.13.4" />
+    <meta name="version" content="4.14.0" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.13.4">
+    <link rel="stylesheet" href="/css/app.css?v=4.14.0">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -188,6 +188,10 @@
                 </div>
                 <div class="nav-head">
                     <span class="nav-head-title" data-i18n="conversations">会话</span>
+                    <button class="nav-head-btn nav-head-btn-rel" id="btnFriends" title="好友" aria-label="好友">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span class="nav-head-dot" id="friendReqDot" style="display:none"></span>
+                    </button>
                     <button class="nav-head-btn" id="btnNewGroup" title="新建群聊" aria-label="新建群聊">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                     </button>
@@ -622,6 +626,35 @@
             </div>
         </div>
     </div>
+    <!-- ===================== 第 2 期：好友 ===================== -->
+    <div class="custom-modal" id="friendsModal">
+        <div class="modal-overlay" id="friendsOverlay"></div>
+        <div class="modal-content friends-content">
+            <h3 class="modal-title">好友</h3>
+
+            <div class="fr-tabs">
+                <button class="fr-tab active" id="frTabFriends" type="button">我的好友 <span class="fr-count" id="frFriendCount">0</span></button>
+                <button class="fr-tab" id="frTabRequests" type="button">好友请求 <span class="fr-count fr-count-hi" id="frReqCount">0</span></button>
+            </div>
+
+            <div class="fr-pane" id="frPaneFriends">
+                <div class="fr-search">
+                    <input id="frSearchInput" type="text" placeholder="输入邮箱或昵称搜索用户" />
+                    <button id="frSearchBtn" type="button">搜索</button>
+                </div>
+                <div class="fr-search-result" id="frSearchResult" style="display:none"></div>
+                <div class="fr-list" id="frFriendList"></div>
+            </div>
+
+            <div class="fr-pane" id="frPaneRequests" style="display:none">
+                <div class="fr-list" id="frRequestList"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" id="friendsClose" type="button">关闭</button>
+            </div>
+        </div>
+    </div>
     <!-- ===================== 第 1 期：新建群聊弹窗 ===================== -->
     <div class="custom-modal" id="newGroupModal">
         <div class="modal-overlay" id="newGroupOverlay"></div>
@@ -718,6 +751,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.13.4" defer></script>
+<script src="/js/app.js?v=4.14.0" defer></script>
 </body>
 </html>

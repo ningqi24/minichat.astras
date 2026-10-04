@@ -1016,3 +1016,35 @@
 .cs-hint{font-size:12px;color:var(--text-muted);margin:10px 0 0;line-height:1.6}
 .cs-danger{color:#ef4444!important}
 .cs-danger:hover{background:rgba(239,68,68,.12)!important;border-color:#ef4444!important}
+
+/* ===================== 第 2 期：好友 ===================== */
+.nav-head-btn-rel{position:relative}
+.nav-head-dot{position:absolute;top:0;right:0;min-width:8px;height:8px;border-radius:4px;background:#ef4444}
+.friends-content{max-width:460px;width:94vw}
+.fr-tabs{display:flex;gap:6px;margin:4px 0 12px;border-bottom:1px solid var(--border,rgba(255,255,255,.08));padding-bottom:8px}
+.fr-tab{flex:1;padding:7px 10px;border:none;background:transparent;color:var(--text-muted);border-radius:var(--radius-sm);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.fr-tab:hover{color:var(--text-primary)}
+.fr-tab.active{background:var(--bg-hover);color:var(--accent)}
+.fr-count{min-width:16px;height:16px;padding:0 5px;border-radius:8px;background:var(--bg-input);color:var(--text-secondary);font-size:10px;display:flex;align-items:center;justify-content:center}
+.fr-count-hi{background:#ef4444;color:#fff}
+.fr-pane{min-height:180px}
+.fr-search{display:flex;gap:8px;margin-bottom:10px}
+.fr-search input{flex:1;min-width:0;box-sizing:border-box;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border,rgba(255,255,255,.12));background:var(--bg-input);color:var(--text-primary);font-size:13px;outline:none}
+.fr-search input:focus{border-color:var(--accent)}
+.fr-search button{padding:0 14px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;flex-shrink:0}
+.fr-list{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.fr-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm)}
+.fr-row:hover{background:var(--bg-hover)}
+.fr-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;background:var(--bg-input);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-secondary);overflow:hidden}
+.fr-info{flex:1;min-width:0}
+.fr-name{font-size:13px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr-sub{font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr-act{display:flex;gap:6px;flex-shrink:0}
+.fr-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--border,rgba(255,255,255,.12));background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.fr-btn:hover{border-color:var(--accent);color:var(--accent)}
+.fr-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.fr-btn-primary:hover{opacity:.88;color:#fff}
+.fr-btn-danger:hover{border-color:#ef4444;color:#ef4444}
+.fr-empty{padding:16px;text-align:center;color:var(--text-muted);font-size:13px}
+.fr-search-result{margin-bottom:10px;border-bottom:1px solid var(--border,rgba(255,255,255,.08));padding-bottom:6px}
+.fr-search-result .fr-title{font-size:12px;color:var(--text-muted);padding:4px 10px}

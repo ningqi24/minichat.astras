@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.13.4';
+var APP_VERSION = '4.14.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3197,6 +3197,9 @@ function enterChat() {
                 }).then(() => {
                     loadConversations();
                     try { setupConversationsRealtime(); } catch (e) { console.warn('[MiniChat/boot] 会话订阅失败', e); }
+                    // 第 2 期：好友（列表 + 待处理请求 + 实时）
+                    try { loadFriends(); loadFriendRequests(); setupFriendsRealtime(); }
+                    catch (e) { console.warn('[MiniChat/boot] 好友初始化失败', e); }
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
                     // 这里【不清空】消息列表：清空放在 loadHistory 成功之后再统一做。
@@ -3790,6 +3793,290 @@ async function onLeaveConversation() {
             } else { done(); }
         } catch (e) { done(); }
     });
+})();
+
+// ===================== 第 2 期：好友 =====================
+// 服务端见 supabase/phase2-friends.sql：
+//   list_my_friends() / send_friend_request / respond_friend_request /
+//   remove_friend / set_friend_remark / block_user / unblock_user
+// 读取请求直接查 friend_requests 表（RLS 只让我看到收发双方的记录）。
+var friendList = [];
+var friendRequests = [];
+var frSearchResults = [];
+var friendsRealtimeChannel = null;
+
+function frName(o) {
+    if (!o) return '未知用户';
+    return o.remark || o.display_name || (o.email ? o.email.split('@')[0] : '未知用户');
+}
+function frMakeAvatar(url, name) {
+    var av = document.createElement('span');
+    av.className = 'fr-av';
+    if (url) { av.style.backgroundImage = 'url("' + url + '")'; }
+    else { av.textContent = (name || '?').slice(0, 1); }
+    return av;
+}
+function frMakeRow(av, name, sub, actions) {
+    var row = document.createElement('div'); row.className = 'fr-row';
+    row.appendChild(av);
+    var info = document.createElement('div'); info.className = 'fr-info';
+    var n = document.createElement('div'); n.className = 'fr-name'; n.textContent = name;
+    info.appendChild(n);
+    if (sub) { var s = document.createElement('div'); s.className = 'fr-sub'; s.textContent = sub; info.appendChild(s); }
+    row.appendChild(info);
+    if (actions && actions.length) {
+        var act = document.createElement('div'); act.className = 'fr-act';
+        actions.forEach(function (b) { act.appendChild(b); });
+        row.appendChild(act);
+    }
+    return row;
+}
+function frButton(text, cls, fn) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fr-btn' + (cls ? ' ' + cls : '');
+    b.textContent = text;
+    b.addEventListener('click', fn);
+    return b;
+}
+
+async function loadFriends() {
+    if (!currentUserId) return;
+    try {
+        var res = await supabase.rpc('list_my_friends');
+        if (res.error) throw res.error;
+        friendList = res.data || [];
+        renderFriendList();
+    } catch (e) {
+        console.warn('[MiniChat/friends] 好友加载失败:', e && e.message);
+    }
+}
+
+async function loadFriendRequests() {
+    if (!currentUserId) return;
+    try {
+        var res = await supabase.from('friend_requests')
+            .select('id, from_id, to_id, message, status, created_at')
+            .eq('to_id', currentUserId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+        if (res.error) throw res.error;
+        var rows = res.data || [];
+        var ids = rows.map(function (r) { return r.from_id; });
+        var profMap = {};
+        if (ids.length) {
+            var p = await supabase.from('profiles').select('id,email,display_name,avatar_url').in('id', ids);
+            (p.data || []).forEach(function (x) { profMap[x.id] = x; });
+        }
+        friendRequests = rows.map(function (r) {
+            return { id: r.id, from_id: r.from_id, message: r.message, from: profMap[r.from_id] || null };
+        });
+        renderFriendRequests();
+        updateFriendDot();
+    } catch (e) {
+        console.warn('[MiniChat/friends] 好友请求加载失败:', e && e.message);
+    }
+}
+
+function updateFriendDot() {
+    var dot = document.getElementById('friendReqDot');
+    if (dot) dot.style.display = friendRequests.length ? 'block' : 'none';
+    var c1 = document.getElementById('frReqCount');
+    if (c1) c1.textContent = String(friendRequests.length);
+    var c2 = document.getElementById('frFriendCount');
+    if (c2) c2.textContent = String(friendList.length);
+}
+
+function renderFriendList() {
+    var box = document.getElementById('frFriendList');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!friendList.length) {
+        var e = document.createElement('div'); e.className = 'fr-empty'; e.textContent = '还没有好友，搜索用户加一个吧。';
+        box.appendChild(e);
+    }
+    friendList.forEach(function (f) {
+        var name = frName({ remark: f.remark, display_name: f.display_name, email: f.email });
+        var sub = f.email + (f.i_blocked ? '（已拉黑）' : '');
+        var btns = [
+            frButton('备注', '', function () {
+                var r = prompt('给「' + name + '」设置备注（留空清除）', f.remark || '');
+                if (r === null) return;
+                supabase.rpc('set_friend_remark', { p_friend_id: f.friend_id, p_remark: r }).then(function (res) {
+                    if (res.error) { alert('设置失败：' + res.error.message); return; }
+                    loadFriends();
+                });
+            }),
+            frButton(f.i_blocked ? '取消拉黑' : '拉黑', 'fr-btn-danger', function () {
+                var fn = f.i_blocked ? 'unblock_user' : 'block_user';
+                if (!f.i_blocked && !confirm('拉黑「' + name + '」？对方将无法再向你发好友请求。')) return;
+                supabase.rpc(fn, { p_user_id: f.friend_id }).then(function (res) {
+                    if (res.error) { alert('操作失败：' + res.error.message); return; }
+                    loadFriends();
+                });
+            }),
+            frButton('删除', 'fr-btn-danger', function () {
+                if (!confirm('删除好友「' + name + '」？')) return;
+                supabase.rpc('remove_friend', { p_friend_id: f.friend_id }).then(function (res) {
+                    if (res.error) { alert('删除失败：' + res.error.message); return; }
+                    loadFriends(); loadFriendRequests();
+                });
+            })
+        ];
+        box.appendChild(frMakeRow(frMakeAvatar(f.avatar_url, name), name, sub, btns));
+    });
+    updateFriendDot();
+}
+
+function renderFriendRequests() {
+    var box = document.getElementById('frRequestList');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!friendRequests.length) {
+        var e = document.createElement('div'); e.className = 'fr-empty'; e.textContent = '没有待处理的好友请求。';
+        box.appendChild(e);
+        return;
+    }
+    friendRequests.forEach(function (r) {
+        var name = frName(r.from);
+        var sub = r.message ? ('留言：' + r.message) : ((r.from && r.from.email) || '');
+        var btns = [
+            frButton('同意', 'fr-btn-primary', function () { respondRequest(r.id, true); }),
+            frButton('拒绝', '', function () { respondRequest(r.id, false); })
+        ];
+        box.appendChild(frMakeRow(frMakeAvatar(r.from && r.from.avatar_url, name), name + ' 请求加你为好友', sub, btns));
+    });
+}
+
+function renderSearchResults() {
+    var box = document.getElementById('frSearchResult');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!frSearchResults.length) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    var title = document.createElement('div'); title.className = 'fr-title';
+    title.textContent = '搜索结果（' + frSearchResults.length + '）';
+    box.appendChild(title);
+    frSearchResults.forEach(function (u) {
+        var name = frName(u);
+        var btns = [frButton('加好友', 'fr-btn-primary', function () { addFriend(u.id); })];
+        box.appendChild(frMakeRow(frMakeAvatar(u.avatar_url, name), name, u.email, btns));
+    });
+}
+
+async function searchUsers() {
+    var input = document.getElementById('frSearchInput');
+    var box = document.getElementById('frSearchResult');
+    var q = ((input && input.value) || '').trim();
+    if (!q) { if (box) { box.style.display = 'none'; box.innerHTML = ''; } frSearchResults = []; return; }
+    try {
+        var res = await supabase.from('profiles')
+            .select('id,email,display_name,avatar_url')
+            .or('email.ilike.%' + q + '%,display_name.ilike.%' + q + '%')
+            .limit(20);
+        if (res.error) throw res.error;
+        var friendIds = {};
+        friendList.forEach(function (f) { friendIds[f.friend_id] = 1; });
+        frSearchResults = (res.data || []).filter(function (u) {
+            return u.id !== currentUserId && !friendIds[u.id];
+        });
+        renderSearchResults();
+        if (!frSearchResults.length && box) {
+            box.style.display = '';
+            box.innerHTML = '<div class="fr-title">没有找到可添加的用户</div>';
+        }
+    } catch (e) {
+        console.warn('[MiniChat/friends] 搜索失败:', e && e.message);
+        alert('搜索失败：' + (e && e.message ? e.message : e));
+    }
+}
+
+async function addFriend(userId) {
+    try {
+        var res = await supabase.rpc('send_friend_request', { p_to_id: userId, p_message: null });
+        if (res.error) throw res.error;
+        var out = res.data;
+        var msg = out === 'already_friends' ? '你们已经是好友了'
+                : out === 'accepted_each_other' ? '对方之前也申请过，已直接成为好友'
+                : '好友请求已发送';
+        console.log('[MiniChat/friends] ' + out);
+        await loadFriends(); await loadFriendRequests();
+        searchUsers();
+        alert(msg);
+    } catch (e) {
+        alert('发送失败：' + (e && e.message ? e.message : e));
+    }
+}
+
+async function respondRequest(id, accept) {
+    try {
+        var res = await supabase.rpc('respond_friend_request', { p_request_id: id, p_accept: accept });
+        if (res.error) throw res.error;
+        await loadFriendRequests(); await loadFriends();
+    } catch (e) {
+        alert('处理失败：' + (e && e.message ? e.message : e));
+    }
+}
+
+function openFriendsModal() {
+    var m = document.getElementById('friendsModal');
+    if (!m) return;
+    m.classList.add('active');
+    switchFrTab('friends');
+    loadFriends(); loadFriendRequests();
+}
+function closeFriendsModal() {
+    var m = document.getElementById('friendsModal');
+    if (m) m.classList.remove('active');
+}
+function switchFrTab(which) {
+    var isFriends = which === 'friends';
+    var tf = document.getElementById('frTabFriends'), tr = document.getElementById('frTabRequests');
+    if (tf) tf.classList.toggle('active', isFriends);
+    if (tr) tr.classList.toggle('active', !isFriends);
+    var pf = document.getElementById('frPaneFriends'), pr = document.getElementById('frPaneRequests');
+    if (pf) pf.style.display = isFriends ? '' : 'none';
+    if (pr) pr.style.display = isFriends ? 'none' : '';
+}
+
+function setupFriendsRealtime() {
+    if (friendsRealtimeChannel) { friendsRealtimeChannel.unsubscribe(); friendsRealtimeChannel = null; }
+    if (!currentUserId) return;
+    friendsRealtimeChannel = supabase.channel('friends-realtime');
+    friendsRealtimeChannel.on('postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests' },
+        function (payload) {
+            var r = payload.new || payload.old || {};
+            if (r.to_id !== currentUserId && r.from_id !== currentUserId) return;
+            var m = document.getElementById('friendsModal');
+            if (m && m.classList.contains('active')) loadFriendRequests(); else loadFriendRequests();
+        });
+    friendsRealtimeChannel.on('postgres_changes',
+        { event: '*', schema: 'public', table: 'friendships' },
+        function () {
+            var m = document.getElementById('friendsModal');
+            if (m && m.classList.contains('active')) loadFriends();
+        });
+    friendsRealtimeChannel.subscribe(function (status) {
+        console.log('[MiniChat/friends] 订阅状态: ' + status);
+    });
+}
+
+(function wireFriendsUI() {
+    var b = document.getElementById('btnFriends');
+    if (b) b.addEventListener('click', openFriendsModal);
+    var x = document.getElementById('friendsClose');
+    if (x) x.addEventListener('click', closeFriendsModal);
+    var o = document.getElementById('friendsOverlay');
+    if (o) o.addEventListener('click', closeFriendsModal);
+    var tf = document.getElementById('frTabFriends');
+    if (tf) tf.addEventListener('click', function () { switchFrTab('friends'); });
+    var tr = document.getElementById('frTabRequests');
+    if (tr) tr.addEventListener('click', function () { switchFrTab('requests'); });
+    var sb = document.getElementById('frSearchBtn');
+    if (sb) sb.addEventListener('click', searchUsers);
+    var si = document.getElementById('frSearchInput');
+    if (si) si.addEventListener('keydown', function (e) { if (e.key === 'Enter') searchUsers(); });
 })();
 
 async function ensureGlobalConversation() {
