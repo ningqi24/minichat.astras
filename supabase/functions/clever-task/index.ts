@@ -562,6 +562,15 @@ async function sendMessage(body: any) {
     return json({ error: "你已被禁言，暂时不能发言", code: "MUTED", until: muteRow.muted_until }, 403);
   }
 
+
+  // 私聊：任一方拉黑对方就拒绝（本函数用 service_role 会绕过 RLS，必须自己查）。
+  // 群聊不受影响 —— direct_blocked_between 内部限定 type='direct'。
+  const { data: blockedFlag } = await supabaseAdmin
+    .rpc("direct_blocked_between", { p_conversation_id: conversationId, p_uid: user.id });
+  if (blockedFlag === true) {
+    return json({ error: "你们之间有一方拉黑了对方，当前无法发言", code: "PEER_BLOCKED" }, 403);
+  }
+
   const content = String(body.content || "");
   if (!content.trim()) return json({ error: "empty content" }, 400);
 

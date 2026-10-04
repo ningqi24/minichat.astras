@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.20.0';
+var APP_VERSION = '4.21.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3976,6 +3976,9 @@ async function onLeaveConversation() {
 // 读取请求直接查 friend_requests 表（RLS 只让我看到收发双方的记录）。
 // 我在当前会话的禁言到期时间（毫秒）。RLS 才是真闸，这里只用来提前给出人能看懂的提示。
 var myMuteUntil = 0;
+// 私聊里『任一方拉黑了对方』（服务端 my_conversation_state.peer_blocked 为真）。
+// 为真时前端提前提示，不等到发送被 RLS 拒了才说。群聊恒为 false。
+var myPeerBlocked = false;
 var friendList = [];
 var friendRequests = [];
 var frSearchResults = [];
@@ -4030,6 +4033,7 @@ async function refreshMyState() {
             var t0 = new Date(row.muted_until).getTime();
             if (t0 > Date.now()) myMuteUntil = t0;
         }
+        myPeerBlocked = !!(row && row.peer_blocked);
     } catch (e) {
         console.warn('[MiniChat/mute] 状态查询失败:', e && e.message);
     }
@@ -4057,6 +4061,15 @@ function applyMuteUI() {
     var banner = document.getElementById('muteBanner');
     var text = document.getElementById('muteBannerText');
     var input = document.getElementById('chatInput');
+
+    // 情况 A：私聊里有一方拉黑了对方（含我自己拉的）——不能发言，且不能说成『被禁言』
+    if (myPeerBlocked) {
+        if (text) text.textContent = '你们之间有一方拉黑了对方，当前无法在此私聊中发言';
+        if (banner) banner.style.display = '';
+        if (input) { input.disabled = true; input.placeholder = '当前无法发言'; }
+        return;
+    }
+
     var left = myMuteUntil - Date.now();
     if (left > 0) {
         var mins = Math.ceil(left / 60000);
