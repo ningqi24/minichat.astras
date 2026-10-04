@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.17.0';
+var APP_VERSION = '4.17.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3731,6 +3731,9 @@ function openConvSettings() {
         var sm = document.getElementById('csSaveMsg'); if (sm) { sm.textContent = ''; sm.style.color = ''; }
     }
 
+    // 第 4 期：待审批的加群申请。loadJoinRequests 内部自己判断我是不是群主/管理员，
+    // 不是就把这块隐藏掉，所以这里可以无条件调用。
+    try { loadJoinRequests(); } catch (e) { console.warn('[MiniChat/join] 申请列表加载失败', e); }
     var leave = document.getElementById('csLeaveBtn');
     if (leave) {
         // 群主不是「退出」，而是「解散」：整群连消息一起删掉（调 dissolve_group）。
@@ -3846,7 +3849,6 @@ async function onLeaveConversation() {
     if (cb) cb.addEventListener('change', onBridgeToggleChange);
     var lv = document.getElementById('csLeaveBtn');
     if (lv) lv.addEventListener('click', onLeaveConversation);
-    if (canManage) { try { loadJoinRequests(); } catch (e) {} } else { var _jl = document.getElementById('csJoinReqList'); if (_jl) { _jl.innerHTML = ''; _jl.style.display = 'none'; } }
     var sb = document.getElementById('csSaveBtn');
     if (sb) sb.addEventListener('click', onSaveGroupProfile);
     var iv = document.getElementById('csInviteBtn');
