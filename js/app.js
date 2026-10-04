@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.18.0';
+var APP_VERSION = '4.18.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -4207,8 +4207,6 @@ async function respondJoinReq(id, accept) {
 }
 
 (function wireJoinGroupUI() {
-    var b = document.getElementById('btnJoinGroup');
-    if (b) b.addEventListener('click', openJoinGroup);
     var x = document.getElementById('joinGroupClose');
     if (x) x.addEventListener('click', closeJoinGroup);
     var o = document.getElementById('joinGroupOverlay');
