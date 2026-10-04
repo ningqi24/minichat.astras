@@ -1101,3 +1101,11 @@
 .jg-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
 .jg-notice{font-size:12px;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap;border-top:1px solid var(--border,rgba(255,255,255,.08));padding-top:8px}
 .jg-msg{font-size:12px;color:var(--text-muted);text-align:center;padding:6px 0}
+
+/* ===================== 第 1.5 期：禁言提示（修正定位）=====================
+   .input-area 是 position:absolute;bottom:16px，普通文档流里的提示条会被甩到最底下。
+   所以这里也用绝对定位，贴在输入框正上方。 */
+.chat-main .mute-banner{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:600px;z-index:6;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;margin:0;border-radius:14px;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.38);color:#f59e0b;font-size:12.5px;line-height:1.45;box-shadow:0 4px 16px rgba(0,0,0,.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.chat-main .mute-banner svg{flex-shrink:0}
+/* 被禁言时输入框要一眼看出来不能用 */
+.chat-main .input-area .input-group textarea:disabled{opacity:.5;cursor:not-allowed}

@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.17.1';
+var APP_VERSION = '4.18.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3201,7 +3201,7 @@ function enterChat() {
                     // 第 2 期：好友（列表 + 待处理请求 + 实时）
                     try { loadFriends(); loadFriendRequests(); loadBlocks(); setupFriendsRealtime(); }
                     catch (e) { console.warn('[MiniChat/boot] 好友初始化失败', e); }
-                    try { refreshMyState(); } catch (e) { console.warn('[MiniChat/boot] 状态加载失败', e); }
+                    try { refreshMyState(); ensureMyStatePolling(); } catch (e) { console.warn('[MiniChat/boot] 状态加载失败', e); }
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
                     // 这里【不清空】消息列表：清空放在 loadHistory 成功之后再统一做。
@@ -3503,6 +3503,24 @@ function selectConversation(id) {
 // 因为 conversation_participants 的 cp_insert 策略是 with check (user_id = auth.uid())，
 // 客户端只能把自己加进会话，没法把别人拉进来，建群必须由服务端完成。
 // RPC 会顺带生成 8 位群号，并把创建者写成 role='owner'。
+// 第 4 期：新建群聊与加入群聊合并成同一个弹窗的两个标签页。
+function switchNewGroupTab(which) {
+    var isCreate = which === 'create';
+    var tc = document.getElementById('ngTabCreate'), tj = document.getElementById('ngTabJoin');
+    if (tc) tc.classList.toggle('active', isCreate);
+    if (tj) tj.classList.toggle('active', !isCreate);
+    var pc = document.getElementById('ngPaneCreate'), pj = document.getElementById('ngPaneJoin');
+    if (pc) pc.style.display = isCreate ? '' : 'none';
+    if (pj) pj.style.display = isCreate ? 'none' : '';
+    // 只有创建页才显示「创建」按钮
+    var cf = document.getElementById('newGroupConfirm');
+    if (cf) cf.style.display = isCreate ? '' : 'none';
+    if (!isCreate) {
+        var inp = document.getElementById('jgGroupNo');
+        if (inp) setTimeout(function () { try { inp.focus(); } catch (e) {} }, 60);
+    }
+}
+
 async function openNewGroupModal() {
     var modal = document.getElementById('newGroupModal');
     var box = document.getElementById('newGroupMembers');
@@ -3513,11 +3531,22 @@ async function openNewGroupModal() {
     if (cntEl) cntEl.textContent = '已选 0 人';
     box.innerHTML = '<div class="ngm-loading">' + t('loading') + '</div>';
     modal.classList.add('active');
+    switchNewGroupTab('create');
 
+    // 第 2/4 期：只能拉【已是好友】的人进群，所以这里只列好友。
+    // 服务端 create_group 也会再校验一次（members_must_be_friends），前端过滤只是省得用户白选。
     var members = [];
-    try { members = (await fetchAllMembers()) || []; } catch (e) { members = []; }
-    // 自己不用勾选 —— 服务端会把创建者自动加成 owner
-    members = members.filter(function (m) { return m.id !== currentUserId; });
+    try {
+        if (!friendList.length) { await loadFriends(); }
+        members = friendList.map(function (fr) {
+            return {
+                id: fr.friend_id,
+                email: fr.email,
+                display_name: fr.remark || fr.display_name || (fr.email ? fr.email.split('@')[0] : ''),
+                avatar_url: fr.avatar_url
+            };
+        });
+    } catch (e) { members = []; }
 
     box.innerHTML = '';
     if (!members.length) {
@@ -3938,6 +3967,23 @@ async function refreshMyState() {
     applyMuteUI();
 }
 
+// 常驻轮询：每 30 秒向服务端对一次账。
+// 以前只在『被禁言时』才刷新，结果群主取消禁言后前端一直不知道，
+// myMuteUntil 停留在旧时间戳，输入框再也点不了。现在改成任何状态都对账。
+function ensureMyStatePolling() {
+    if (window.__myStateTimer) return;
+    window.__myStateTimer = setInterval(function () {
+        if (document.hidden || !currentUserId) return;
+        refreshMyState();
+    }, 30000);
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && currentUserId) refreshMyState();
+    });
+    window.addEventListener('focus', function () {
+        if (currentUserId) refreshMyState();
+    });
+}
+
 function applyMuteUI() {
     var banner = document.getElementById('muteBanner');
     var text = document.getElementById('muteBannerText');
@@ -3951,14 +3997,10 @@ function applyMuteUI() {
         if (text) text.textContent = '你已被禁言，约 ' + human + ' 后可以发言';
         if (banner) banner.style.display = '';
         if (input) { input.disabled = true; input.placeholder = '你已被禁言'; }
-        // 到点自动恢复
+        // 到点先就地恢复，之后由常驻轮询向服务端对账
         if (!window.__muteTimer) {
             window.__muteTimer = setInterval(function () {
-                if (!myMuteUntil || myMuteUntil <= Date.now()) {
-                    myMuteUntil = 0;
-                    clearInterval(window.__muteTimer); window.__muteTimer = null;
-                    applyMuteUI();
-                }
+                if (myMuteUntil && myMuteUntil <= Date.now()) { myMuteUntil = 0; applyMuteUI(); }
             }, 20000);
         }
     } else {
@@ -3977,9 +4019,11 @@ function applyMuteUI() {
 var jgFound = null;
 
 function openJoinGroup() {
-    var m = document.getElementById('joinGroupModal');
+    // 合并后与新建群聊共用同一个弹窗，只是默认切到『加入群聊』页
+    var m = document.getElementById('newGroupModal');
     if (!m) return;
     m.classList.add('active');
+    switchNewGroupTab('join');
     var inp = document.getElementById('jgGroupNo');
     if (inp) { inp.value = ''; setTimeout(function () { try { inp.focus(); } catch (e) {} }, 60); }
     var res = document.getElementById('jgResult');
@@ -3987,7 +4031,7 @@ function openJoinGroup() {
     jgFound = null;
 }
 function closeJoinGroup() {
-    var m = document.getElementById('joinGroupModal');
+    var m = document.getElementById('newGroupModal');
     if (m) m.classList.remove('active');
 }
 
@@ -4169,6 +4213,10 @@ async function respondJoinReq(id, accept) {
     if (x) x.addEventListener('click', closeJoinGroup);
     var o = document.getElementById('joinGroupOverlay');
     if (o) o.addEventListener('click', closeJoinGroup);
+    var tc = document.getElementById('ngTabCreate');
+    if (tc) tc.addEventListener('click', function () { switchNewGroupTab('create'); });
+    var tj = document.getElementById('ngTabJoin');
+    if (tj) tj.addEventListener('click', function () { switchNewGroupTab('join'); });
     var fb = document.getElementById('jgFindBtn');
     if (fb) fb.addEventListener('click', jgFind);
     var gi = document.getElementById('jgGroupNo');
@@ -6513,6 +6561,7 @@ async function adminMute(uid, minutes, name) {
         if (r.error) throw r.error;
         showAlert(minutes > 0 ? ('已禁言 ' + name) : ('已解除 ' + name + ' 的禁言'), 'success');
         refreshMemberModal();
+        refreshMyState();
     } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
 }
 
