@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.14.0';
+var APP_VERSION = '4.14.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3658,6 +3658,14 @@ function setupConversationsRealtime() {
         document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshNow(); });
         window.addEventListener('focus', refreshNow);
     }
+
+    // 好友请求小红点的兜底：每 30 秒拉一次，后台标签页跳过
+    if (!window.__frDotTimer) {
+        window.__frDotTimer = setInterval(function () {
+            if (document.hidden) return;
+            loadFriendRequests();
+        }, 30000);
+    }
 }
 
 // ===================== 第 1 期：会话设置面板 =====================
@@ -3897,7 +3905,7 @@ function renderFriendList() {
     }
     friendList.forEach(function (f) {
         var name = frName({ remark: f.remark, display_name: f.display_name, email: f.email });
-        var sub = f.email + (f.i_blocked ? '（已拉黑）' : '');
+        var sub = f.email + (f.i_blocked ? '  ⛔ 已拉黑' : '');
         var btns = [
             frButton('备注', '', function () {
                 var r = prompt('给「' + name + '」设置备注（留空清除）', f.remark || '');
@@ -3909,7 +3917,12 @@ function renderFriendList() {
             }),
             frButton(f.i_blocked ? '取消拉黑' : '拉黑', 'fr-btn-danger', function () {
                 var fn = f.i_blocked ? 'unblock_user' : 'block_user';
-                if (!f.i_blocked && !confirm('拉黑「' + name + '」？对方将无法再向你发好友请求。')) return;
+                if (!f.i_blocked && !confirm('拉黑「' + name + '」？' + String.fromCharCode(10,10) +
+                    '拉黑后：' + String.fromCharCode(10) +
+                    '· 对方搜不到你，你也搜不到对方' + String.fromCharCode(10) +
+                    '· 对方无法再向你发好友请求' + String.fromCharCode(10) +
+                    '· 第 3 期的私聊会禁止你们互相发起' + String.fromCharCode(10) +
+                    '（好友关系保留，取消拉黑即可恢复）')) return;
                 supabase.rpc(fn, { p_user_id: f.friend_id }).then(function (res) {
                     if (res.error) { alert('操作失败：' + res.error.message); return; }
                     loadFriends();
@@ -3970,16 +3983,12 @@ async function searchUsers() {
     var q = ((input && input.value) || '').trim();
     if (!q) { if (box) { box.style.display = 'none'; box.innerHTML = ''; } frSearchResults = []; return; }
     try {
-        var res = await supabase.from('profiles')
-            .select('id,email,display_name,avatar_url')
-            .or('email.ilike.%' + q + '%,display_name.ilike.%' + q + '%')
-            .limit(20);
+        // 用 SECURITY DEFINER 的 search_users：服务端统一排除
+        // 自己 / 已是好友 / 我拉黑的人 / 拉黑了我的人。
+        // 前端直接查 profiles 做不到后两条（blocks 的 RLS 只让我看自己那份）。
+        var res = await supabase.rpc('search_users', { p_query: q, p_limit: 20 });
         if (res.error) throw res.error;
-        var friendIds = {};
-        friendList.forEach(function (f) { friendIds[f.friend_id] = 1; });
-        frSearchResults = (res.data || []).filter(function (u) {
-            return u.id !== currentUserId && !friendIds[u.id];
-        });
+        frSearchResults = res.data || [];
         renderSearchResults();
         if (!frSearchResults.length && box) {
             box.style.display = '';
@@ -4024,10 +4033,18 @@ function openFriendsModal() {
     m.classList.add('active');
     switchFrTab('friends');
     loadFriends(); loadFriendRequests();
+    // 面板开着时每 5 秒刷一次：不管 Realtime 事件到不到，
+    // 都不会出现『对方同意了但我这边一直没反应』。
+    if (window.__frRefreshTimer) clearInterval(window.__frRefreshTimer);
+    window.__frRefreshTimer = setInterval(function () {
+        if (document.hidden) return;
+        loadFriends(); loadFriendRequests();
+    }, 5000);
 }
 function closeFriendsModal() {
     var m = document.getElementById('friendsModal');
     if (m) m.classList.remove('active');
+    if (window.__frRefreshTimer) { clearInterval(window.__frRefreshTimer); window.__frRefreshTimer = null; }
 }
 function switchFrTab(which) {
     var isFriends = which === 'friends';
@@ -4042,6 +4059,7 @@ function switchFrTab(which) {
 function setupFriendsRealtime() {
     if (friendsRealtimeChannel) { friendsRealtimeChannel.unsubscribe(); friendsRealtimeChannel = null; }
     if (!currentUserId) return;
+    console.log('[MiniChat/friends] 建立实时订阅（当前用户 ' + currentUserId + '）');
     friendsRealtimeChannel = supabase.channel('friends-realtime');
     friendsRealtimeChannel.on('postgres_changes',
         { event: '*', schema: 'public', table: 'friend_requests' },
