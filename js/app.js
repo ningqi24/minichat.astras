@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.8';
+var APP_VERSION = '4.12.9';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3196,6 +3196,7 @@ function enterChat() {
                     console.warn('[MiniChat/boot] 全局会话准备失败（继续）', e && e.message);
                 }).then(() => {
                     loadConversations();
+                    try { setupConversationsRealtime(); } catch (e) { console.warn('[MiniChat/boot] 会话订阅失败', e); }
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
                     // 这里【不清空】消息列表：清空放在 loadHistory 成功之后再统一做。
@@ -3538,6 +3539,39 @@ async function createGroupFromModal() {
     var k = document.getElementById('newGroupConfirm');
     if (k) k.addEventListener('click', createGroupFromModal);
 })();
+
+// ===================== 第 1 期：会话变更实时同步 =====================
+// 场景：别人把你拉进一个群，你不刷新页面也应该看到它出现在侧边栏。
+// 做法：订阅 conversation_participants 的 INSERT，发现"自己被加进某个会话"就重拉会话列表。
+// ⚠️ 这里刻意【不依赖】Realtime 是否应用了表 RLS：
+//    即便收到的是所有人的加入事件，下面也用 payload.new.user_id === currentUserId 过滤，
+//    而且它只是"谁进了哪个会话"这种元数据，不含任何消息内容，风险可接受。
+var conversationsRealtimeChannel = null;
+
+function setupConversationsRealtime() {
+    if (conversationsRealtimeChannel) {
+        conversationsRealtimeChannel.unsubscribe();
+        conversationsRealtimeChannel = null;
+    }
+    if (!currentUserId) return;
+    var pending = null;
+    var schedule = function () {
+        if (pending) return;                       // 简单防抖：连续加多个成员只拉一次
+        pending = setTimeout(function () { pending = null; loadConversations(); }, 400);
+    };
+    conversationsRealtimeChannel = supabase.channel('conversations-realtime');
+    conversationsRealtimeChannel.on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'conversation_participants'
+    }, function (payload) {
+        var row = payload.new;
+        if (!row || row.user_id !== currentUserId) return;
+        console.log('[MiniChat/conversations] 被加入新会话: ' + row.conversation_id);
+        schedule();
+    });
+    conversationsRealtimeChannel.subscribe(function (status) {
+        if (status === 'SUBSCRIBED') console.log('[MiniChat/conversations] 会话变更订阅就绪');
+    });
+}
 
 async function ensureGlobalConversation() {
     try {

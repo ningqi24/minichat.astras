@@ -13,11 +13,14 @@
 if (btnLogin) btnLogin.addEventListener('click', handleAuth);
 
 // ---- 「注册 / 登录」切换 ----
-var _switchToSignup = document.getElementById('switchToSignup');
-if (_switchToSignup) _switchToSignup.addEventListener('click', function(e) {
-    e.preventDefault();
-    switchMode(isLoginMode ? 'signup' : 'login');
-});
+// ⚠️ 必须用【事件委托】绑在 .auth-toggle 容器上，不能绑 #switchToSignup 这个 <a> 本身。
+//    原因：switchMode() 每次都会把容器的 innerHTML 整体换掉
+//      （见 app.js：tEl.innerHTML = isLoginMode ? t('noAccount') : t('hasAccount')），
+//    里面那个 <a id="switchToSignup"> 每次都是【新元素】，直接绑的话第一次点击之后监听器就没了。
+//    表现就是用户报的："注册"能点，切过去之后"登录"点了没反应。
+//    app.js 里用的 handleAuthToggleClick 本来就是委托写法，这里跟着保持一致。
+var _authToggle = document.querySelector('.auth-toggle');
+if (_authToggle) _authToggle.addEventListener('click', handleAuthToggleClick);
 
 // ---- 密码显示 / 隐藏（含图标切换）----
 // 注意：app.js 里这段用的是 this.innerHTML 换 SVG；这里改用 CSS 类切换，
