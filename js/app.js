@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.14.1';
+var APP_VERSION = '4.14.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3198,7 +3198,7 @@ function enterChat() {
                     loadConversations();
                     try { setupConversationsRealtime(); } catch (e) { console.warn('[MiniChat/boot] 会话订阅失败', e); }
                     // 第 2 期：好友（列表 + 待处理请求 + 实时）
-                    try { loadFriends(); loadFriendRequests(); setupFriendsRealtime(); }
+                    try { loadFriends(); loadFriendRequests(); loadBlocks(); setupFriendsRealtime(); }
                     catch (e) { console.warn('[MiniChat/boot] 好友初始化失败', e); }
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
@@ -3941,6 +3941,46 @@ function renderFriendList() {
     updateFriendDot();
 }
 
+// 黑名单：list_my_blocks() 是第 2 期补充的 RPC（supabase/phase2-search-blocks.sql）。
+// 没有这个列表的话，拉黑了【非好友】的人就再也找不到入口取消了。
+var blockedList = [];
+
+async function loadBlocks() {
+    if (!currentUserId) return;
+    try {
+        var res = await supabase.rpc('list_my_blocks');
+        if (res.error) throw res.error;
+        blockedList = res.data || [];
+        renderBlocks();
+    } catch (e) {
+        console.warn('[MiniChat/friends] 黑名单加载失败:', e && e.message);
+    }
+}
+
+function renderBlocks() {
+    var box = document.getElementById('frBlockList');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!blockedList.length) {
+        var e0 = document.createElement('div'); e0.className = 'fr-empty';
+        e0.textContent = '黑名单是空的。';
+        box.appendChild(e0);
+    }
+    blockedList.forEach(function (b) {
+        var name = frName(b);
+        var btns = [frButton('取消拉黑', 'fr-btn-primary', function () {
+            supabase.rpc('unblock_user', { p_user_id: b.blocked_id }).then(function (res) {
+                if (res.error) { alert('操作失败：' + res.error.message); return; }
+                loadBlocks(); loadFriends(); loadFriendRequests();
+            });
+        })];
+        box.appendChild(frMakeRow(frMakeAvatar(b.avatar_url, name), name, b.email, btns));
+    });
+    var c = document.getElementById('frBlockCount');
+    if (c) c.textContent = String(blockedList.length);
+}
+
+
 function renderFriendRequests() {
     var box = document.getElementById('frRequestList');
     if (!box) return;
@@ -4032,13 +4072,13 @@ function openFriendsModal() {
     if (!m) return;
     m.classList.add('active');
     switchFrTab('friends');
-    loadFriends(); loadFriendRequests();
+    loadFriends(); loadFriendRequests(); loadBlocks();
     // 面板开着时每 5 秒刷一次：不管 Realtime 事件到不到，
     // 都不会出现『对方同意了但我这边一直没反应』。
     if (window.__frRefreshTimer) clearInterval(window.__frRefreshTimer);
     window.__frRefreshTimer = setInterval(function () {
         if (document.hidden) return;
-        loadFriends(); loadFriendRequests();
+        loadFriends(); loadFriendRequests(); loadBlocks();
     }, 5000);
 }
 function closeFriendsModal() {
@@ -4047,13 +4087,19 @@ function closeFriendsModal() {
     if (window.__frRefreshTimer) { clearInterval(window.__frRefreshTimer); window.__frRefreshTimer = null; }
 }
 function switchFrTab(which) {
-    var isFriends = which === 'friends';
-    var tf = document.getElementById('frTabFriends'), tr = document.getElementById('frTabRequests');
-    if (tf) tf.classList.toggle('active', isFriends);
-    if (tr) tr.classList.toggle('active', !isFriends);
-    var pf = document.getElementById('frPaneFriends'), pr = document.getElementById('frPaneRequests');
-    if (pf) pf.style.display = isFriends ? '' : 'none';
-    if (pr) pr.style.display = isFriends ? 'none' : '';
+    var map = [
+        ['friends',  'frTabFriends',  'frPaneFriends'],
+        ['requests', 'frTabRequests', 'frPaneRequests'],
+        ['blocks',   'frTabBlocks',   'frPaneBlocks']
+    ];
+    map.forEach(function (m) {
+        var on = m[0] === which;
+        var tab = document.getElementById(m[1]);
+        var pane = document.getElementById(m[2]);
+        if (tab) tab.classList.toggle('active', on);
+        if (pane) pane.style.display = on ? '' : 'none';
+    });
+    if (which === 'blocks') loadBlocks();
 }
 
 function setupFriendsRealtime() {
@@ -4091,6 +4137,8 @@ function setupFriendsRealtime() {
     if (tf) tf.addEventListener('click', function () { switchFrTab('friends'); });
     var tr = document.getElementById('frTabRequests');
     if (tr) tr.addEventListener('click', function () { switchFrTab('requests'); });
+    var tb = document.getElementById('frTabBlocks');
+    if (tb) tb.addEventListener('click', function () { switchFrTab('blocks'); });
     var sb = document.getElementById('frSearchBtn');
     if (sb) sb.addEventListener('click', searchUsers);
     var si = document.getElementById('frSearchInput');
