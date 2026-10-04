@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.13.3';
+var APP_VERSION = '4.13.4';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3641,7 +3641,20 @@ function setupConversationsRealtime() {
     window.__convRefreshTimer = setInterval(function () {
         if (document.hidden) return;
         loadConversations();
-    }, 45000);
+    }, 20000);
+
+    // 切回页面 / 窗口重新获得焦点时立刻拉一次（最常见的『其实我早就被拉进群了』场景）
+    if (!window.__convFocusWired) {
+        window.__convFocusWired = true;
+        var refreshNow = function () {
+            var now = Date.now();
+            if (window.__convLastRefresh && now - window.__convLastRefresh < 5000) return;
+            window.__convLastRefresh = now;
+            loadConversations();
+        };
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshNow(); });
+        window.addEventListener('focus', refreshNow);
+    }
 }
 
 // ===================== 第 1 期：会话设置面板 =====================
@@ -3678,10 +3691,10 @@ function openConvSettings() {
         cb.disabled = isDirect || isGlobal || !canEditBridge;
     }
     if (hint) {
-        if (isDirect) hint.textContent = '私聊不会同步到 FloxChat。';
-        else if (isGlobal) hint.textContent = '全局聊天是所有人共用的，是否同步到 FloxChat 由服务端设定，界面上不能改。';
-        else if (!canEditBridge) hint.textContent = '只有群主或管理员可以修改同步设置。';
-        else hint.textContent = '开启后，这个会话会出现在 FloxChat 侧的桥接列表里。';
+        if (isDirect) hint.textContent = '私聊不参与同步。';
+        else if (isGlobal) hint.textContent = '全局聊天固定同步。';
+        else if (!canEditBridge) hint.textContent = '只有群主和管理员能改。';
+        else hint.textContent = '开启后，这个群会出现在 FloxChat 里。';
     }
 
     var leave = document.getElementById('csLeaveBtn');
@@ -5695,10 +5708,16 @@ function subscribeMessages() {
     // 不再使用 convId 过滤器，监听 messages 表全部变更，在回调里筛全局消息（conversation_id 为 null）
     ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => {
         var m = payload.new; if (!m || m.sender_email === currentEmail) return;
-        // 只处理【当前打开的会话】的消息。全局会话同时兼容 conversation_id 为 null 的老数据。
-        if (currentConversationId === GLOBAL_CONVERSATION_ID) {
-            if (m.conversation_id && m.conversation_id !== currentConversationId) return;
-        } else if (m.conversation_id !== currentConversationId) {
+        // 不是当前打开的会话：只把那个会话的未读角标 +1，不往消息列表里插。
+        // 这样别人在群里说话时侧边栏角标是【立刻】变的，不用等重新拉取。
+        // 全局会话兼容 conversation_id 为 null 的老数据。
+        var mConv = m.conversation_id || GLOBAL_CONVERSATION_ID;
+        if (mConv !== currentConversationId) {
+            var target = conversations.filter(function (x) { return x.id === mConv; })[0];
+            if (target) {
+                target.unread = (target.unread || 0) + 1;
+                renderConversationList();
+            }
             return;
         }
         addMessageToBottom({ id: m.id, content: m.content, sender_name: m.sender_name || '匿名', sender_email: m.sender_email, isMe: false, time: formatTimeShort(m.created_at), created_at: m.created_at });
