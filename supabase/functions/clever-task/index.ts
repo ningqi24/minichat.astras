@@ -550,6 +550,18 @@ async function sendMessage(body: any) {
     return json({ error: "not_a_member", code: "NOT_A_MEMBER" }, 403);
   }
 
+  // 禁言：RLS 里也拦了前端直连插入，但本函数用 service_role 会绕过 RLS，
+  // 所以这里必须自己再查一次，两边都拦才真的禁得住。
+  const { data: muteRow } = await supabaseAdmin
+    .from("conversation_participants")
+    .select("muted_until")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (muteRow?.muted_until && new Date(muteRow.muted_until as string).getTime() > Date.now()) {
+    return json({ error: "你已被禁言，暂时不能发言", code: "MUTED", until: muteRow.muted_until }, 403);
+  }
+
   const content = String(body.content || "");
   if (!content.trim()) return json({ error: "empty content" }, 400);
 
@@ -828,12 +840,15 @@ async function deleteUser(body: any, targetId: string | null) {
     }
   }
 
-  const part = await supabaseAdmin
-    .from("conversation_participants")
-    .delete()
-    .eq("user_id", uid)
-    .select("conversation_id");
-  result.conversations_left = part.data?.length ?? 0;
+  // 群治理：如果目标用户是某些群的群主，先把这些群移交给别人，或者直接解散。
+  // 不这么做的话，这些群会变成【永久无主】——没人能解散、也没人能转让。
+  // （depart_group_for_user 内部同时会清掉他在所有群里的参与记录。）
+  let governance = "";
+  try {
+    const { data: gov } = await supabaseAdmin.rpc("depart_group_for_user", { p_user_id: uid });
+    governance = String(gov ?? "");
+  } catch (e) { console.error("[deleteUser] depart_group_for_user 失败:", e); }
+  result.governance = governance;
 
   await supabaseAdmin.from("profiles").delete().eq("id", uid);
 
