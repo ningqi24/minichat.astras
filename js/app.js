@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.19.0';
+var APP_VERSION = '4.20.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3317,6 +3317,11 @@ var conversationsLoaded = false;
 function conversationTitle(c) {
     if (!c) return '';
     if (c.type === 'global') return t('globalChat');
+    // 第 3 期：私聊没有会话名，用对方的备注 > 昵称 > 邮箱前缀
+    if (c.type === 'direct') {
+        return c.peer_remark || c.peer_name
+            || (c.peer_email ? c.peer_email.split('@')[0] : t('directChat'));
+    }
     if (c.name) return c.name;
     return c.type === 'group' ? t('group') : t('directChat');
 }
@@ -3324,6 +3329,69 @@ function conversationTitle(c) {
 // ---- 未读数 ----
 // 服务端用 list_conversation_unread() 一次算回所有会话的未读条数（避免前端 N+1 查询）。
 // 口径：该会话里时间晚于我的 last_read_at、且不是我发的消息。
+// ===================== 第 3 期：私聊 =====================
+// 服务端见 supabase/phase3-direct.sql：
+//   create_direct(p_friend_id)  —— 只有好友才能建；任一方拉黑都不允许；
+//                                  同一对用户只会有一个 direct 会话（direct_key 唯一）
+//   list_my_directs()           —— 我的私聊列表（带对方资料与备注）
+async function loadDirects() {
+    if (!currentUserId) return;
+    try {
+        var res = await supabase.rpc('list_my_directs');
+        if (res.error) throw res.error;
+        var map = {};
+        (res.data || []).forEach(function (d) { map[d.conversation_id] = d; });
+        conversations.forEach(function (c) {
+            if (c.type !== 'direct') return;
+            var d = map[c.id];
+            if (d) {
+                c.peer_id = d.peer_id;
+                c.peer_name = d.peer_name;
+                c.peer_email = d.peer_email;
+                c.peer_avatar = d.peer_avatar;
+                c.peer_remark = d.remark;
+            }
+        });
+        renderConversationList();
+        updateChatTitle();
+    } catch (e) {
+        console.warn('[MiniChat/directs] 私聊信息加载失败:', e && e.message);
+    }
+}
+
+// 发起（或进入已有的）私聊。失败时把服务端的原因翻成人话。
+async function startDirect(peerId, name) {
+    if (!peerId) return;
+    try {
+        var res = await supabase.rpc('create_direct', { p_friend_id: peerId });
+        if (res.error) throw res.error;
+        var id = res.data;
+        if (!id) throw new Error('服务端没有返回会话 id');
+
+        // 关掉可能开着的面板
+        var pc = document.getElementById('profileCard');
+        if (pc) pc.classList.remove('active');
+        closeConvSettings();
+        closeFriendsModal();
+        closeJoinGroup();
+
+        await loadConversations();
+        await loadDirects();
+        // 强制切换：先置空，让 selectConversation 认为需要动作
+        if (currentConversationId !== id) {
+            currentConversationId = '';
+            selectConversation(id);
+        }
+    } catch (e) {
+        var m = String(e && e.message || '');
+        var human = /not_friends/.test(m) ? '你们还不是好友，先加好友才能私聊'
+                  : /blocked/.test(m) ? '你们之间有一方拉黑了对方，暂时不能私聊'
+                  : /invalid_target/.test(m) ? '不能和自己私聊'
+                  : m;
+        alert('无法发起私聊：' + human);
+    }
+}
+
 async function loadUnreadCounts() {
     if (!currentUserId) return;
     try {
@@ -3394,6 +3462,7 @@ async function loadConversations() {
         updateChatTitle();
         highlightGlobalNav();
         loadUnreadCounts();
+        loadDirects();
     } catch (e) {
         console.warn('[MiniChat/conversations] 加载失败:', e && e.message);
     }
@@ -4280,6 +4349,8 @@ function renderFriendList() {
         var name = frName({ remark: f.remark, display_name: f.display_name, email: f.email });
         var sub = f.email + (f.i_blocked ? '  ⛔ 已拉黑' : '');
         var btns = [
+            // 第 3 期：私聊入口（服务端 create_direct 会校验是否好友、是否被拉黑）
+            frButton('发消息', 'fr-btn-primary', function () { startDirect(f.friend_id, name); }),
             frButton('备注', '', function () {
                 var r = prompt('给「' + name + '」设置备注（留空清除）', f.remark || '');
                 if (r === null) return;
@@ -5718,7 +5789,7 @@ async function loadProfileCardExtras(email) {
         }));
     } else {
         actEl.appendChild(pcButton('发消息', 'pc-btn-primary', function () {
-            alert('私聊正在做，第 3 期上线。');
+            startDirect(uid, name);
         }));
     }
 
