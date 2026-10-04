@@ -1,36 +1,56 @@
 -- ============================================================================
 -- MiniChat · 第 1 期表结构（多群聊 + 桥接预留）
 -- ============================================================================
--- 可重复执行。执行前建议先跑 phase0-check.sql 确认第 0 期地基已就位。
--- 本文件只做三件事：
---   ① 给会话加"是否同步到 FloxChat"的开关（bridge_visible）
---   ② 给群加"群号"字段（group_no），并在建群时自动生成
---   ③ 提供一个"桥接可见的会话清单"RPC（只给群与全局，绝不给私聊）
+-- 可重复执行。
+--
+-- ⚠️ 上一版漏了 conversations.avatar_url（桥接清单 RPC 用到它），导致
+--    ERROR: 42703: column c.avatar_url does not exist。
+--    教训：写 SQL 前先对着 diagnose-schema.sql 的结果核对列，别照设计稿凭印象写。
+--    本版把【所有会用到的列】统一放在最前面先补，函数一律排在补列之后。
+--
+-- 跑完最后有一段自检，应该全部显示 ✅。
 -- ============================================================================
 
--- ① 桥接开关：控制这个会话要不要同步到 FloxChat。
---    默认 true（群本来就该同步）；私聊由 ③ 里的 type 过滤挡住，不靠这个字段。
+-- ────────────────────────────────────────────────────────────────────────────
+-- 第 1 步：补列（全部 if not exists，可重复执行）
+-- ────────────────────────────────────────────────────────────────────────────
+
+-- 会话：桥接开关
 alter table public.conversations
   add column if not exists bridge_visible boolean not null default true;
 
+-- 会话：群号、群头像、群公告、加群方式、成员上限（后四项的逻辑在第 1.5 期做，先备列）
+alter table public.conversations add column if not exists group_no    text;
+alter table public.conversations add column if not exists avatar_url  text;
+alter table public.conversations add column if not exists notice      text;
+alter table public.conversations add column if not exists join_mode   text not null default 'approval';
+alter table public.conversations add column if not exists max_members integer not null default 200;
+
+-- 成员：群内角色、禁言到期、群昵称
+alter table public.conversation_participants
+  add column if not exists role text not null default 'member';
+alter table public.conversation_participants add column if not exists muted_until timestamptz;
+alter table public.conversation_participants add column if not exists group_nick  text;
+
 comment on column public.conversations.bridge_visible is
   '是否同步到 FloxChat 桥接；仅对 type=group/global 生效，direct 永不暴露';
-
--- ② 群号：便于搜索与分享的短号（像 QQ 群号）。先加列，第 1.5 期再做"按群号搜索/申请入群"。
-alter table public.conversations
-  add column if not exists group_no text;
+comment on column public.conversations.group_no is
+  '群号，8 位数字，全局唯一；仅 type=group 使用';
+comment on column public.conversations.join_mode is
+  '加群方式：open(允许任何人) / approval(需要验证，默认) / closed(不允许)';
+comment on column public.conversation_participants.role is
+  '群内角色：owner(群主) / admin(管理员) / member(普通成员)';
 
 create unique index if not exists conversations_group_no_uniq
   on public.conversations (group_no)
   where group_no is not null;
 
-comment on column public.conversations.group_no is
-  '群号，8 位数字，全局唯一；仅 type=group 使用';
-
--- ③ 桥接可见的会话清单
---    ⚠️ 用 SECURITY DEFINER 是为了让桥接不用理解角色/审批/好友体系，只要一份平坦列表；
---       正因为 definer 会绕过 RLS，所以函数内部【必须】自己按 auth.uid() 过滤。
---    ⚠️ type 只放 group 与 global —— 私聊(direct) 绝不暴露给 FloxChat。
+-- ────────────────────────────────────────────────────────────────────────────
+-- 第 2 步：桥接可见的会话清单
+--   ⚠️ 用 SECURITY DEFINER 是为了让桥接不必理解角色/审批/好友体系，只要一份平坦列表；
+--      正因 definer 绕过 RLS，函数内部【必须】自己按 auth.uid() 过滤。
+--   ⚠️ type 只放 group 与 global —— 私聊(direct) 绝不暴露给 FloxChat。
+-- ────────────────────────────────────────────────────────────────────────────
 create or replace function public.list_bridge_conversations()
 returns table (
   id              uuid,
@@ -55,8 +75,13 @@ $fn$;
 revoke all on function public.list_bridge_conversations() from public, anon;
 grant execute on function public.list_bridge_conversations() to authenticated;
 
--- ④ 建群 RPC 升级：加群号自动生成 + 桥接开关参数
---    （目前只有本项目自己在调，改签名不影响别处；参数带默认值，旧调用方式仍然可用）
+-- ────────────────────────────────────────────────────────────────────────────
+-- 第 3 步：建群 RPC（群号自动生成 + 桥接开关 + 创建者写 owner）
+--   ⚠️ 签名由 (text, uuid[]) 变为 (text, uuid[], boolean)，所以 revoke/grant 也要用新签名，
+--      否则旧签名上的授权会残留、新函数可能没人能执行。
+-- ────────────────────────────────────────────────────────────────────────────
+drop function if exists public.create_group(text, uuid[]);
+
 create or replace function public.create_group(
   p_name           text,
   p_member_ids     uuid[],
@@ -93,7 +118,7 @@ begin
   -- 生成不重复的 8 位群号（首位不为 0），最多试 20 次
   loop
     v_try := v_try + 1;
-    v_no := lpad((floor(random() * 90000000) + 10000000)::bigint::text, 8, '0');
+    v_no := (floor(random() * 90000000) + 10000000)::bigint::text;
     exit when not exists (select 1 from public.conversations where group_no = v_no);
     if v_try >= 20 then
       raise exception 'group_no_generation_failed' using errcode = '22023';
@@ -103,7 +128,7 @@ begin
   insert into public.conversations (id, type, name, created_by, group_no, bridge_visible)
   values (v_conv, 'group', v_name, v_uid, v_no, coalesce(p_bridge_visible, true));
 
-  -- 创建者自动成为群主
+  -- 创建者自动成为群主，其余为普通成员
   insert into public.conversation_participants (conversation_id, user_id, role)
   select v_conv, uid, case when uid = v_uid then 'owner' else 'member' end
     from (
@@ -121,9 +146,41 @@ $fn$;
 revoke all on function public.create_group(text, uuid[], boolean) from public, anon;
 grant execute on function public.create_group(text, uuid[], boolean) to authenticated;
 
--- role 列（第 1.5 期的群治理要用；现在补上，建群时已开始写入 owner）
-alter table public.conversation_participants
-  add column if not exists role text not null default 'member';
-
-comment on column public.conversation_participants.role is
-  '群内角色：owner(群主) / admin(管理员) / member(普通成员)';
+-- ────────────────────────────────────────────────────────────────────────────
+-- 第 4 步：自检（应该全部 ✅）
+-- ────────────────────────────────────────────────────────────────────────────
+select
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversations' and column_name='bridge_visible')
+       then '✅' else '❌' end as "conversations.bridge_visible",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversations' and column_name='group_no')
+       then '✅' else '❌' end as "conversations.group_no",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversations' and column_name='avatar_url')
+       then '✅' else '❌' end as "conversations.avatar_url",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversations' and column_name='notice')
+       then '✅' else '❌' end as "conversations.notice",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversations' and column_name='join_mode')
+       then '✅' else '❌' end as "conversations.join_mode",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversations' and column_name='max_members')
+       then '✅' else '❌' end as "conversations.max_members",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversation_participants' and column_name='role')
+       then '✅' else '❌' end as "participants.role",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversation_participants' and column_name='muted_until')
+       then '✅' else '❌' end as "participants.muted_until",
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='conversation_participants' and column_name='group_nick')
+       then '✅' else '❌' end as "participants.group_nick",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='list_bridge_conversations')
+       then '✅' else '❌' end as "list_bridge_conversations()",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='create_group'
+                       and pg_get_function_arguments(p.oid) like '%boolean%')
+       then '✅' else '❌' end as "create_group(text,uuid[],bool)";
