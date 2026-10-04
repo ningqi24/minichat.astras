@@ -164,22 +164,6 @@ $fn$;
 
 revoke all on function public.list_conversation_unread() from public, anon;
 grant execute on function public.list_conversation_unread() to authenticated;
-
--- ── 自检（补充 ④）──
-select
-  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-                     where n.nspname='public' and p.proname='mark_conversation_read')
-       then '✅' else '❌' end as "mark_conversation_read",
-  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-                     where n.nspname='public' and p.proname='leave_conversation')
-       then '✅' else '❌' end as "leave_conversation",
-  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-                     where n.nspname='public' and p.proname='set_conversation_bridge_visible')
-       then '✅' else '❌' end as "set_conversation_bridge_visible",
-  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-                     where n.nspname='public' and p.proname='list_conversation_unread')
-       then '✅' else '❌' end as "list_conversation_unread";
-
 -- ── ⑥ 解散群聊（仅群主）──
 --    与"退出群聊"分开：退出是成员自己走，解散是把整个群连消息一起删掉。
 --    显式删 messages / participants 再删 conversations，不依赖外键的 ON DELETE 行为。
