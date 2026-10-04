@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.16.0';
+var APP_VERSION = '4.16.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3201,6 +3201,7 @@ function enterChat() {
                     // 第 2 期：好友（列表 + 待处理请求 + 实时）
                     try { loadFriends(); loadFriendRequests(); loadBlocks(); setupFriendsRealtime(); }
                     catch (e) { console.warn('[MiniChat/boot] 好友初始化失败', e); }
+                    try { refreshMyState(); } catch (e) { console.warn('[MiniChat/boot] 状态加载失败', e); }
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
                     // 这里【不清空】消息列表：清空放在 loadHistory 成功之后再统一做。
@@ -3485,6 +3486,7 @@ function selectConversation(id) {
     updateChatTitle();
     highlightGlobalNav();
     markConversationRead(id);
+    refreshMyState();
 
     // 重订阅实时频道：频道名固定，重订阅即切换监听目标（回调里按 currentConversationId 守卫）
     try { subscribeMessages(); } catch (e) { console.warn('[MiniChat/conversations] 重订阅失败', e); }
@@ -3909,6 +3911,58 @@ function frButton(text, cls, fn) {
     b.textContent = text;
     b.addEventListener('click', fn);
     return b;
+}
+
+// ---- 第 1.5 期：我在当前会话的状态（角色 / 禁言）----
+// 单独的小 RPC my_conversation_state：切会话时只查我自己那一行，比重拉全群成员便宜得多。
+// 目的：被禁言的人在【发言之前】就能看到提示，而不是发送失败后得到一句含糊的权限错误。
+async function refreshMyState() {
+    myMuteUntil = 0;
+    if (!currentUserId || !currentConversationId) { applyMuteUI(); return; }
+    try {
+        var res = await supabase.rpc('my_conversation_state', { p_conversation_id: currentConversationId });
+        if (res.error) throw res.error;
+        var row = (res.data && res.data[0]) || null;
+        if (row && row.muted_until) {
+            var t0 = new Date(row.muted_until).getTime();
+            if (t0 > Date.now()) myMuteUntil = t0;
+        }
+    } catch (e) {
+        console.warn('[MiniChat/mute] 状态查询失败:', e && e.message);
+    }
+    applyMuteUI();
+}
+
+function applyMuteUI() {
+    var banner = document.getElementById('muteBanner');
+    var text = document.getElementById('muteBannerText');
+    var input = document.getElementById('chatInput');
+    var left = myMuteUntil - Date.now();
+    if (left > 0) {
+        var mins = Math.ceil(left / 60000);
+        var human = mins >= 1440 ? (Math.ceil(mins / 1440) + ' 天')
+                  : mins >= 60 ? (Math.ceil(mins / 60) + ' 小时')
+                  : (mins + ' 分钟');
+        if (text) text.textContent = '你已被禁言，约 ' + human + ' 后可以发言';
+        if (banner) banner.style.display = '';
+        if (input) { input.disabled = true; input.placeholder = '你已被禁言'; }
+        // 到点自动恢复
+        if (!window.__muteTimer) {
+            window.__muteTimer = setInterval(function () {
+                if (!myMuteUntil || myMuteUntil <= Date.now()) {
+                    myMuteUntil = 0;
+                    clearInterval(window.__muteTimer); window.__muteTimer = null;
+                    applyMuteUI();
+                }
+            }, 20000);
+        }
+    } else {
+        if (banner) banner.style.display = 'none';
+        if (input && input.disabled) {
+            input.disabled = false;
+            input.placeholder = t('chatPlaceholder');
+        }
+    }
 }
 
 async function loadFriends() {
@@ -5818,12 +5872,19 @@ async function sendMessageContent(content) {
             } catch(err) {
                 console.error(err);
                 if (text && chatInput) { chatInput.value = text; localStorage.setItem('minichat_draft', text); autoResizeTextarea(); }
-                setAuthMessage(t('sendFailed') + (err.message || t('unknownError')),'error');
+                // 被 RLS 拦下时（比如刚好被禁言），错误信息很含糊，这里补一句人话
+                var _em = String(err && err.message || '');
+                if (/row-level security|permission denied|violates row-level/i.test(_em)) {
+                    setAuthMessage('发送被拒绝：你可能已被禁言，或已不在该会话中', 'error');
+                    refreshMyState();
+                } else {
+                    setAuthMessage(t('sendFailed') + (err.message || t('unknownError')),'error');
+                }
                 if (messageList) {
                     var te = messageList.querySelector('[data-message-id^="temp-"]');
                     if (te) te.remove();
                 }
-            } finally { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput) chatInput.disabled = false; }
+            } finally { isSending = false; if (btnSend) btnSend.disabled = false; if (chatInput && !myMuteUntil) chatInput.disabled = false; }
         }
 window.recallMessage = async function(mid) {
     if (!mid) return;

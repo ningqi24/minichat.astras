@@ -1083,3 +1083,7 @@
 .member-sheet-btn:hover{background:var(--bg-hover)}
 .member-sheet-btn.danger{color:#ef4444}
 .member-sheet-cancel{margin-top:6px;background:var(--bg-input)}
+
+/* ===================== 第 1.5 期：禁言提示条 ===================== */
+.mute-banner{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;margin:0 12px 6px;border-radius:var(--radius-sm);background:rgba(245,158,11,.15);color:#f59e0b;font-size:12.5px;line-height:1.45}
+.mute-banner svg{flex-shrink:0}
