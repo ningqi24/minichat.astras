@@ -109,6 +109,8 @@ begin
     raise exception 'too_many_members' using errcode = '22023';
   end if;
 
+  -- type 的合法取值由 conversations_type_check 限制：
+  --   CHECK (type = ANY (ARRAY['direct','group','global']))，所以 'group' 是合法的。
   insert into public.conversations (id, type, name, created_by)
   values (v_conv, 'group', v_name, v_uid);
 

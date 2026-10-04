@@ -36,14 +36,11 @@ select id as "用户UUID", email, last_login
 begin;
 
   -- ① 造测试数据（此时还是 owner 身份，绕过 RLS）
-  -- ⚠️ type 必须用【已存在的合法值】。conversations 表上有 conversations_type_check 约束，
-  --    实测 'private' 会被拒（ERROR 23514）。这里用 'global' —— 隔离性只取决于
-  --    conversation_participants 里有没有这一行，跟 type 是什么无关，所以不影响测试结论。
-  --    等 diagnose-schema.sql 查出允许的完整取值后，可以换成更贴切的（例如 'group'/'direct'）。
+  -- ⚠️ type 的合法取值由 conversations_type_check 限制：
+  --      CHECK (type = ANY (ARRAY['direct','group','global']))
+  --    所以 'private' 会被拒（ERROR 23514），私聊对应的是 'direct'。
   insert into public.conversations (id, type, name)
-  select '11111111-1111-1111-1111-111111111111', type, '隔离测试-勿留'
-    from public.conversations
-   where id = '00000000-0000-0000-0000-000000000000'
+  values ('11111111-1111-1111-1111-111111111111', 'direct', '隔离测试-勿留')
   on conflict (id) do nothing;
 
   insert into public.conversation_participants (conversation_id, user_id)
