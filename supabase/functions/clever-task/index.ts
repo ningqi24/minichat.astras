@@ -218,6 +218,24 @@ function originAllowed(req: Request): { ok: boolean; origin: string | null } {
   return { ok: false, origin: raw };
 }
 
+// ---- 错误信息脱敏 ----
+// 背景：Deno 的 fetch 失败时 e.message 形如
+//   "error sending request for url (https://内部域名/接口路径)"
+// 直接回传给客户端，等于把 FloxChat 的接口地址暴露给任何调用者
+// （前端 F12 控制台里就能看到，攻击者也能看到）。
+// 公开仓库那边已经因为同类问题暴露过一次接口地址，这里必须堵死。
+// 做法：所有回传给客户端的错误信息一律经过 redactUrl()，
+//       完整详情只写进服务端日志（Supabase 的 Edge Function Logs）。
+function redactUrl(s: string): string {
+  return String(s || "").replace(/https?:\/\/[^\s"')\]}]+/gi, "<已隐藏>");
+}
+
+function safeError(prefix: string, e: unknown): string {
+  const anyE = e as any;
+  const msg = anyE && typeof anyE === "object" && "message" in anyE ? String(anyE.message) : String(e ?? "");
+  return redactUrl(prefix + msg);
+}
+
 function clientIp(req: Request): string {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
     req.headers.get("cf-connecting-ip") ||
@@ -284,7 +302,8 @@ Deno.serve(async (req: Request) => {
     if (action === "admin_delete_user") return await deleteUser(body, body?.target_user_id);
     return await login(req, body);
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+  console.error('[dispatch] 未捕获错误', e);
+  return json({ error: safeError('', e) }, 500);
   }
 });
 
@@ -375,7 +394,8 @@ async function floxSendCode(req: Request, body: any) {
     await ticketPut(email, clientIp(req));
     return json({ ok: true });
   } catch (e: any) {
-    return json({ error: `FloxChat 发送服务暂不可用: ${e.message}`, code: "FLOX_UNAVAILABLE" }, 502);
+    console.error('[flox/send] 失败', e);
+    return json({ error: safeError('FloxChat 发送服务暂不可用: ', e), code: 'FLOX_UNAVAILABLE' }, 502);
   }
 }
 
@@ -412,7 +432,8 @@ async function floxCodeLogin(req: Request, body: any) {
     });
     text = await resp.text();
   } catch (e: any) {
-    return json({ error: `FloxChat 校验服务暂不可用: ${e.message}`, code: "FLOX_UNAVAILABLE" }, 502);
+    console.error('[flox/verify] 失败', e);
+    return json({ error: safeError('FloxChat 校验服务暂不可用: ', e), code: 'FLOX_UNAVAILABLE' }, 502);
   }
 
   let ok = false;
