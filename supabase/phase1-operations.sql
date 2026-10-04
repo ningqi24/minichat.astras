@@ -120,7 +120,12 @@ begin
   if v_role is null then
     raise exception 'not_a_member' using errcode = '42501';
   end if;
-  -- 全局聊天没有群主，允许任何成员改（它本来就只有一个）；
+  -- 全局聊天是所有人共用的默认大厅：任何成员都不该单方面改它是否同步到 FloxChat。
+  -- （早先这里允许任何成员改，用户指出不合理，已收紧为禁止。）
+  if v_type = 'global' then
+    raise exception 'global_bridge_locked' using errcode = '42501',
+      hint = '全局聊天是否同步到 FloxChat 由服务端设定，界面上不能修改';
+  end if;
   -- 群聊要求 owner / admin。
   if v_type = 'group' and v_role not in ('owner', 'admin') then
     raise exception 'not_enough_privilege' using errcode = '42501',

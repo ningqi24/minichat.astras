@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.13.2';
+var APP_VERSION = '4.13.3';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3327,6 +3327,9 @@ async function loadUnreadCounts() {
         var map = {};
         (res.data || []).forEach(function (r) { map[r.conversation_id] = Number(r.unread) || 0; });
         conversations.forEach(function (c) { c.unread = map[c.id] || 0; });
+        console.log('[MiniChat/conversations] 未读: ' + conversations.map(function (x) {
+            return (x.type === 'global' ? 'global' : (x.name || x.type)) + '=' + (x.unread || 0);
+        }).join(', ') + '   (RPC 原始返回 ' + JSON.stringify(res.data) + ')');
         renderConversationList();
         updateGlobalUnreadBadge();
     } catch (e) {
@@ -3613,9 +3616,32 @@ function setupConversationsRealtime() {
         console.log('[MiniChat/conversations] 被加入新会话: ' + row.conversation_id);
         schedule();
     });
-    conversationsRealtimeChannel.subscribe(function (status) {
-        if (status === 'SUBSCRIBED') console.log('[MiniChat/conversations] 会话变更订阅就绪');
+    // DELETE：被移出群，或群被解散（解散时参与记录会被删掉）。
+    // DELETE 的 payload.old 默认只带主键，拿不到 user_id，所以这里不精确匹配、直接重拉列表。
+    conversationsRealtimeChannel.on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'conversation_participants'
+    }, function (payload) {
+        var old = payload.old || {};
+        if (old.user_id && old.user_id !== currentUserId) return;
+        console.log('[MiniChat/conversations] 参与记录被删除，重拉会话列表');
+        schedule();
     });
+    // 会话元数据变化（改名、转让等）也刷新
+    conversationsRealtimeChannel.on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'conversations'
+    }, function () { schedule(); });
+    conversationsRealtimeChannel.subscribe(function (status) {
+        console.log('[MiniChat/conversations] 会话变更订阅状态: ' + status);
+    });
+
+    // 定时兜底：Realtime 是否应用表 RLS 尚未确认（见 docs/realtime-rls-test.md），
+    // 万一事件收不到，这里每 45 秒重拉一次会话列表与未读数，
+    // 保证『别人拉我进群 / 解散群』最终一定可见。后台标签页不刷，省额度。
+    if (window.__convRefreshTimer) clearInterval(window.__convRefreshTimer);
+    window.__convRefreshTimer = setInterval(function () {
+        if (document.hidden) return;
+        loadConversations();
+    }, 45000);
 }
 
 // ===================== 第 1 期：会话设置面板 =====================
@@ -3643,13 +3669,17 @@ function openConvSettings() {
     var cb = document.getElementById('csBridgeVisible');
     var hint = document.getElementById('csBridgeHint');
     var isDirect = !c || c.type === 'direct';
-    var canEditBridge = !isDirect && (!c || c.type === 'global' || c.role === 'owner' || c.role === 'admin');
+
+    // 早先这里写的是『global 允许任何成员改』，用户指出不合理，已收紧为只读。
+    var isGlobal = !!c && c.type === 'global';
+    var canEditBridge = !isDirect && !isGlobal && (!!c && (c.role === 'owner' || c.role === 'admin'));
     if (cb) {
         cb.checked = !!(c && c.bridge_visible !== false) && !isDirect;
-        cb.disabled = isDirect || !canEditBridge;
+        cb.disabled = isDirect || isGlobal || !canEditBridge;
     }
     if (hint) {
         if (isDirect) hint.textContent = '私聊不会同步到 FloxChat。';
+        else if (isGlobal) hint.textContent = '全局聊天是所有人共用的，是否同步到 FloxChat 由服务端设定，界面上不能改。';
         else if (!canEditBridge) hint.textContent = '只有群主或管理员可以修改同步设置。';
         else hint.textContent = '开启后，这个会话会出现在 FloxChat 侧的桥接列表里。';
     }
