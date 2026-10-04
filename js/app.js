@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.4';
+var APP_VERSION = '4.12.5';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -4739,11 +4739,14 @@ async function sendMessageContent(content) {
                 var tempId = 'temp-'+Date.now();
                 addMessageToBottom({ id: tempId, content: fc, sender_name: senderName, sender_email: currentEmail, isMe: true, time: formatTimeShort(new Date().toISOString()), created_at: new Date().toISOString() });
                 if (chatInput) { chatInput.value = ''; localStorage.removeItem('minichat_draft'); attachments = []; renderAttachments(); autoResizeTextarea(); }
-                // 全局模式：直接插入消息，不写 conversation_id（默认 null）
+                // ⚠️ conversation_id 必须写：收紧 RLS 之后，没有归属的消息谁也读不到
+                //    （历史数据是 null，靠 SQL 里的 backfill 补齐；新消息一律带上当前会话）
+                //    目前只有全局聊天这一个会话；做多会话时把它换成"当前打开的会话"即可。
                 var insertObj = {
                     content: fc,
                     sender_name: senderName,
-                    sender_email: currentEmail
+                    sender_email: currentEmail,
+                    conversation_id: currentConversationId
                 };
                 var res = await supabase.from('messages').insert(insertObj).select().single();
                 if (res.error) throw res.error;

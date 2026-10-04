@@ -169,6 +169,28 @@ async function ticketTake(email: string, ip: string): Promise<boolean> {
   }
 }
 
+// ---- 会话归属与成员校验 ----
+// 背景：历史上 messages.conversation_id 一直是 NULL（前端插入时压根没写这个字段，
+//       见 js/app.js 里那句"全局模式：直接插入消息，不写 conversation_id（默认 null）"），
+//       所有人都在一个「全局聊天」里。做私聊 / 多群聊前必须先把归属补上，
+//       否则收紧 RLS 之后所有人都读不到任何东西。
+// GLOBAL_CONVERSATION_ID 必须与前端 ensureGlobalConversation() 里的常量保持一致。
+const GLOBAL_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000";
+
+// ⚠️ 这两个动作（get_messages / send_message）用的是 service_role，会【绕过 RLS】，
+//    所以必须自己校验成员身份，不能指望数据库拦。
+//    校验失败按 fail-closed 处理：查不到就当作没权限（宁可误拒，不可误放）。
+async function isConversationMember(conversationId: string, userId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("conversation_participants")
+    .select("conversation_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) { console.warn("[conv] 成员校验失败:", error.message); return false; }
+  return !!data;
+}
+
 // ---- 来源白名单 ----
 // 目的：把"随手拿到密钥就能从任何地方调"抬高到"得先知道要伪造 Origin 头"。
 // ⚠️ 说清楚它的边界：Origin 头【可以伪造】（curl 加一行就行），所以这不是绝对防线，
@@ -470,12 +492,20 @@ async function getMessages(body: any) {
   const user = await getUserFromBody(body);
   if (!user) return json({ error: "unauthorized" }, 401);
 
+  // 会话归属：缺省为全局聊天（兼容旧版扩展），但【必须校验成员身份】——
+  // 这里用 service_role，绕过 RLS，所以校验只能自己做。
+  const conversationId = String(body.conversation_id || GLOBAL_CONVERSATION_ID);
+  if (!(await isConversationMember(conversationId, user.id))) {
+    return json({ error: "not_a_member", code: "NOT_A_MEMBER" }, 403);
+  }
+
   const limit = Math.min(parseInt(body.limit) || 30, 1000);
   const offset = parseInt(body.offset) || 0;
 
   const { data, error } = await supabaseAdmin
     .from("messages")
     .select("*")
+    .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -491,6 +521,12 @@ async function sendMessage(body: any) {
   // 限流：每个账号每分钟最多 20 条，防止脚本刷屏
   if (!rateLimit(`send:${user.id}`, 20, 60_000)) {
     return json({ error: "发送过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
+  }
+
+  // 会话归属：缺省为全局聊天（兼容旧版扩展），同样必须校验成员身份
+  const conversationId = String(body.conversation_id || GLOBAL_CONVERSATION_ID);
+  if (!(await isConversationMember(conversationId, user.id))) {
+    return json({ error: "not_a_member", code: "NOT_A_MEMBER" }, 403);
   }
 
   const content = String(body.content || "");
@@ -509,6 +545,7 @@ async function sendMessage(body: any) {
       content,
       sender_email,
       sender_name: sender_name || null,
+      conversation_id: conversationId,
     })
     .select()
     .single();
