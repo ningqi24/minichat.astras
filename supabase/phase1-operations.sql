@@ -174,3 +174,68 @@ select
   case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                      where n.nspname='public' and p.proname='list_conversation_unread')
        then '✅' else '❌' end as "list_conversation_unread";
+
+-- ── ⑥ 解散群聊（仅群主）──
+--    与"退出群聊"分开：退出是成员自己走，解散是把整个群连消息一起删掉。
+--    显式删 messages / participants 再删 conversations，不依赖外键的 ON DELETE 行为。
+create or replace function public.dissolve_group(p_conversation_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  v_uid  uuid := auth.uid();
+  v_type text;
+  v_role text;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+
+  select c.type into v_type from public.conversations c where c.id = p_conversation_id;
+  if v_type is null then
+    raise exception 'conversation_not_found' using errcode = '22023';
+  end if;
+  if v_type <> 'group' then
+    raise exception 'only_group_can_dissolve' using errcode = '22023',
+      hint = '只有群聊可以解散';
+  end if;
+
+  select cp.role into v_role
+    from public.conversation_participants cp
+   where cp.conversation_id = p_conversation_id and cp.user_id = v_uid;
+  if v_role is null then
+    raise exception 'not_a_member' using errcode = '42501';
+  end if;
+  if v_role <> 'owner' then
+    raise exception 'only_owner_can_dissolve' using errcode = '42501',
+      hint = '只有群主可以解散群聊';
+  end if;
+
+  delete from public.messages where conversation_id = p_conversation_id;
+  delete from public.conversation_participants where conversation_id = p_conversation_id;
+  delete from public.conversations where id = p_conversation_id;
+end;
+$fn$;
+
+revoke all on function public.dissolve_group(uuid) from public, anon;
+grant execute on function public.dissolve_group(uuid) to authenticated;
+
+-- 自检（补充）
+select
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='mark_conversation_read')
+       then '✅' else '❌' end as "mark_conversation_read",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='leave_conversation')
+       then '✅' else '❌' end as "leave_conversation",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='set_conversation_bridge_visible')
+       then '✅' else '❌' end as "set_conversation_bridge_visible",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='list_conversation_unread')
+       then '✅' else '❌' end as "list_conversation_unread",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='dissolve_group')
+       then '✅' else '❌' end as "dissolve_group";

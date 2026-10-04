@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.13.1';
+var APP_VERSION = '4.13.2';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3336,12 +3336,9 @@ async function loadUnreadCounts() {
 
 // 全局聊天那一项的角标是 HTML 里的静态元素
 function updateGlobalUnreadBadge() {
-    var badge = document.getElementById('sidebarUnreadBadge');
-    if (!badge) return;
-    var g = conversations.filter(function (c) { return c.type === 'global'; })[0];
-    var n = g ? (g.unread || 0) : 0;
-    badge.textContent = n > 99 ? '99+' : String(n);
-    badge.classList.toggle('show', n > 0);
+    // 已废弃：会话列表改成统一动态渲染后，每个会话项自带 .conv-badge，
+    // 不再需要单独维护那个静态角标。保留这个空函数是为了不动调用点。
+    return;
 }
 
 // 进入会话时标记已读（把 last_read_at 推到服务端的 now()）
@@ -3395,9 +3392,11 @@ async function loadConversations() {
 function renderConversationList() {
     var box = document.getElementById('conversationList');
     if (!box) return;
-    var others = conversations.filter(function (c) { return c.type !== 'global'; });
+    // 含全局聊天：它以前是 HTML 里的静态项，与动态项两套逻辑，导致角标/设置都沾不上边。
+    // 现在统一在这里渲染，排序由 loadConversations 保证（全局恒在最前）。
+    var list = conversations;
     box.innerHTML = '';
-    others.forEach(function (c) {
+    list.forEach(function (c) {
         var el = document.createElement('div');
         el.className = 'nav-item' + (c.id === currentConversationId ? ' active' : '');
         el.setAttribute('data-conversation-id', c.id);
@@ -3429,7 +3428,7 @@ function renderConversationList() {
         box.appendChild(el);
     });
     var empty = document.getElementById('conversationEmpty');
-    if (empty) empty.style.display = others.length ? 'none' : '';
+    if (empty) empty.style.display = list.length ? 'none' : '';
 }
 
 // 更新聊天区标题（群号作为副标题，方便分享）
@@ -3484,16 +3483,9 @@ function selectConversation(id) {
     loadHistory(false);
 }
 
-// 侧边栏的「全局聊天」是写在 HTML 里的静态项，这里单独给它挂上切换
-(function wireGlobalChatNav() {
-    var gnav = document.getElementById('globalChatNav');
-    if (!gnav || gnav.getAttribute('data-conv-wired')) return;
-    gnav.setAttribute('data-conv-wired', '1');
-    gnav.addEventListener('click', function () { selectConversation(GLOBAL_CONVERSATION_ID); });
-    gnav.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectConversation(GLOBAL_CONVERSATION_ID); }
-    });
-})();
+// （原 wireGlobalChatNav 已移除：静态的 #globalChatNav 不再存在，
+//   全局聊天现在也是动态渲染出来的会话项，点击走的是同一套 selectConversation。）
+
 
 // ===================== 第 1 期：新建群聊 =====================
 // 走 create_group RPC（SECURITY DEFINER），而不是直接 insert：
@@ -3664,11 +3656,14 @@ function openConvSettings() {
 
     var leave = document.getElementById('csLeaveBtn');
     if (leave) {
+        // 群主不是「退出」，而是「解散」：整群连消息一起删掉（调 dissolve_group）。
+        var isOwnerOfGroup = !!c && c.type === 'group' && c.role === 'owner';
         var canLeave = !!c && c.type !== 'global' && c.role !== 'owner';
-        leave.disabled = !canLeave;
-        leave.style.opacity = canLeave ? '' : '.5';
+        leave.textContent = isOwnerOfGroup ? '解散群聊' : '退出会话';
+        leave.disabled = !(canLeave || isOwnerOfGroup);
+        leave.style.opacity = (canLeave || isOwnerOfGroup) ? '' : '.5';
         leave.title = (!c || c.type === 'global') ? '全局聊天不能退出'
-                    : (c.role === 'owner' ? '群主不能直接退群，需要先转让（第 1.5 期）' : '');
+                    : (isOwnerOfGroup ? '解散后群聊与其中的消息都会被删除，不可恢复' : '');
     }
     modal.classList.add('active');
 }
@@ -3704,15 +3699,20 @@ async function onBridgeToggleChange() {
 async function onLeaveConversation() {
     var c = currentConversation();
     if (!c || c.type === 'global') return;
-    if (c.role === 'owner') { alert('群主不能直接退群，需要先转让群主（第 1.5 期实现）。'); return; }
-    if (!confirm('确定退出「' + conversationTitle(c) + '」吗？退出后将不再看到该会话的消息。')) return;
+    var isDissolve = (c.type === 'group' && c.role === 'owner');
+    var okMsg = isDissolve
+        ? '确定解散「' + conversationTitle(c) + '」吗？' + String.fromCharCode(10, 10) + '解散后该群及其中的全部消息都会被删除，且无法恢复。'
+        : '确定退出「' + conversationTitle(c) + '」吗？退出后将不再看到该会话的消息。';
+    if (!confirm(okMsg)) return;
 
     var btn = document.getElementById('csLeaveBtn');
     if (btn) { btn.disabled = true; btn.textContent = '退出中…'; }
     try {
-        var res = await supabase.rpc('leave_conversation', { p_conversation_id: c.id });
+        var res = isDissolve
+            ? await supabase.rpc('dissolve_group', { p_conversation_id: c.id })
+            : await supabase.rpc('leave_conversation', { p_conversation_id: c.id });
         if (res.error) throw res.error;
-        console.log('[MiniChat/conversations] 已退出会话: ' + c.id);
+        console.log('[MiniChat/conversations] ' + (isDissolve ? '已解散群聊: ' : '已退出会话: ') + c.id);
         closeConvSettings();
         await loadConversations();
         // 退出后回到全局聊天（先确保 currentConversationId 不等于目标，selectConversation 才会动作）
@@ -3722,7 +3722,7 @@ async function onLeaveConversation() {
         console.error('[MiniChat/conversations] 退出失败', e);
         alert('退出失败：' + (e && e.message ? e.message : e));
     }
-    if (btn) { btn.disabled = false; btn.textContent = '退出会话'; }
+    if (btn) { btn.disabled = false; btn.textContent = (c && c.type === 'group' && c.role === 'owner') ? '解散群聊' : '退出会话'; }
 }
 
 (function wireConvSettingsUI() {
@@ -4257,14 +4257,10 @@ function updateNewMsgButton() {
     updateSidebarBadge();
 }
 function updateSidebarBadge() {
-    var badge = document.getElementById('sidebarUnreadBadge');
-    if (!badge) return;
-    if (unreadCount > 0) {
-        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        badge.classList.add('show');
-    } else {
-        badge.classList.remove('show');
-    }
+    // 已废弃：原来用本地变量 unreadCount 驱动静态角标，现在未读由服务端
+    // list_conversation_unread() 统一算、随每一项渲染，这里不再重复处理。
+    if (typeof unreadCount === 'undefined') return;
+
 }
 
 // ===================== 输入框自动隐藏 =====================

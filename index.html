@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.13.1" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.13.1">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.13.1">
+    <link rel="icon" href="./favicon.ico?v=4.13.2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.13.2">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.13.2">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.13.1" />
+    <meta name="version" content="4.13.2" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.13.1">
+    <link rel="stylesheet" href="/css/app.css?v=4.13.2">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -193,11 +193,8 @@
                     </button>
                 </div>
                 <nav class="nav" aria-label="主导航">
-                    <div class="nav-item active" id="globalChatNav" data-conversation-id="00000000-0000-0000-0000-000000000000" role="button" tabindex="0" aria-label="全局聊天">
-                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        <span data-i18n="globalChat">全局聊天</span>
-                        <span class="sidebar-badge" id="sidebarUnreadBadge">0</span>
-                    </div>
+                    <!-- 第 1 期：会话列表统一由 renderConversationList 渲染（含全局聊天），
+                         原来写死的 #globalChatNav 已移除，避免静态项与动态项两套逻辑打架。 -->
                     <!-- 第 1 期：动态会话列表（全局聊天那一项是上面写死的静态项） -->
                     <div id="conversationList"></div>
                     <div class="conv-empty" id="conversationEmpty" style="display:none" data-i18n="noConversations">还没有别的会话</div>
@@ -721,6 +718,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.13.1" defer></script>
+<script src="/js/app.js?v=4.13.2" defer></script>
 </body>
 </html>
