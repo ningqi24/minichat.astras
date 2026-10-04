@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.16.1" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.16.1">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.16.1">
+    <link rel="icon" href="./favicon.ico?v=4.17.0" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.17.0">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.17.0">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.16.1" />
+    <meta name="version" content="4.17.0" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.16.1">
+    <link rel="stylesheet" href="/css/app.css?v=4.17.0">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -188,6 +188,9 @@
                 </div>
                 <div class="nav-head">
                     <span class="nav-head-title" data-i18n="conversations">会话</span>
+                    <button class="nav-head-btn" id="btnJoinGroup" title="加入群聊" aria-label="加入群聊">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                    </button>
                     <button class="nav-head-btn nav-head-btn-rel" id="btnFriends" title="好友" aria-label="好友">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span class="nav-head-dot" id="friendReqDot" style="display:none"></span>
@@ -646,13 +649,31 @@
                 <div class="cs-btn-row">
                     <button class="cs-copy" id="csSaveBtn" type="button">保存群设置</button>
                     <button class="cs-copy" id="csManageMembers" type="button">管理成员</button>
+                    <button class="cs-copy" id="csInviteBtn" type="button">邀请好友</button>
                     <span class="cs-hint" id="csSaveMsg"></span>
                 </div>
             </div>
+            <!-- 第 4 期：待处理的加群申请（仅群主/管理员，有内容时才显示）-->
+            <div id="csJoinReqList" style="display:none"></div>
             <div class="cs-row cs-notice-view" id="csNoticeView" style="display:none"><span class="cs-label">群公告</span><span class="cs-value" id="csNoticeText">—</span></div>
             <div class="modal-actions">
                 <button class="btn-cancel" id="convSettingsClose">关闭</button>
                 <button class="btn-cancel cs-danger" id="csLeaveBtn">退出会话</button>
+            </div>
+        </div>
+    </div>
+    <!-- ===================== 第 4 期：加入群聊 ===================== -->
+    <div class="custom-modal" id="joinGroupModal">
+        <div class="modal-overlay" id="joinGroupOverlay"></div>
+        <div class="modal-content join-group-content">
+            <h3 class="modal-title">加入群聊</h3>
+            <div class="jg-search">
+                <input id="jgGroupNo" type="text" inputmode="numeric" maxlength="12" placeholder="输入群号" />
+                <button id="jgFindBtn" type="button">查找</button>
+            </div>
+            <div class="jg-result" id="jgResult" style="display:none"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="joinGroupClose" type="button">关闭</button>
             </div>
         </div>
     </div>
@@ -788,6 +809,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.16.1" defer></script>
+<script src="/js/app.js?v=4.17.0" defer></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.16.1';
+var APP_VERSION = '4.17.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3846,8 +3846,11 @@ async function onLeaveConversation() {
     if (cb) cb.addEventListener('change', onBridgeToggleChange);
     var lv = document.getElementById('csLeaveBtn');
     if (lv) lv.addEventListener('click', onLeaveConversation);
+    if (canManage) { try { loadJoinRequests(); } catch (e) {} } else { var _jl = document.getElementById('csJoinReqList'); if (_jl) { _jl.innerHTML = ''; _jl.style.display = 'none'; } }
     var sb = document.getElementById('csSaveBtn');
     if (sb) sb.addEventListener('click', onSaveGroupProfile);
+    var iv = document.getElementById('csInviteBtn');
+    if (iv) iv.addEventListener('click', openInvitePicker);
     var mm = document.getElementById('csManageMembers');
     if (mm) mm.addEventListener('click', function () {
         closeConvSettings();
@@ -3964,6 +3967,211 @@ function applyMuteUI() {
         }
     }
 }
+
+// ===================== 第 4 期：加群（群号搜索 / 申请 / 邀请 / 审批）=====================
+// 服务端见 supabase/phase4-join.sql：
+//   find_group_by_no / request_join_group / invite_to_group /
+//   list_join_requests / respond_join_request / list_my_join_requests
+var jgFound = null;
+
+function openJoinGroup() {
+    var m = document.getElementById('joinGroupModal');
+    if (!m) return;
+    m.classList.add('active');
+    var inp = document.getElementById('jgGroupNo');
+    if (inp) { inp.value = ''; setTimeout(function () { try { inp.focus(); } catch (e) {} }, 60); }
+    var res = document.getElementById('jgResult');
+    if (res) { res.style.display = 'none'; res.innerHTML = ''; }
+    jgFound = null;
+}
+function closeJoinGroup() {
+    var m = document.getElementById('joinGroupModal');
+    if (m) m.classList.remove('active');
+}
+
+function jgAv(url, name) {
+    var d = document.createElement('div');
+    d.className = 'jg-av';
+    if (url) d.style.backgroundImage = 'url("' + url + '")';
+    else d.textContent = (name || '?').slice(0, 1);
+    return d;
+}
+
+async function jgFind() {
+    var inp = document.getElementById('jgGroupNo');
+    var box = document.getElementById('jgResult');
+    var no = ((inp && inp.value) || '').trim();
+    if (!no) { if (box) { box.style.display = 'none'; box.innerHTML = ''; } return; }
+    if (box) { box.style.display = ''; box.innerHTML = '<div class="jg-msg">查找中…</div>'; }
+    try {
+        var res = await supabase.rpc('find_group_by_no', { p_group_no: no });
+        if (res.error) throw res.error;
+        var g = (res.data && res.data[0]) || null;
+        jgFound = g;
+        if (!box) return;
+        box.innerHTML = '';
+        if (!g) {
+            box.innerHTML = '<div class="jg-msg">没有找到这个群号</div>';
+            return;
+        }
+        var modeText = g.join_mode === 'open' ? '允许任何人加入'
+                     : g.join_mode === 'closed' ? '不允许加入' : '需要管理员同意';
+        var card = document.createElement('div');
+        card.className = 'jg-card';
+        var head = document.createElement('div');
+        head.className = 'jg-head';
+        head.appendChild(jgAv(g.avatar_url, g.name));
+        var meta = document.createElement('div');
+        var nm = document.createElement('div'); nm.className = 'jg-name'; nm.textContent = g.name || '（未命名群）';
+        var sub = document.createElement('div'); sub.className = 'jg-sub';
+        sub.textContent = '群号 ' + no + ' · ' + g.member_count + ' 人 · ' + modeText;
+        meta.appendChild(nm); meta.appendChild(sub);
+        head.appendChild(meta);
+        card.appendChild(head);
+        if (g.notice) {
+            var nt = document.createElement('div'); nt.className = 'jg-notice';
+            nt.textContent = '群公告：' + g.notice;
+            card.appendChild(nt);
+        }
+        // 操作按钮
+        var act = document.createElement('div');
+        act.className = 'fr-act';
+        if (g.is_member) {
+            var b0 = document.createElement('button');
+            b0.type = 'button'; b0.className = 'fr-btn';
+            b0.textContent = '已在群中，点此进入';
+            b0.addEventListener('click', function () {
+                closeJoinGroup();
+                currentConversationId = '';
+                selectConversation(g.conversation_id);
+            });
+            act.appendChild(b0);
+        } else if (g.my_request === 'pending') {
+            act.innerHTML = '<span class="jg-msg">已申请，等待管理员同意</span>';
+        } else {
+            var b1 = document.createElement('button');
+            b1.type = 'button'; b1.className = 'fr-btn fr-btn-primary';
+            b1.textContent = g.join_mode === 'open' ? '加入群聊' : '申请加入';
+            b1.addEventListener('click', function () { jgJoin(no, b1); });
+            act.appendChild(b1);
+        }
+        card.appendChild(act);
+        box.appendChild(card);
+    } catch (e) {
+        if (box) box.innerHTML = '<div class="jg-msg">查找失败：' + (e && e.message ? e.message : e) + '</div>';
+    }
+}
+
+async function jgJoin(groupNo, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '处理中…'; }
+    try {
+        var res = await supabase.rpc('request_join_group', { p_group_no: groupNo, p_message: null });
+        if (res.error) throw res.error;
+        var out = res.data;
+        if (out === 'joined') {
+            showAlert('已加入群聊', 'success');
+        } else if (out === 'pending') {
+            showAlert('申请已发送，等待管理员同意', 'success');
+        } else if (out === 'already_member') {
+            showAlert('你已经在这个群里了', 'success');
+        }
+        await loadConversations();
+        jgFind();
+    } catch (e) {
+        alert('操作失败：' + (e && e.message ? e.message : e));
+        if (btn) { btn.disabled = false; btn.textContent = '申请加入'; }
+    }
+}
+
+// ---- 邀请好友入群（在群设置面板里）----
+async function openInvitePicker() {
+    var c = currentConversation();
+    if (!c || c.type !== 'group') return;
+    if (!friendList.length) { alert('你还没有好友，先去加几个好友吧。'); return; }
+    var names = friendList.map(function (f, i) {
+        return (i + 1) + '. ' + frName({ remark: f.remark, display_name: f.display_name, email: f.email });
+    }).join(String.fromCharCode(10));
+    var pick = prompt('邀请哪位好友入群？输入序号：' + String.fromCharCode(10, 10) + names);
+    if (!pick) return;
+    var idx = parseInt(pick, 10) - 1;
+    if (!(idx >= 0 && idx < friendList.length)) { alert('序号不对'); return; }
+    var f = friendList[idx];
+    try {
+        var res = await supabase.rpc('invite_to_group', { p_conversation_id: c.id, p_user_id: f.friend_id });
+        if (res.error) throw res.error;
+        var out = res.data;
+        showAlert(out === 'added' ? '已把好友拉进群'
+                 : out === 'pending' ? '邀请已发送，等待管理员同意'
+                 : out === 'already_member' ? '对方已经在群里了' : '已处理', 'success');
+        await loadConversations();
+    } catch (e) {
+        alert('邀请失败：' + (e && e.message ? e.message : e));
+    }
+}
+
+// ---- 待审批加群申请（群主/管理员，在群设置面板里）----
+async function loadJoinRequests() {
+    var box = document.getElementById('csJoinReqList');
+    if (!box) return;
+    var c = currentConversation();
+    if (!c || c.type !== 'group' || (c.role !== 'owner' && c.role !== 'admin')) {
+        box.innerHTML = '';
+        box.style.display = 'none';
+        return;
+    }
+    try {
+        var res = await supabase.rpc('list_join_requests', { p_conversation_id: c.id });
+        if (res.error) throw res.error;
+        var list = res.data || [];
+        box.innerHTML = '';
+        box.style.display = list.length ? '' : 'none';
+        if (!list.length) return;
+        var title = document.createElement('div');
+        title.className = 'cs-hint';
+        title.style.marginTop = '10px';
+        title.textContent = '待处理的加群申请（' + list.length + '）';
+        box.appendChild(title);
+        list.forEach(function (r) {
+            var nm = frName(r);
+            var sub = (r.kind === 'invite' ? '由 ' + (r.inviter_name || '成员') + ' 邀请' : '申请加入')
+                    + (r.message ? ' · ' + r.message : '');
+            var btns = [
+                frButton('同意', 'fr-btn-primary', function () { respondJoinReq(r.id, true); }),
+                frButton('拒绝', '', function () { respondJoinReq(r.id, false); })
+            ];
+            box.appendChild(frMakeRow(frMakeAvatar(r.avatar_url, nm), nm, sub, btns));
+        });
+    } catch (e) {
+        console.warn('[MiniChat/join] 加群申请加载失败:', e && e.message);
+        box.innerHTML = '';
+        box.style.display = 'none';
+    }
+}
+
+async function respondJoinReq(id, accept) {
+    try {
+        var res = await supabase.rpc('respond_join_request', { p_request_id: id, p_accept: accept });
+        if (res.error) throw res.error;
+        showAlert(accept ? '已同意' : '已拒绝', 'success');
+        loadJoinRequests();
+        await loadConversations();
+    } catch (e) {
+        alert('处理失败：' + (e && e.message ? e.message : e));
+    }
+}
+
+(function wireJoinGroupUI() {
+    var b = document.getElementById('btnJoinGroup');
+    if (b) b.addEventListener('click', openJoinGroup);
+    var x = document.getElementById('joinGroupClose');
+    if (x) x.addEventListener('click', closeJoinGroup);
+    var o = document.getElementById('joinGroupOverlay');
+    if (o) o.addEventListener('click', closeJoinGroup);
+    var fb = document.getElementById('jgFindBtn');
+    if (fb) fb.addEventListener('click', jgFind);
+    var gi = document.getElementById('jgGroupNo');
+    if (gi) gi.addEventListener('keydown', function (e) { if (e.key === 'Enter') jgFind(); });
+})();
 
 async function loadFriends() {
     if (!currentUserId) return;

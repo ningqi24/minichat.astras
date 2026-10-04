@@ -1087,3 +1087,17 @@
 /* ===================== 第 1.5 期：禁言提示条 ===================== */
 .mute-banner{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;margin:0 12px 6px;border-radius:var(--radius-sm);background:rgba(245,158,11,.15);color:#f59e0b;font-size:12.5px;line-height:1.45}
 .mute-banner svg{flex-shrink:0}
+
+/* ===================== 第 4 期：加入群聊 ===================== */
+.join-group-content{max-width:420px;width:94vw}
+.jg-search{display:flex;gap:8px;margin:6px 0 12px}
+.jg-search input{flex:1;min-width:0;box-sizing:border-box;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border,rgba(255,255,255,.12));background:var(--bg-input);color:var(--text-primary);font-size:14px;outline:none;letter-spacing:1px}
+.jg-search input:focus{border-color:var(--accent)}
+.jg-search button{padding:0 16px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:14px;cursor:pointer;flex-shrink:0}
+.jg-card{border:1px solid var(--border,rgba(255,255,255,.1));border-radius:var(--radius-sm);padding:12px;display:flex;flex-direction:column;gap:8px}
+.jg-head{display:flex;align-items:center;gap:10px}
+.jg-av{width:44px;height:44px;border-radius:12px;flex-shrink:0;background:var(--bg-input);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--text-secondary);overflow:hidden}
+.jg-name{font-size:14px;color:var(--text-primary);font-weight:600}
+.jg-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.jg-notice{font-size:12px;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap;border-top:1px solid var(--border,rgba(255,255,255,.08));padding-top:8px}
+.jg-msg{font-size:12px;color:var(--text-muted);text-align:center;padding:6px 0}
