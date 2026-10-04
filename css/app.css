@@ -1059,3 +1059,27 @@
 .pc-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .pc-btn-primary:hover{opacity:.88;color:#fff}
 .pc-btn-danger:hover{border-color:#ef4444;color:#ef4444}
+
+/* ===================== 第 1.5 期：群治理表单 ===================== */
+.cs-edit input,.cs-edit select,.cs-edit textarea{flex:1;min-width:0;box-sizing:border-box;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border,rgba(255,255,255,.12));background:var(--bg-input);color:var(--text-primary);font-size:13px;outline:none;font-family:inherit}
+.cs-edit input:focus,.cs-edit select:focus,.cs-edit textarea:focus{border-color:var(--accent)}
+.cs-edit-col{flex-direction:column;align-items:stretch;gap:6px}
+.cs-edit-col .cs-label{text-align:left}
+.cs-edit textarea{resize:vertical;line-height:1.5}
+.cs-btn-row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.cs-btn-row .cs-hint{margin:0;flex:1;min-width:60px;text-align:right}
+.cs-notice-view .cs-value{white-space:pre-wrap;text-align:right;max-height:60px;overflow-y:auto}
+
+/* ===================== 第 1.5 期：群治理（身份标记 / 成员操作面板）===================== */
+.member-role-badge{margin-left:6px;padding:1px 5px;border-radius:4px;font-size:10px;vertical-align:middle;flex-shrink:0;white-space:nowrap}
+.member-role-badge.owner{background:rgba(239,68,68,.2);color:#ef4444}
+.member-role-badge.admin{background:rgba(59,130,246,.2);color:#3b82f6}
+.member-role-badge.muted{background:rgba(245,158,11,.22);color:#f59e0b}
+.member-mg-btn{font-size:16px;line-height:1;font-weight:700;font-family:inherit}
+.member-sheet{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5)}
+.member-sheet-box{background:var(--bg-secondary,#1c1c1e);width:100%;max-width:420px;border-radius:14px 14px 0 0;padding:14px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.member-sheet-box h4{margin:0 0 8px;font-size:14px;color:var(--text-primary);text-align:center;font-weight:600}
+.member-sheet-btn{padding:11px;border:none;background:transparent;color:var(--text-primary);font-size:14px;border-radius:8px;cursor:pointer;text-align:center;font-family:inherit}
+.member-sheet-btn:hover{background:var(--bg-hover)}
+.member-sheet-btn.danger{color:#ef4444}
+.member-sheet-cancel{margin-top:6px;background:var(--bg-input)}

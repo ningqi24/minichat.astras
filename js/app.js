@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.15.0';
+var APP_VERSION = '4.16.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3368,7 +3368,7 @@ async function loadConversations() {
     try {
         var res = await supabase
             .from('conversation_participants')
-            .select('role, conversation_id, conversations!inner(id, type, name, avatar_url, group_no, last_message_at, bridge_visible)')
+            .select('role, conversation_id, conversations!inner(id, type, name, avatar_url, group_no, last_message_at, bridge_visible, notice, join_mode)')
             .eq('user_id', currentUserId);
         if (res.error) throw res.error;
         var rows = res.data || [];
@@ -3377,7 +3377,9 @@ async function loadConversations() {
             return {
                 id: c.id, type: c.type, name: c.name, avatar_url: c.avatar_url,
                 group_no: c.group_no, last_message_at: c.last_message_at, role: r.role,
-                bridge_visible: c.bridge_visible !== false
+                bridge_visible: c.bridge_visible !== false,
+                notice: c.notice || '',
+                join_mode: c.join_mode || 'approval'
             };
         }).sort(function (a, b) {
             // 全局聊天固定排最前（它是静态项，这里排序只影响动态部分）
@@ -3709,6 +3711,24 @@ function openConvSettings() {
         else hint.textContent = '开启后，这个群会出现在 FloxChat 里。';
     }
 
+    // ---- 第 1.5 期：群治理表单（仅群聊；非群主/管理员只读展示公告）----
+    var gb = document.getElementById('csGroupBlock');
+    var nv = document.getElementById('csNoticeView');
+    var isGroup = !!c && c.type === 'group';
+    var canManage = isGroup && (c.role === 'owner' || c.role === 'admin');
+    if (gb) gb.style.display = canManage ? '' : 'none';
+    if (nv) {
+        nv.style.display = (!canManage && isGroup && c.notice) ? '' : 'none';
+        var nt = document.getElementById('csNoticeText');
+        if (nt) nt.textContent = (c && c.notice) || '—';
+    }
+    if (canManage) {
+        var ni = document.getElementById('csNameInput'); if (ni) ni.value = c.name || '';
+        var ji = document.getElementById('csJoinMode'); if (ji) ji.value = c.join_mode || 'approval';
+        var no = document.getElementById('csNoticeInput'); if (no) no.value = c.notice || '';
+        var sm = document.getElementById('csSaveMsg'); if (sm) { sm.textContent = ''; sm.style.color = ''; }
+    }
+
     var leave = document.getElementById('csLeaveBtn');
     if (leave) {
         // 群主不是「退出」，而是「解散」：整群连消息一起删掉（调 dissolve_group）。
@@ -3726,6 +3746,39 @@ function openConvSettings() {
 function closeConvSettings() {
     var m = document.getElementById('convSettingsModal');
     if (m) m.classList.remove('active');
+}
+
+// ---- 第 1.5 期：群治理 ----
+// 服务端见 supabase/phase1.5-governance.sql：set_group_profile / set_member_role /
+// kick_member / set_member_muted / transfer_ownership。
+// 界面上的可用性只是预判与提示，真正的把关在这些 RPC 里。
+async function onSaveGroupProfile() {
+    var c = currentConversation();
+    if (!c || c.type !== 'group') return;
+    var ni = document.getElementById('csNameInput');
+    var ji = document.getElementById('csJoinMode');
+    var no = document.getElementById('csNoticeInput');
+    var msg = document.getElementById('csSaveMsg');
+    var name = ni ? (ni.value || '').trim() : '';
+    if (!name) { if (msg) { msg.textContent = '群名不能为空'; msg.style.color = '#ef4444'; } return; }
+    try {
+        var res = await supabase.rpc('set_group_profile', {
+            p_conversation_id: c.id,
+            p_name: name,
+            p_notice: no ? no.value : null,
+            p_join_mode: ji ? ji.value : null
+        });
+        if (res.error) throw res.error;
+        c.name = name;
+        c.notice = no ? (no.value || '').trim() : c.notice;
+        c.join_mode = ji ? ji.value : c.join_mode;
+        if (msg) { msg.textContent = '已保存'; msg.style.color = ''; setTimeout(function () { if (msg.textContent === '已保存') msg.textContent = ''; }, 2000); }
+        renderConversationList();
+        updateChatTitle();
+    } catch (e) {
+        console.error('[MiniChat/groups] 保存群设置失败', e);
+        if (msg) { msg.textContent = '保存失败：' + (e && e.message ? e.message : e); msg.style.color = '#ef4444'; }
+    }
 }
 
 async function onBridgeToggleChange() {
@@ -3791,6 +3844,13 @@ async function onLeaveConversation() {
     if (cb) cb.addEventListener('change', onBridgeToggleChange);
     var lv = document.getElementById('csLeaveBtn');
     if (lv) lv.addEventListener('click', onLeaveConversation);
+    var sb = document.getElementById('csSaveBtn');
+    if (sb) sb.addEventListener('click', onSaveGroupProfile);
+    var mm = document.getElementById('csManageMembers');
+    if (mm) mm.addEventListener('click', function () {
+        closeConvSettings();
+        if (typeof showAllMembersModal === 'function') showAllMembersModal();
+    });
     var cp = document.getElementById('csCopyGroupNo');
     if (cp) cp.addEventListener('click', function () {
         var c = currentConversation();
@@ -3809,6 +3869,8 @@ async function onLeaveConversation() {
 //   list_my_friends() / send_friend_request / respond_friend_request /
 //   remove_friend / set_friend_remark / block_user / unblock_user
 // 读取请求直接查 friend_requests 表（RLS 只让我看到收发双方的记录）。
+// 我在当前会话的禁言到期时间（毫秒）。RLS 才是真闸，这里只用来提前给出人能看懂的提示。
+var myMuteUntil = 0;
 var friendList = [];
 var friendRequests = [];
 var frSearchResults = [];
@@ -5734,6 +5796,12 @@ async function sendMessageContent(content) {
                 // ⚠️ conversation_id 必须写：收紧 RLS 之后，没有归属的消息谁也读不到
                 //    （历史数据是 null，靠 SQL 里的 backfill 补齐；新消息一律带上当前会话）
                 //    目前只有全局聊天这一个会话；做多会话时把它换成"当前打开的会话"即可。
+                // 第 1.5 期：禁言预检。RLS 的 messages_insert 里也拦了，
+                // 但直连插入被拒时只会得到一个含糊的权限错误，这里先给出明确提示。
+                if (myMuteUntil && myMuteUntil > Date.now()) {
+                    var _mins = Math.max(1, Math.ceil((myMuteUntil - Date.now()) / 60000));
+                    throw new Error('你已被禁言，约 ' + _mins + ' 分钟后才能发言');
+                }
                 var insertObj = {
                     content: fc,
                     sender_name: senderName,
@@ -5928,6 +5996,20 @@ var allMembersVirtualList = {
         var name = document.createElement('span'); name.className = 'online-user-name'; name.textContent = displayName;
         var em = document.createElement('span'); em.className = 'online-user-email'; em.textContent = email || '';
         info.appendChild(name); info.appendChild(em);
+        // 第 1.5 期：群内身份标记与禁言状态（只有群聊的成员数据带 role/muted_until）
+        var _mc = (typeof currentConversation === 'function') ? currentConversation() : null;
+        if (_mc && _mc.type === 'group' && (m.role === 'owner' || m.role === 'admin')) {
+            var _rb = document.createElement('span');
+            _rb.className = 'member-role-badge ' + m.role;
+            _rb.textContent = m.role === 'owner' ? '群主' : '管理员';
+            name.appendChild(_rb);
+        }
+        if (_mc && _mc.type === 'group' && m.muted_until && new Date(m.muted_until).getTime() > Date.now()) {
+            var _mb = document.createElement('span');
+            _mb.className = 'member-role-badge muted';
+            _mb.textContent = '禁言中';
+            name.appendChild(_mb);
+        }
         it.appendChild(avatar); it.appendChild(dot); it.appendChild(info);
         return it;
     },
@@ -5993,6 +6075,20 @@ function renderAllMembers(members) {
         em.className = 'online-user-email';
         em.textContent = email || '';
         info.appendChild(name); info.appendChild(em);
+        // 第 1.5 期：群内身份标记与禁言状态（只有群聊的成员数据带 role/muted_until）
+        var _mc = (typeof currentConversation === 'function') ? currentConversation() : null;
+        if (_mc && _mc.type === 'group' && (m.role === 'owner' || m.role === 'admin')) {
+            var _rb = document.createElement('span');
+            _rb.className = 'member-role-badge ' + m.role;
+            _rb.textContent = m.role === 'owner' ? '群主' : '管理员';
+            name.appendChild(_rb);
+        }
+        if (_mc && _mc.type === 'group' && m.muted_until && new Date(m.muted_until).getTime() > Date.now()) {
+            var _mb = document.createElement('span');
+            _mb.className = 'member-role-badge muted';
+            _mb.textContent = '禁言中';
+            name.appendChild(_mb);
+        }
         it.appendChild(avatar); it.appendChild(dot); it.appendChild(info);
         // 管理员：可以在这里直接删掉某个用户，免得再去后台写 SQL
         if (window.isAdmin && email && email.toLowerCase() !== window.myEmail) {
@@ -6006,6 +6102,17 @@ function renderAllMembers(members) {
                 deleteUserAsAdmin(m, displayName, email);
             });
             it.appendChild(delBtn);
+        }
+        // 第 1.5 期：群管理操作入口（仅群聊、仅群主/管理员、不能操作自己）
+        var _mc2 = (typeof currentConversation === 'function') ? currentConversation() : null;
+        if (_mc2 && _mc2.type === 'group' && (_mc2.role === 'owner' || _mc2.role === 'admin') && m.id !== currentUserId) {
+            var mgBtn = document.createElement('button');
+            mgBtn.className = 'member-del-btn member-mg-btn';
+            mgBtn.title = '管理该成员';
+            mgBtn.setAttribute('aria-label', '管理该成员');
+            mgBtn.textContent = '⋯';
+            mgBtn.addEventListener('click', function (e) { e.stopPropagation(); openMemberActions(m, displayName); });
+            it.appendChild(mgBtn);
         }
         allMembersList.appendChild(it);
     }
@@ -6030,11 +6137,14 @@ async function fetchConversationMembers() {
         var res = await supabase.rpc('list_conversation_members', { p_conversation_id: currentConversationId });
         if (res.error) throw res.error;
         var list = res.data || [];
+        // 顺便记下自己的禁言状态（发送前用来给友好提示）
+        var meRow = list.filter(function (x) { return x.user_id === currentUserId; })[0];
+        myMuteUntil = (meRow && meRow.muted_until) ? new Date(meRow.muted_until).getTime() : 0;
         // 会话成员也要补进 currentUserMap（资料卡要靠它按 email 找 id 和 bio）
         list.forEach(function (m) {
             if (m.email) currentUserMap[m.email] = { id: m.user_id, display_name: m.display_name, avatar_url: m.avatar_url, bio: m.bio };
         });
-        return list.map(function (m) { return { id: m.user_id, email: m.email, display_name: m.display_name, avatar_url: m.avatar_url, bio: m.bio, created_at: m.joined_at }; });
+        return list.map(function (m) { return { id: m.user_id, email: m.email, display_name: m.group_nick || m.display_name, avatar_url: m.avatar_url, bio: m.bio, created_at: m.joined_at, role: m.role, muted_until: m.muted_until, group_nick: m.group_nick }; });
     } catch (e) {
         console.warn('[MiniChat/members] 会话成员加载失败，退回全部用户:', e && e.message);
         return await fetchAllMembers();
@@ -6046,6 +6156,122 @@ function applyMembersTitle(count) {
     var c = (typeof currentConversation === 'function') ? currentConversation() : null;
     var label = (c && c.type !== 'global') ? conversationTitle(c) : t('allMembers');
     allMembersTitle.textContent = label + ' · ' + count;
+}
+
+// ---- 第 1.5 期：成员管理操作面板 ----
+// 用动态生成的底部操作表，避免再往 index.html 里塞一堆结构。
+// 每项操作都调对应的 SECURITY DEFINER RPC，前端判断只是"显示哪些项"。
+function closeMemberSheet() {
+    var s = document.getElementById('memberSheet');
+    if (s && s.parentNode) s.parentNode.removeChild(s);
+}
+
+function openMemberActions(m, displayName) {
+    var me = (typeof currentConversation === 'function') ? currentConversation() : null;
+    if (!me || me.type !== 'group') return;
+    var iAmOwner = me.role === 'owner';
+    var isOwner = m.role === 'owner';
+    var isAdmin = m.role === 'admin';
+    if (isOwner) { alert('不能对群主执行这些操作。'); return; }
+
+    closeMemberSheet();
+    var wrap = document.createElement('div');
+    wrap.className = 'member-sheet';
+    wrap.id = 'memberSheet';
+    var box = document.createElement('div');
+    box.className = 'member-sheet-box';
+    var title = document.createElement('h4');
+    title.textContent = displayName + (isAdmin ? '（管理员）' : '（成员）');
+    box.appendChild(title);
+
+    var muted = m.muted_until && new Date(m.muted_until).getTime() > Date.now();
+    var add = function (label, danger, fn) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'member-sheet-btn' + (danger ? ' danger' : '');
+        b.textContent = label;
+        b.addEventListener('click', function () { closeMemberSheet(); fn(); });
+        box.appendChild(b);
+    };
+
+    // 只有群主能设撤管理员
+    if (iAmOwner) {
+        add(isAdmin ? '取消管理员' : '设为管理员', false, function () {
+            adminSetRole(m.id, isAdmin ? 'member' : 'admin', displayName);
+        });
+    }
+    // 禁言：管理员只能对普通成员操作，服务端也会再校验一次
+    if (!isAdmin) {
+        if (muted) {
+            add('解除禁言', false, function () { adminMute(m.id, 0, displayName); });
+        } else {
+            add('禁言 10 分钟', false, function () { adminMute(m.id, 10, displayName); });
+            add('禁言 1 小时', false, function () { adminMute(m.id, 60, displayName); });
+            add('禁言 1 天', false, function () { adminMute(m.id, 60 * 24, displayName); });
+        }
+    }
+    add('移出群聊', true, function () { adminKick(m.id, displayName); });
+    if (iAmOwner) {
+        add('转让群主给 TA', true, function () { adminTransfer(m.id, displayName); });
+    }
+
+    var cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'member-sheet-btn member-sheet-cancel';
+    cancel.textContent = '取消';
+    cancel.addEventListener('click', closeMemberSheet);
+    box.appendChild(cancel);
+
+    wrap.appendChild(box);
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) closeMemberSheet(); });
+    document.body.appendChild(wrap);
+}
+
+async function adminSetRole(uid, role, name) {
+    try {
+        var r = await supabase.rpc('set_member_role', { p_conversation_id: currentConversationId, p_user_id: uid, p_role: role });
+        if (r.error) throw r.error;
+        showAlert(role === 'admin' ? ('已把 ' + name + ' 设为管理员') : ('已取消 ' + name + ' 的管理员'), 'success');
+        refreshMemberModal();
+    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+}
+
+async function adminMute(uid, minutes, name) {
+    try {
+        var r = await supabase.rpc('set_member_muted', { p_conversation_id: currentConversationId, p_user_id: uid, p_minutes: minutes });
+        if (r.error) throw r.error;
+        showAlert(minutes > 0 ? ('已禁言 ' + name) : ('已解除 ' + name + ' 的禁言'), 'success');
+        refreshMemberModal();
+    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+}
+
+async function adminKick(uid, name) {
+    if (!confirm('把「' + name + '」移出群聊？他之后将看不到本群消息。')) return;
+    try {
+        var r = await supabase.rpc('kick_member', { p_conversation_id: currentConversationId, p_user_id: uid });
+        if (r.error) throw r.error;
+        showAlert('已移出 ' + name, 'success');
+        refreshMemberModal();
+    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+}
+
+async function adminTransfer(uid, name) {
+    if (!confirm('把群主转让给「' + name + '」？' + String.fromCharCode(10, 10) + '转让后你变成普通成员，不能再管理本群。')) return;
+    try {
+        var r = await supabase.rpc('transfer_ownership', { p_conversation_id: currentConversationId, p_new_owner: uid });
+        if (r.error) throw r.error;
+        showAlert('已把群主转让给 ' + name, 'success');
+        await loadConversations();
+        refreshMemberModal();
+    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+}
+
+async function refreshMemberModal() {
+    try {
+        var members = await fetchConversationMembers();
+        renderAllMembers(members);
+        applyMembersTitle(members.length);
+    } catch (e) { /* ignore */ }
 }
 
 async function showAllMembersModal() {
