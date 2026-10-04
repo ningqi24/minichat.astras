@@ -136,7 +136,31 @@ $fn$;
 revoke all on function public.set_conversation_bridge_visible(uuid, boolean) from public, anon;
 grant execute on function public.set_conversation_bridge_visible(uuid, boolean) to authenticated;
 
--- ── ④ 自检 ──
+-- ── ⑤ 未读数：一次查回当前用户所有会话的未读条数（避免前端每个会话查一次）──
+--    口径：该会话里 created_at 晚于我的 last_read_at、且不是我发的消息数。
+--    没有 last_read_at 的（理论上不会有，列是 NOT NULL default now()）按 0 计。
+create or replace function public.list_conversation_unread()
+returns table (conversation_id uuid, unread bigint)
+language sql
+security definer
+set search_path = public
+as $fn$
+  select cp.conversation_id,
+         count(m.id) filter (
+           where m.created_at > cp.last_read_at
+             and (m.sender_email is null
+                  or lower(m.sender_email) <> lower(coalesce(auth.jwt() ->> 'email', '')))
+         )::bigint as unread
+    from public.conversation_participants cp
+    left join public.messages m on m.conversation_id = cp.conversation_id
+   where cp.user_id = auth.uid()
+   group by cp.conversation_id;
+$fn$;
+
+revoke all on function public.list_conversation_unread() from public, anon;
+grant execute on function public.list_conversation_unread() to authenticated;
+
+-- ── 自检（补充 ④）──
 select
   case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                      where n.nspname='public' and p.proname='mark_conversation_read')
@@ -146,4 +170,7 @@ select
        then '✅' else '❌' end as "leave_conversation",
   case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                      where n.nspname='public' and p.proname='set_conversation_bridge_visible')
-       then '✅' else '❌' end as "set_conversation_bridge_visible";
+       then '✅' else '❌' end as "set_conversation_bridge_visible",
+  case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                     where n.nspname='public' and p.proname='list_conversation_unread')
+       then '✅' else '❌' end as "list_conversation_unread";

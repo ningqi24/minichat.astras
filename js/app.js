@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.9';
+var APP_VERSION = '4.13.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3316,6 +3316,49 @@ function conversationTitle(c) {
     return c.type === 'group' ? t('group') : t('directChat');
 }
 
+// ---- 未读数 ----
+// 服务端用 list_conversation_unread() 一次算回所有会话的未读条数（避免前端 N+1 查询）。
+// 口径：该会话里时间晚于我的 last_read_at、且不是我发的消息。
+async function loadUnreadCounts() {
+    if (!currentUserId) return;
+    try {
+        var res = await supabase.rpc('list_conversation_unread');
+        if (res.error) throw res.error;
+        var map = {};
+        (res.data || []).forEach(function (r) { map[r.conversation_id] = Number(r.unread) || 0; });
+        conversations.forEach(function (c) { c.unread = map[c.id] || 0; });
+        renderConversationList();
+        updateGlobalUnreadBadge();
+    } catch (e) {
+        console.warn('[MiniChat/conversations] 未读数加载失败:', e && e.message);
+    }
+}
+
+// 全局聊天那一项的角标是 HTML 里的静态元素
+function updateGlobalUnreadBadge() {
+    var badge = document.getElementById('sidebarUnreadBadge');
+    if (!badge) return;
+    var g = conversations.filter(function (c) { return c.type === 'global'; })[0];
+    var n = g ? (g.unread || 0) : 0;
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.classList.toggle('show', n > 0);
+}
+
+// 进入会话时标记已读（把 last_read_at 推到服务端的 now()）
+async function markConversationRead(id) {
+    if (!id || !currentUserId) return;
+    try {
+        var res = await supabase.rpc('mark_conversation_read', { p_conversation_id: id });
+        if (res.error) throw res.error;
+        var c = conversations.filter(function (x) { return x.id === id; })[0];
+        if (c) c.unread = 0;
+        renderConversationList();
+        updateGlobalUnreadBadge();
+    } catch (e) {
+        console.warn('[MiniChat/conversations] 标记已读失败:', e && e.message);
+    }
+}
+
 async function loadConversations() {
     if (!currentUserId) { console.warn('[MiniChat/conversations] 未登录，跳过'); return; }
     try {
@@ -3342,6 +3385,7 @@ async function loadConversations() {
         renderConversationList();
         updateChatTitle();
         highlightGlobalNav();
+        loadUnreadCounts();
     } catch (e) {
         console.warn('[MiniChat/conversations] 加载失败:', e && e.message);
     }
@@ -3371,6 +3415,12 @@ function renderConversationList() {
 
         el.appendChild(av);
         el.appendChild(nm);
+        var badge = document.createElement('span');
+        badge.className = 'conv-badge';
+        var un = c.unread || 0;
+        badge.textContent = un > 99 ? '99+' : String(un);
+        if (un > 0) badge.classList.add('show');
+        el.appendChild(badge);
         el.addEventListener('click', function () { selectConversation(c.id); });
         el.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectConversation(c.id); }
@@ -3425,7 +3475,9 @@ function selectConversation(id) {
 
     updateChatTitle();
     highlightGlobalNav();
+    markConversationRead(id);
 
+    // 重订阅实时频道：频道名固定，重订阅即切换监听目标（回调里按 currentConversationId 守卫）
     try { subscribeMessages(); } catch (e) { console.warn('[MiniChat/conversations] 重订阅失败', e); }
 
     loadHistory(false);
