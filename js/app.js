@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.18.1';
+var APP_VERSION = '4.19.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -5686,7 +5686,7 @@ async function loadProfileCardExtras(email) {
 
     var card = null;
     try {
-        var res = await supabase.rpc('get_user_card', { p_user_id: uid });
+        var res = await supabase.rpc('get_user_card', { p_user_id: uid, p_conversation_id: currentConversationId });
         if (res.error) throw res.error;
         card = (res.data && res.data[0]) || null;
     } catch (e) {
@@ -5748,6 +5748,80 @@ async function loadProfileCardExtras(email) {
             if (r.error) { alert('删除失败：' + r.error.message); return; }
             after();
         }));
+    }
+    // ---- 第 4 期：当前群的管理操作（群主/管理员点成员头像时可直接操作）----
+    // 服务端 get_user_card 会带回目标在当前会话的角色与禁言状态。
+    // 这里只负责"显示哪些按钮"，真正的权限判断在 RPC 里。
+    var conv = (typeof currentConversation === 'function') ? currentConversation() : null;
+    var myRole = (card && card.my_conv_role) || (conv && conv.role) || null;
+    var targetRole = card && card.conv_role;
+    if (conv && conv.type === 'group' && (myRole === 'owner' || myRole === 'admin') && targetRole) {
+        var canAct = (targetRole !== 'owner') && !(myRole === 'admin' && targetRole === 'admin');
+        if (canAct) {
+            var pcSep = document.createElement('div');
+            pcSep.className = 'pc-sep';
+            actEl.appendChild(pcSep);
+
+            var afterC = function () {
+                loadFriends(); loadFriendRequests(); loadBlocks();
+                loadProfileCardExtras(email);
+                if (typeof refreshMemberModal === 'function') refreshMemberModal();
+            };
+
+            if (myRole === 'owner') {
+                actEl.appendChild(pcButton(targetRole === 'admin' ? '取消管理员' : '设为管理员', '', async function () {
+                    try {
+                        var r = await supabase.rpc('set_member_role', {
+                            p_conversation_id: currentConversationId, p_user_id: uid,
+                            p_role: targetRole === 'admin' ? 'member' : 'admin'
+                        });
+                        if (r.error) throw r.error;
+                        afterC();
+                    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+                }));
+            }
+
+            var mutedNow = !!(card.conv_muted_until && new Date(card.conv_muted_until).getTime() > Date.now());
+            if (mutedNow) {
+                actEl.appendChild(pcButton('解除禁言', '', async function () {
+                    try {
+                        var r = await supabase.rpc('set_member_muted', { p_conversation_id: currentConversationId, p_user_id: uid, p_minutes: 0 });
+                        if (r.error) throw r.error;
+                        afterC();
+                    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+                }));
+            } else {
+                [[10, '禁言 10 分钟'], [60, '禁言 1 小时'], [1440, '禁言 1 天']].forEach(function (pair) {
+                    actEl.appendChild(pcButton(pair[1], '', async function () {
+                        try {
+                            var r = await supabase.rpc('set_member_muted', { p_conversation_id: currentConversationId, p_user_id: uid, p_minutes: pair[0] });
+                            if (r.error) throw r.error;
+                            afterC();
+                        } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+                    }));
+                });
+            }
+
+            actEl.appendChild(pcButton('移出群聊', 'pc-btn-danger', async function () {
+                if (!confirm('把「' + name + '」移出本群？他之后将看不到本群消息。')) return;
+                try {
+                    var r = await supabase.rpc('kick_member', { p_conversation_id: currentConversationId, p_user_id: uid });
+                    if (r.error) throw r.error;
+                    afterC();
+                } catch (e) { alert('移出失败：' + (e && e.message ? e.message : e)); }
+            }));
+
+            if (myRole === 'owner') {
+                actEl.appendChild(pcButton('转让群主给 TA', 'pc-btn-danger', async function () {
+                    if (!confirm('把群主转让给「' + name + '」？转让后你变成普通成员，不能再管理本群。')) return;
+                    try {
+                        var r = await supabase.rpc('transfer_ownership', { p_conversation_id: currentConversationId, p_new_owner: uid });
+                        if (r.error) throw r.error;
+                        afterC();
+                    } catch (e) { alert('操作失败：' + (e && e.message ? e.message : e)); }
+                }));
+            }
+        }
     }
 }
 

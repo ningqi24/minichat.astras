@@ -1109,3 +1109,6 @@
 .chat-main .mute-banner svg{flex-shrink:0}
 /* 被禁言时输入框要一眼看出来不能用 */
 .chat-main .input-area .input-group textarea:disabled{opacity:.5;cursor:not-allowed}
+
+/* 第 4 期：资料卡里的"群管理操作"分组分隔线 */
+.pc-sep{flex-basis:100%;height:1px;background:var(--border,rgba(255,255,255,.12));margin:6px 0 2px}
