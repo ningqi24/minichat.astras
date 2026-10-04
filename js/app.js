@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.5';
+var APP_VERSION = '4.12.6';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -1098,6 +1098,11 @@ var i18n = {
         newUser: '新用户？',
         chatPlaceholder: '输入消息…（Ctrl+Enter 换行，Enter 发送）',
         globalChat: '全局聊天',
+        conversations: '会话',
+        newGroup: '新建群聊',
+        group: '群聊',
+        directChat: '私聊',
+        noConversations: '还没有别的会话',
         allMembers: '# 所有成员',
         online: '在线',
         offline: '离线',
@@ -1974,6 +1979,11 @@ var i18n = {
         newUser: 'New user?',
         chatPlaceholder: 'Type a message… (Ctrl+Enter newline, Enter send)',
         globalChat: 'Global Chat',
+        conversations: 'Chats',
+        newGroup: 'New Group',
+        group: 'Group',
+        directChat: 'Direct',
+        noConversations: 'No other chats yet',
         allMembers: '# All Members',
         online: 'Online',
         offline: 'Offline',
@@ -3179,10 +3189,11 @@ function enterChat() {
                 checkAdmin().catch(function(e) { console.warn('[MiniChat/admin] 查询失败', e); });
                 try { setupProfilesRealtime(); } catch (e) { console.warn('[MiniChat/boot] profiles 失败', e); }
                 try { fetchAllMembers(); } catch (e) { console.warn('[MiniChat/boot] 成员列表失败', e); }
-                // 不再加载会话列表，仅保证全局会话存在并订阅频道
+                // 保证全局会话存在，并【拉取会话列表】（第 1 期：多群聊）
                 ensureGlobalConversation().catch(function(e) {
                     console.warn('[MiniChat/boot] 全局会话准备失败（继续）', e && e.message);
                 }).then(() => {
+                    loadConversations();
                     console.log('[MiniChat/boot] 开始加载历史 | messageList=' + !!messageList +
                                 ' isLoadingMore=' + isLoadingMore + ' hasMoreMessages=' + hasMoreMessages);
                     // 这里【不清空】消息列表：清空放在 loadHistory 成功之后再统一做。
@@ -3287,6 +3298,91 @@ function closeSettingsFunc() { if (settingsOverlay) settingsOverlay.classList.re
 
 // ===================== 会话管理（仅全局聊天） =====================
 // 确保全局会话存在，并保证当前用户是其中的参与者
+// ===================== 第 1 期：会话列表（多群聊） =====================
+// 数据来源：从 conversation_participants 出发内嵌 conversations。
+//   内嵌能成立是因为 conversation_participants.conversation_id → conversations(id) 这条外键。
+//   RLS 已经收紧成"只能读自己参与的会话"，服务端帮我们过滤过一次；
+//   这里仍然显式带 .eq('user_id', currentUserId)，一是更清楚，二是将来 RLS 放宽时不会漏。
+var conversations = [];
+var conversationsLoaded = false;
+
+function conversationTitle(c) {
+    if (!c) return '';
+    if (c.type === 'global') return t('globalChat');
+    if (c.name) return c.name;
+    return c.type === 'group' ? t('group') : t('directChat');
+}
+
+async function loadConversations() {
+    if (!currentUserId) { console.warn('[MiniChat/conversations] 未登录，跳过'); return; }
+    try {
+        var res = await supabase
+            .from('conversation_participants')
+            .select('role, conversation_id, conversations!inner(id, type, name, avatar_url, group_no, last_message_at)')
+            .eq('user_id', currentUserId);
+        if (res.error) throw res.error;
+        var rows = res.data || [];
+        conversations = rows.filter(function (r) { return r.conversations; }).map(function (r) {
+            var c = r.conversations;
+            return {
+                id: c.id, type: c.type, name: c.name, avatar_url: c.avatar_url,
+                group_no: c.group_no, last_message_at: c.last_message_at, role: r.role
+            };
+        }).sort(function (a, b) {
+            // 全局聊天固定排最前（它是静态项，这里排序只影响动态部分）
+            if (a.type === 'global') return -1;
+            if (b.type === 'global') return 1;
+            return String(b.last_message_at || '').localeCompare(String(a.last_message_at || ''));
+        });
+        conversationsLoaded = true;
+        console.log('[MiniChat/conversations] 加载到 ' + conversations.length + ' 个会话');
+        renderConversationList();
+    } catch (e) {
+        console.warn('[MiniChat/conversations] 加载失败:', e && e.message);
+    }
+}
+
+function renderConversationList() {
+    var box = document.getElementById('conversationList');
+    if (!box) return;
+    var others = conversations.filter(function (c) { return c.type !== 'global'; });
+    box.innerHTML = '';
+    others.forEach(function (c) {
+        var el = document.createElement('div');
+        el.className = 'nav-item' + (c.id === currentConversationId ? ' active' : '');
+        el.setAttribute('data-conversation-id', c.id);
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.title = conversationTitle(c) + (c.group_no ? '（群号 ' + c.group_no + '）' : '');
+
+        var av = document.createElement('span');
+        av.className = 'conv-avatar';
+        if (c.avatar_url) { av.style.backgroundImage = 'url("' + c.avatar_url + '")'; }
+        else { av.textContent = (conversationTitle(c) || '?').slice(0, 1); }
+
+        var nm = document.createElement('span');
+        nm.className = 'conv-name';
+        nm.textContent = conversationTitle(c);
+
+        el.appendChild(av);
+        el.appendChild(nm);
+        el.addEventListener('click', function () { selectConversation(c.id); });
+        el.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectConversation(c.id); }
+        });
+        box.appendChild(el);
+    });
+    var empty = document.getElementById('conversationEmpty');
+    if (empty) empty.style.display = others.length ? 'none' : '';
+}
+
+// ⚠️ 本期第 1 步只做到"列出来"。真正的切换（保存缓存 → 清空 → 载入 → 换标题 → 重订阅）
+//    是下一步的内容，先把入口留好、行为先只打日志，避免半成品状态影响现有单会话使用。
+function selectConversation(id) {
+    if (!id || id === currentConversationId) return;
+    console.log('[MiniChat/conversations] 请求切换到 ' + id + '（切换逻辑尚未实现，下一步做）');
+}
+
 async function ensureGlobalConversation() {
     try {
         // 1. 确保 conversations 表中存在全局会话记录
