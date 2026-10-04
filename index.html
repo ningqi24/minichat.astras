@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.13.0" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.13.0">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.13.0">
+    <link rel="icon" href="./favicon.ico?v=4.13.1" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.13.1">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.13.1">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.13.0" />
+    <meta name="version" content="4.13.1" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.13.0">
+    <link rel="stylesheet" href="/css/app.css?v=4.13.1">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -231,6 +231,9 @@
                 <div class="chat-header-right">
                     <button class="share-btn mobile-hidden" id="shareBtn" title="分享聊天" aria-label="分享聊天">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    </button>
+                    <button class="btn-icon mobile-hidden" id="convSettingsBtn" title="会话设置" aria-label="会话设置">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </button>
                     <button class="btn-icon" id="searchBtn" title="搜索消息（Ctrl+F）" aria-label="搜索消息">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -603,6 +606,25 @@
         </div>
     </div>
     <!-- v3.1.0: 旧版 userProfileModal 已删除，统一使用新的 #profileCard 资料卡 -->
+    <!-- ===================== 第 1 期：会话设置 ===================== -->
+    <div class="custom-modal" id="convSettingsModal">
+        <div class="modal-overlay" id="convSettingsOverlay"></div>
+        <div class="modal-content conv-settings-content">
+            <h3 class="modal-title" id="convSettingsTitle">会话设置</h3>
+            <div class="cs-row"><span class="cs-label">类型</span><span class="cs-value" id="csType">—</span></div>
+            <div class="cs-row"><span class="cs-label">群号</span><span class="cs-value" id="csGroupNo">—</span><button class="cs-copy" id="csCopyGroupNo" type="button">复制</button></div>
+            <div class="cs-row"><span class="cs-label">我的身份</span><span class="cs-value" id="csRole">—</span></div>
+            <div class="cs-row cs-row-switch">
+                <span class="cs-label">同步到 FloxChat</span>
+                <label class="cs-switch"><input type="checkbox" id="csBridgeVisible" /><span class="cs-slider"></span></label>
+            </div>
+            <div class="cs-hint" id="csBridgeHint"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="convSettingsClose">关闭</button>
+                <button class="btn-cancel cs-danger" id="csLeaveBtn">退出会话</button>
+            </div>
+        </div>
+    </div>
     <!-- ===================== 第 1 期：新建群聊弹窗 ===================== -->
     <div class="custom-modal" id="newGroupModal">
         <div class="modal-overlay" id="newGroupOverlay"></div>
@@ -699,6 +721,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.13.0" defer></script>
+<script src="/js/app.js?v=4.13.1" defer></script>
 </body>
 </html>

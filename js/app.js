@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.13.0';
+var APP_VERSION = '4.13.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3364,7 +3364,7 @@ async function loadConversations() {
     try {
         var res = await supabase
             .from('conversation_participants')
-            .select('role, conversation_id, conversations!inner(id, type, name, avatar_url, group_no, last_message_at)')
+            .select('role, conversation_id, conversations!inner(id, type, name, avatar_url, group_no, last_message_at, bridge_visible)')
             .eq('user_id', currentUserId);
         if (res.error) throw res.error;
         var rows = res.data || [];
@@ -3372,7 +3372,8 @@ async function loadConversations() {
             var c = r.conversations;
             return {
                 id: c.id, type: c.type, name: c.name, avatar_url: c.avatar_url,
-                group_no: c.group_no, last_message_at: c.last_message_at, role: r.role
+                group_no: c.group_no, last_message_at: c.last_message_at, role: r.role,
+                bridge_visible: c.bridge_visible !== false
             };
         }).sort(function (a, b) {
             // 全局聊天固定排最前（它是静态项，这里排序只影响动态部分）
@@ -3624,6 +3625,129 @@ function setupConversationsRealtime() {
         if (status === 'SUBSCRIBED') console.log('[MiniChat/conversations] 会话变更订阅就绪');
     });
 }
+
+// ===================== 第 1 期：会话设置面板 =====================
+// 三个 RPC 都在 supabase/phase1-operations.sql 里：
+//   set_conversation_bridge_visible / leave_conversation / mark_conversation_read
+// 界面上的可用性先做一遍"预判"（私聊不能改桥接、群主不能退群等），
+// 但真正的把关在 RPC 里 —— 前端判断只是为了给出更好的提示，不能当作权限控制。
+var csBusy = false;
+
+function currentConversation() {
+    return conversations.filter(function (c) { return c.id === currentConversationId; })[0] || null;
+}
+
+function openConvSettings() {
+    var modal = document.getElementById('convSettingsModal');
+    if (!modal) return;
+    var c = currentConversation();
+    var set = function (id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+
+    set('convSettingsTitle', c ? conversationTitle(c) : t('globalChat'));
+    set('csType', !c ? '—' : (c.type === 'global' ? t('globalChat') : (c.type === 'group' ? t('group') : t('directChat'))));
+    set('csGroupNo', (c && c.group_no) ? c.group_no : '—');
+    set('csRole', !c ? '—' : (c.role === 'owner' ? '群主' : (c.role === 'admin' ? '管理员' : '成员')));
+
+    var cb = document.getElementById('csBridgeVisible');
+    var hint = document.getElementById('csBridgeHint');
+    var isDirect = !c || c.type === 'direct';
+    var canEditBridge = !isDirect && (!c || c.type === 'global' || c.role === 'owner' || c.role === 'admin');
+    if (cb) {
+        cb.checked = !!(c && c.bridge_visible !== false) && !isDirect;
+        cb.disabled = isDirect || !canEditBridge;
+    }
+    if (hint) {
+        if (isDirect) hint.textContent = '私聊不会同步到 FloxChat。';
+        else if (!canEditBridge) hint.textContent = '只有群主或管理员可以修改同步设置。';
+        else hint.textContent = '开启后，这个会话会出现在 FloxChat 侧的桥接列表里。';
+    }
+
+    var leave = document.getElementById('csLeaveBtn');
+    if (leave) {
+        var canLeave = !!c && c.type !== 'global' && c.role !== 'owner';
+        leave.disabled = !canLeave;
+        leave.style.opacity = canLeave ? '' : '.5';
+        leave.title = (!c || c.type === 'global') ? '全局聊天不能退出'
+                    : (c.role === 'owner' ? '群主不能直接退群，需要先转让（第 1.5 期）' : '');
+    }
+    modal.classList.add('active');
+}
+
+function closeConvSettings() {
+    var m = document.getElementById('convSettingsModal');
+    if (m) m.classList.remove('active');
+}
+
+async function onBridgeToggleChange() {
+    if (csBusy) return;
+    var cb = document.getElementById('csBridgeVisible');
+    if (!cb) return;
+    var want = cb.checked;
+    csBusy = true; cb.disabled = true;
+    try {
+        var res = await supabase.rpc('set_conversation_bridge_visible', {
+            p_conversation_id: currentConversationId,
+            p_visible: want
+        });
+        if (res.error) throw res.error;
+        var c = currentConversation();
+        if (c) c.bridge_visible = want;
+        console.log('[MiniChat/conversations] 同步设置已更新: ' + want);
+    } catch (e) {
+        console.error('[MiniChat/conversations] 修改同步设置失败', e);
+        cb.checked = !want;                       // 失败回滚界面
+        alert('修改失败：' + (e && e.message ? e.message : e));
+    }
+    csBusy = false; cb.disabled = false;
+}
+
+async function onLeaveConversation() {
+    var c = currentConversation();
+    if (!c || c.type === 'global') return;
+    if (c.role === 'owner') { alert('群主不能直接退群，需要先转让群主（第 1.5 期实现）。'); return; }
+    if (!confirm('确定退出「' + conversationTitle(c) + '」吗？退出后将不再看到该会话的消息。')) return;
+
+    var btn = document.getElementById('csLeaveBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '退出中…'; }
+    try {
+        var res = await supabase.rpc('leave_conversation', { p_conversation_id: c.id });
+        if (res.error) throw res.error;
+        console.log('[MiniChat/conversations] 已退出会话: ' + c.id);
+        closeConvSettings();
+        await loadConversations();
+        // 退出后回到全局聊天（先确保 currentConversationId 不等于目标，selectConversation 才会动作）
+        currentConversationId = c.id;
+        selectConversation(GLOBAL_CONVERSATION_ID);
+    } catch (e) {
+        console.error('[MiniChat/conversations] 退出失败', e);
+        alert('退出失败：' + (e && e.message ? e.message : e));
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '退出会话'; }
+}
+
+(function wireConvSettingsUI() {
+    var b = document.getElementById('convSettingsBtn');
+    if (b) b.addEventListener('click', openConvSettings);
+    var x = document.getElementById('convSettingsClose');
+    if (x) x.addEventListener('click', closeConvSettings);
+    var o = document.getElementById('convSettingsOverlay');
+    if (o) o.addEventListener('click', closeConvSettings);
+    var cb = document.getElementById('csBridgeVisible');
+    if (cb) cb.addEventListener('change', onBridgeToggleChange);
+    var lv = document.getElementById('csLeaveBtn');
+    if (lv) lv.addEventListener('click', onLeaveConversation);
+    var cp = document.getElementById('csCopyGroupNo');
+    if (cp) cp.addEventListener('click', function () {
+        var c = currentConversation();
+        if (!c || !c.group_no) return;
+        var done = function () { cp.textContent = '已复制'; setTimeout(function () { cp.textContent = '复制'; }, 1500); };
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(c.group_no).then(done, done);
+            } else { done(); }
+        } catch (e) { done(); }
+    });
+})();
 
 async function ensureGlobalConversation() {
     try {
