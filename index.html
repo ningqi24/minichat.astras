@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.12.7" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.12.7">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.12.7">
+    <link rel="icon" href="./favicon.ico?v=4.12.8" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.12.8">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.12.8">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.12.7" />
+    <meta name="version" content="4.12.8" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.12.7">
+    <link rel="stylesheet" href="/css/app.css?v=4.12.8">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -603,6 +603,21 @@
         </div>
     </div>
     <!-- v3.1.0: 旧版 userProfileModal 已删除，统一使用新的 #profileCard 资料卡 -->
+    <!-- ===================== 第 1 期：新建群聊弹窗 ===================== -->
+    <div class="custom-modal" id="newGroupModal">
+        <div class="modal-overlay" id="newGroupOverlay"></div>
+        <div class="modal-content new-group-content">
+            <h3 class="modal-title" data-i18n="newGroup">新建群聊</h3>
+            <input class="new-group-name" id="newGroupName" maxlength="40" placeholder="群名称（最多 40 字）" />
+            <div class="new-group-label"><span>选择成员</span><span id="newGroupCount">已选 0 人</span></div>
+            <div class="new-group-members" id="newGroupMembers"></div>
+            <div class="new-group-hint">不选人也可以创建，之后再把成员拉进来。</div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="newGroupCancel" data-i18n="cancel">取消</button>
+                <button class="btn-confirm" id="newGroupConfirm">创建</button>
+            </div>
+        </div>
+    </div>
     <div class="custom-modal" id="customModal">
         <div class="modal-overlay" id="customModalOverlay"></div>
         <div class="modal-content">
@@ -684,6 +699,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.12.7" defer></script>
+<script src="/js/app.js?v=4.12.8" defer></script>
 </body>
 </html>

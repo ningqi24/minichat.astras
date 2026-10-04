@@ -982,3 +982,18 @@
 .sidebar-wrapper.collapsed #conversationList .conv-badge,
 .sidebar-wrapper.collapsed .conv-empty{display:none!important}
 .sidebar-wrapper.collapsed #conversationList .nav-item{justify-content:center;padding:8px;gap:0}
+
+/* ===================== 第 1 期：新建群聊弹窗 ===================== */
+.new-group-content{max-width:440px;width:92vw}
+.new-group-name{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border,rgba(255,255,255,.12));background:var(--bg-input);color:var(--text-primary);font-size:14px;margin:6px 0 14px;outline:none}
+.new-group-name:focus{border-color:var(--accent)}
+.new-group-name::placeholder{color:var(--text-muted)}
+.new-group-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.new-group-members{max-height:44vh;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.ngm-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s}
+.ngm-item:hover{background:var(--bg-hover)}
+.ngm-item input{width:15px;height:15px;margin:0;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.ngm-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:var(--bg-input);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-secondary);overflow:hidden}
+.ngm-name{font-size:13px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ngm-loading{padding:12px;color:var(--text-muted);font-size:13px;text-align:center}
+.new-group-hint{font-size:12px;color:var(--text-muted);margin-top:10px}

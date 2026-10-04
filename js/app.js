@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.7';
+var APP_VERSION = '4.12.8';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3405,7 +3405,11 @@ function updateChatTitle() {
 //   ⑤ 重订阅实时频道（频道名固定，重订阅即改变监听目标）；
 //   ⑥ 最后拉消息。
 function selectConversation(id) {
-    if (!id || id === currentConversationId) return;
+    if (!id) return;
+    if (id === currentConversationId) {
+        console.log('[MiniChat/conversations] 已在该会话，无需切换: ' + id);
+        return;
+    }
     console.log('[MiniChat/conversations] 切换会话 ' + currentConversationId + ' → ' + id);
 
     currentConversationId = id;
@@ -3435,6 +3439,104 @@ function selectConversation(id) {
     gnav.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectConversation(GLOBAL_CONVERSATION_ID); }
     });
+})();
+
+// ===================== 第 1 期：新建群聊 =====================
+// 走 create_group RPC（SECURITY DEFINER），而不是直接 insert：
+// 因为 conversation_participants 的 cp_insert 策略是 with check (user_id = auth.uid())，
+// 客户端只能把自己加进会话，没法把别人拉进来，建群必须由服务端完成。
+// RPC 会顺带生成 8 位群号，并把创建者写成 role='owner'。
+async function openNewGroupModal() {
+    var modal = document.getElementById('newGroupModal');
+    var box = document.getElementById('newGroupMembers');
+    var nameEl = document.getElementById('newGroupName');
+    var cntEl = document.getElementById('newGroupCount');
+    if (!modal || !box) return;
+    if (nameEl) nameEl.value = '';
+    if (cntEl) cntEl.textContent = '已选 0 人';
+    box.innerHTML = '<div class="ngm-loading">' + t('loading') + '</div>';
+    modal.classList.add('active');
+
+    var members = [];
+    try { members = (await fetchAllMembers()) || []; } catch (e) { members = []; }
+    // 自己不用勾选 —— 服务端会把创建者自动加成 owner
+    members = members.filter(function (m) { return m.id !== currentUserId; });
+
+    box.innerHTML = '';
+    if (!members.length) {
+        box.innerHTML = '<div class="ngm-loading">没有可选的成员</div>';
+        return;
+    }
+    var updateCount = function () {
+        var n = box.querySelectorAll('input[type=checkbox]:checked').length;
+        if (cntEl) cntEl.textContent = '已选 ' + n + ' 人';
+    };
+    members.forEach(function (m) {
+        var row = document.createElement('label');
+        row.className = 'ngm-item';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = m.id;
+        cb.addEventListener('change', updateCount);
+        var av = document.createElement('span');
+        av.className = 'ngm-avatar';
+        if (m.avatar_url) { av.style.backgroundImage = 'url("' + m.avatar_url + '")'; }
+        else { av.textContent = (m.display_name || m.email || '?').slice(0, 1); }
+        var nm = document.createElement('span');
+        nm.className = 'ngm-name';
+        nm.textContent = m.display_name || (m.email || '').split('@')[0] || '未命名';
+        row.appendChild(cb); row.appendChild(av); row.appendChild(nm);
+        box.appendChild(row);
+    });
+    updateCount();
+}
+
+function closeNewGroupModal() {
+    var m = document.getElementById('newGroupModal');
+    if (m) m.classList.remove('active');
+}
+
+async function createGroupFromModal() {
+    var nameEl = document.getElementById('newGroupName');
+    var box = document.getElementById('newGroupMembers');
+    var btn = document.getElementById('newGroupConfirm');
+    var name = ((nameEl && nameEl.value) || '').trim();
+    if (!name) { alert('请先填写群名称'); if (nameEl) nameEl.focus(); return; }
+
+    var ids = [];
+    if (box) {
+        box.querySelectorAll('input[type=checkbox]:checked').forEach(function (c) { ids.push(c.value); });
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = '创建中…'; }
+    try {
+        var res = await supabase.rpc('create_group', {
+            p_name: name,
+            p_member_ids: ids,
+            p_bridge_visible: true
+        });
+        if (res.error) throw res.error;
+        var newId = res.data;
+        console.log('[MiniChat/newGroup] 创建成功: ' + newId);
+        closeNewGroupModal();
+        await loadConversations();
+        if (newId) selectConversation(newId);
+    } catch (e) {
+        console.error('[MiniChat/newGroup] 创建失败', e);
+        alert('创建失败：' + (e && e.message ? e.message : e));
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '创建'; }
+}
+
+(function wireNewGroupUI() {
+    var b = document.getElementById('btnNewGroup');
+    if (b) b.addEventListener('click', openNewGroupModal);
+    var c = document.getElementById('newGroupCancel');
+    if (c) c.addEventListener('click', closeNewGroupModal);
+    var o = document.getElementById('newGroupOverlay');
+    if (o) o.addEventListener('click', closeNewGroupModal);
+    var k = document.getElementById('newGroupConfirm');
+    if (k) k.addEventListener('click', createGroupFromModal);
 })();
 
 async function ensureGlobalConversation() {
