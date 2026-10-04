@@ -174,7 +174,43 @@ alter table conversations add column if not exists direct_key text unique;  -- '
 
 ---
 
-## 6. 明确的取舍
+## 6. 与 FloxChat 的关系（"稍稍兼容"）
+
+FloxChat 是另一个项目，通过 `Floxchat-Bridge/` 里的 TurboWarp 扩展把 MiniChat 的群聊注入到 FloxChat 界面里。
+MiniChat 要做多群聊与好友，容易把这条链路弄坏，所以提前把关系定清楚。
+
+### 原则：MiniChat 按 IM 的需要设计，兼容层由桥接侧承担
+
+不要为了让 FloxChat 好接而扭曲 MiniChat 的数据模型。
+正确的做法是**桥接侧做适配**：把 MiniChat 的会话映射成 FloxChat 的群聊条目。
+
+### 设计时预留的四个点（零额外成本，只是别把信息藏起来）
+
+1. **Edge Function 的 `get_messages` / `send_message` 保持 `conversation_id` 参数** —— 已具备，
+   桥接可以一调用一改就支持多群。
+2. **提供一个"桥接可见的会话清单"查询** —— 桥接不需要理解角色、好友、审批，
+   只要拿到"这个人参与的群"（注意：**只给群，不给私聊**）这样的平坦列表。
+3. **群名与群头像保持简单字段**（`conversations.name` / `avatar_url`），
+   因为 FloxChat 侧的群条目就需要 name + avatar_url。
+4. **消息结构保持 `{ content, sender_name, sender_email, created_at }`** 这套已有形状，
+   别把正文包进复杂嵌套里。
+
+### ⚠️ 私聊不暴露给桥接
+
+QQ 式的产品形态下，私聊需要先加好友，属于更强的隐私。
+桥接只应暴露 `type = 'group'`（以及兼容用的 `global`）的会话，**绝不包括 `direct`**。
+
+### ⚠️ 现在不是适配的时机
+
+- 桥接补丁对 FloxChat **P2.5.3 目前是坏的**（补丁4 卡在「通讯」精灵被拆成通讯录），
+  且已决定等 FloxChat 版本稳定后再移植，本身处于挂起状态。
+- MiniChat 的会话模型正要大改。现在适配等于要适配两次。
+- **建议**：先把 MiniChat 的多群聊做出来，模型稳定后再一次性适配桥接。
+  届时由于上面第 1、4 点已经预留，桥接侧的改动量会很小。
+
+---
+
+## 7. 明确的取舍
 
 - **不引入框架与构建步骤**：仍是零构建的手写 JS，状态管理会更复杂，但保持贡献者门槛。
 - **不做 QQ 的全部**：群等级、群活跃度、群文件、群相册、临时会话等暂不做。
