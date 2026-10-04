@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.6';
+var APP_VERSION = '4.12.7';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -71,7 +71,9 @@ var onlineUsers = {}, onlineCount = 0, isSending = false, lastSendTime = 0;
 var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
 var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null;
 var unreadCount = 0, isUploadingFile = false;
-var currentConversationId = '00000000-0000-0000-0000-000000000000';
+// 全局聊天会话的固定 id（历史遗留：最早只有一个全局大厅，所有人都在里面）
+var GLOBAL_CONVERSATION_ID = '00000000-0000-0000-0000-000000000000';
+var currentConversationId = GLOBAL_CONVERSATION_ID;
 var presenceChannel = null;
 var profilesRealtimeChannel = null;
 var failedAvatars = {};
@@ -3337,6 +3339,8 @@ async function loadConversations() {
         conversationsLoaded = true;
         console.log('[MiniChat/conversations] 加载到 ' + conversations.length + ' 个会话');
         renderConversationList();
+        updateChatTitle();
+        highlightGlobalNav();
     } catch (e) {
         console.warn('[MiniChat/conversations] 加载失败:', e && e.message);
     }
@@ -3376,12 +3380,62 @@ function renderConversationList() {
     if (empty) empty.style.display = others.length ? 'none' : '';
 }
 
-// ⚠️ 本期第 1 步只做到"列出来"。真正的切换（保存缓存 → 清空 → 载入 → 换标题 → 重订阅）
-//    是下一步的内容，先把入口留好、行为先只打日志，避免半成品状态影响现有单会话使用。
+// 更新聊天区标题（群号作为副标题，方便分享）
+function updateChatTitle() {
+    if (!chatTitle) return;
+    var c = conversations.filter(function (x) { return x.id === currentConversationId; })[0];
+    var label = c ? conversationTitle(c) : t('globalChat');
+    chatTitle.innerHTML = '';
+    var span = document.createElement('span');
+    span.textContent = label;
+    chatTitle.appendChild(span);
+    if (c && c.group_no) {
+        var small = document.createElement('small');
+        small.textContent = '群号 ' + c.group_no;
+        chatTitle.appendChild(small);
+    }
+}
+
+// 切换会话。
+// 顺序很重要：
+//   ① 先改 currentConversationId —— 后面的 loadHistory 与实时回调都依赖它；
+//   ② 再重置分页游标，否则会把上一个会话的游标带过来，导致漏消息或重复消息；
+//   ③ 清空消息区并给加载提示；
+//   ④ 换标题与左侧高亮；
+//   ⑤ 重订阅实时频道（频道名固定，重订阅即改变监听目标）；
+//   ⑥ 最后拉消息。
 function selectConversation(id) {
     if (!id || id === currentConversationId) return;
-    console.log('[MiniChat/conversations] 请求切换到 ' + id + '（切换逻辑尚未实现，下一步做）');
+    console.log('[MiniChat/conversations] 切换会话 ' + currentConversationId + ' → ' + id);
+
+    currentConversationId = id;
+
+    oldestTimestamp = null;
+    hasMoreMessages = true;
+    isLoadingMore = false;
+
+    if (messageList) {
+        messageList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;">' + t('loading') + '</div>';
+    }
+
+    updateChatTitle();
+    highlightGlobalNav();
+
+    try { subscribeMessages(); } catch (e) { console.warn('[MiniChat/conversations] 重订阅失败', e); }
+
+    loadHistory(false);
 }
+
+// 侧边栏的「全局聊天」是写在 HTML 里的静态项，这里单独给它挂上切换
+(function wireGlobalChatNav() {
+    var gnav = document.getElementById('globalChatNav');
+    if (!gnav || gnav.getAttribute('data-conv-wired')) return;
+    gnav.setAttribute('data-conv-wired', '1');
+    gnav.addEventListener('click', function () { selectConversation(GLOBAL_CONVERSATION_ID); });
+    gnav.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectConversation(GLOBAL_CONVERSATION_ID); }
+    });
+})();
 
 async function ensureGlobalConversation() {
     try {
@@ -3419,9 +3473,12 @@ async function ensureGlobalConversation() {
 }
 
 // 侧边栏聊天项的激活态切换
+// 侧边栏会话项的激活态：按 data-conversation-id 与 currentConversationId 比对，
+// 这样静态的「全局聊天」项和动态渲染出来的会话项走同一套逻辑。
 function highlightGlobalNav() {
     document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.toggle('active', el.id === 'globalChatNav');
+        var cid = el.getAttribute('data-conversation-id');
+        el.classList.toggle('active', cid === currentConversationId);
     });
 }
 
@@ -3437,9 +3494,15 @@ async function loadHistory(append, retryCount = 0) {
                 let query = supabase
                     .from('messages')
                     .select('*')
-                    .or('conversation_id.is.null,conversation_id.eq.00000000-0000-0000-0000-000000000000')
                     .order('created_at', { ascending: false })
                     .limit(PAGE_SIZE);
+                // 只读【当前打开的会话】。全局会话额外兼容 conversation_id 为 null 的老数据
+                // （第 0 期已把历史消息全部补齐了归属，这里留着只是兜底）。
+                if (currentConversationId === GLOBAL_CONVERSATION_ID) {
+                    query = query.or('conversation_id.is.null,conversation_id.eq.' + currentConversationId);
+                } else {
+                    query = query.eq('conversation_id', currentConversationId);
+                }
                 if (oldestTimestamp) {
                     query = query.lt('created_at', oldestTimestamp);
                 }
@@ -5294,13 +5357,21 @@ function subscribeMessages() {
     // 不再使用 convId 过滤器，监听 messages 表全部变更，在回调里筛全局消息（conversation_id 为 null）
     ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => {
         var m = payload.new; if (!m || m.sender_email === currentEmail) return;
-        // 跳过非全局消息（理论上不再存在，但兼容历史数据）
-        if (m.conversation_id && m.conversation_id !== '00000000-0000-0000-0000-000000000000') return;
+        // 只处理【当前打开的会话】的消息。全局会话同时兼容 conversation_id 为 null 的老数据。
+        if (currentConversationId === GLOBAL_CONVERSATION_ID) {
+            if (m.conversation_id && m.conversation_id !== currentConversationId) return;
+        } else if (m.conversation_id !== currentConversationId) {
+            return;
+        }
         addMessageToBottom({ id: m.id, content: m.content, sender_name: m.sender_name || '匿名', sender_email: m.sender_email, isMe: false, time: formatTimeShort(m.created_at), created_at: m.created_at });
     });
     ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' }, payload => {
         var u = payload.new;
-        if (u.conversation_id && u.conversation_id !== '00000000-0000-0000-0000-000000000000') return;
+        if (currentConversationId === GLOBAL_CONVERSATION_ID) {
+            if (u.conversation_id && u.conversation_id !== currentConversationId) return;
+        } else if (u.conversation_id !== currentConversationId) {
+            return;
+        }
         document.querySelectorAll('.message[data-message-id="'+u.id+'"]').forEach(el => { el.replaceWith(createMessageElement({ id: u.id, content: u.content, sender_name: u.sender_name, sender_email: u.sender_email, isMe: u.sender_email === currentEmail, time: formatTimeShort(u.created_at), created_at: u.created_at })); });
     });
     ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages' }, payload => {

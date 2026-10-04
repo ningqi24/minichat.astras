@@ -13,7 +13,7 @@
 //   · 辅助函数  —— js/app.js 的 getCurrentLang / t / loadLanguage（逐字）
 //   · 页面绑定  —— tools/login-page-bindings.js
 //
-// APP_VERSION 与 js/app.js 保持一致（当前 4.12.6）
+// APP_VERSION 与 js/app.js 保持一致（当前 4.12.7）
 // ==========================================================================
 
 // ===================== 版本号 =====================
@@ -21,7 +21,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.12.6';
+var APP_VERSION = '4.12.7';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -89,7 +89,9 @@ var onlineUsers = {}, onlineCount = 0, isSending = false, lastSendTime = 0;
 var MIN_SEND_INTERVAL = 500, PAGE_SIZE = 20;
 var isLoadingMore = false, hasMoreMessages = true, oldestTimestamp = null;
 var unreadCount = 0, isUploadingFile = false;
-var currentConversationId = '00000000-0000-0000-0000-000000000000';
+// 全局聊天会话的固定 id（历史遗留：最早只有一个全局大厅，所有人都在里面）
+var GLOBAL_CONVERSATION_ID = '00000000-0000-0000-0000-000000000000';
+var currentConversationId = GLOBAL_CONVERSATION_ID;
 var presenceChannel = null;
 var profilesRealtimeChannel = null;
 var failedAvatars = {};

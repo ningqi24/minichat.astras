@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-04T04:26:58.223Z",
-  "appVersion": "4.12.6",
-  "fingerprint": "195e91fcba7a9785eb205f2692fefaf1a6ec2cb8cf291879ad9ed3841c666b2f",
+  "generatedAt": "2026-10-04T04:36:27.897Z",
+  "appVersion": "4.12.7",
+  "fingerprint": "cceb488d4abbbfda3662256621de3b692c45347e313ecd7b6ae117bf473a9542",
   "i18nKeys": 39,
-  "appJsBytes": 282660,
-  "loginJsBytes": 62004
+  "appJsBytes": 285356,
+  "loginJsBytes": 62100
 }
