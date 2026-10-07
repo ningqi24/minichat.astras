@@ -69,13 +69,13 @@
         .login-card .auth-title{font-size:24px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
         .login-card .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:24px}
         /* Cloudflare 风格：第三方登录按钮 + 「或」分隔线 */
-        .alt-login{margin-bottom:18px}
+        .alt-login{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
         .alt-login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:13.5px;font-weight:500;font-family:inherit;cursor:pointer;transition:var(--transition)}
         .alt-login-btn:hover{border-color:var(--accent);background:var(--bg-hover)}
         .alt-login-btn:active{transform:scale(.985)}
         .alt-login-logo{width:22px;height:22px;border-radius:6px;background:#0f1115;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;flex-shrink:0}
         .alt-login-logo img{width:100%;height:100%;object-fit:contain;display:block}
-        .or-divider{display:flex;align-items:center;gap:12px;margin-top:16px;color:var(--text-muted);font-size:11.5px}
+        .or-divider{display:flex;align-items:center;gap:12px;margin-top:6px;color:var(--text-muted);font-size:11.5px}
         .or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--border-color)}
         .auth-field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
         .auth-field-label{font-size:12px;font-weight:500;color:var(--text-secondary)}

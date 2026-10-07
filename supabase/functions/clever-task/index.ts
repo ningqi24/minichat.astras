@@ -22,7 +22,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SHARED_SECRET = Deno.env.get("FLOXCHAT_BRIDGE_SECRET")!;
+// 共享密钥：旧名为 FLOXCHAT_BRIDGE_SECRET（历史遗留），新增中性名并保留旧名回退。
+const SHARED_SECRET = (Deno.env.get("MINICHAT_BRIDGE_SECRET") ?? Deno.env.get("FLOXCHAT_BRIDGE_SECRET"))!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;

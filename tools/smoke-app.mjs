@@ -118,6 +118,23 @@ if (failed && !IGNORABLE.test(String(failed && failed.message))) {
   console.error('   ' + (failed.stack || failed.message));
   process.exit(1);
 }
+// ⚠️ 关键全局量断言：这些常量被误删时【加载不会报错】，只在真正调用时才炸，
+//    所以必须在这里显式检查。
+//    教训（2026-10）：整理 FloxChat 相关注释时，连带把 MINICHAT_EDGE_URL 与
+//    MINICHAT_BRIDGE_SECRET 的定义一起删掉了，结果注销账号 / 查身份会 ReferenceError，
+//    而当时的自检照样全绿。
+const REQUIRED_GLOBALS = [
+  'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'MINICHAT_EDGE_URL', 'MINICHAT_BRIDGE_SECRET',
+  'APP_VERSION', 'GLOBAL_CONVERSATION_ID', 'PAGE_SIZE',
+];
+const missing = REQUIRED_GLOBALS.filter((g) => {
+  try { return vm.runInContext('typeof ' + g, ctx) === 'undefined'; } catch { return true; }
+});
+if (missing.length) {
+  console.error('❌ 关键全局量缺失（被误删或改名了）：' + missing.join(', '));
+  process.exit(1);
+}
+console.log('✅ 关键全局量齐全（' + REQUIRED_GLOBALS.length + ' 个）');
 console.log('✅ app.js 在最小 DOM 桩下加载完成，没有抛出未预期的错误');
 if (failed) console.log('   （忽略了一个预期内的桩缺失错误: ' + failed.message + '）');
 // 异步兜底：把未捕获的异步错误也过一遍同样的白名单，避免误报

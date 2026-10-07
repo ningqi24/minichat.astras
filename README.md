@@ -16,8 +16,9 @@
 - **用户认证**：邮箱注册/登录，支持密码显示切换。  
   **User authentication** – Email sign-up / sign-in with password visibility toggle.
 
-- **FloxChat 验证码登录**：使用 FloxChat 账号邮箱获取验证码即可登录 MiniChat，无需在 MiniChat 单独注册（首次登录会自动创建本地账号）。验证码校验**完全交给 FloxChat 官方接口**，MiniChat 不读取、不存储 FloxChat 的任何账号数据，也不提供注册功能。  
-  **FloxChat code login** – Sign in with your FloxChat email and a verification code, no separate MiniChat registration needed. Verification is delegated **entirely to FloxChat's official endpoint** — MiniChat never reads or stores FloxChat account data and offers no registration.
+- **第三方账号登录**：支持微软与 GitHub 一键登录（Supabase OAuth），无需单独注册。
+  **Third-party sign-in** – Sign in with Microsoft or GitHub via Supabase OAuth — no separate registration needed.
+  **Third-party sign-in** – Sign in with Microsoft or GitHub via Supabase OAuth — no separate registration needed.
 
 - **个性昵称**：每个用户可设置显示昵称，**修改后自动同步所有历史消息**，告别显示混乱。  
   **Custom display name** – Each user can set a nickname, and **all historical messages are automatically updated** after change, eliminating display inconsistency.
@@ -140,17 +141,18 @@ ALTER TABLE profiles REPLICA IDENTITY FULL;
 4. 在 Authentication → Providers 中启用 Email 登录（默认已启用）。  
    Enable Email login under Authentication → Providers (enabled by default).
 
-### 2. 部署 Edge Function（FloxChat 验证码登录用，可选）| Deploy the Edge Function (optional)
+### 2. 部署 Edge Function（注销账号 / 身份查询等需要，可选）| Deploy the Edge Function (optional)
 
-> 仅在使用 FloxChat 验证码登录时需要；只做邮箱注册/登录可跳过。  
-> Only required for FloxChat code login; skip it if you only use email sign-up / sign-in.
+> 只在需要「注销账号」「查询管理员身份」这类要 service_role 的动作时才需要；纯聊天可以跳过。
+> Only required for actions needing service_role (account deletion, identity check); skip for plain chat usage.
+> Only required for actions needing service_role (account deletion, identity check); skip for plain chat usage.
 
 源码位于 `supabase/functions/clever-task/index.ts`（Supabase CLI 要求的标准布局），部署为名为 `clever-task` 的函数，并关闭 JWT 校验（鉴权改用请求体中的 `secret`）：  
 The source lives in `supabase/functions/clever-task/index.ts`. Deploy it as a function named `clever-task` with JWT verification disabled (auth is done with the `secret` field in the request body):
 
 ```bash
 supabase functions deploy clever-task --no-verify-jwt
-supabase secrets set FLOXCHAT_BRIDGE_SECRET=<与前端 MINICHAT_BRIDGE_SECRET 保持一致>
+supabase secrets set MINICHAT_BRIDGE_SECRET=<与前端 MINICHAT_BRIDGE_SECRET 保持一致>
 supabase secrets set MINICHAT_BRIDGE_PEPPER=<一段独立的随机串>
 # 可选：管理员邮箱，配置后才能用"删除用户"功能
 supabase secrets set MINICHAT_ADMIN_EMAILS="you@example.com"
@@ -161,9 +163,8 @@ supabase secrets set MINICHAT_ADMIN_EMAILS="you@example.com"
 
 | 环境变量 | 必填 | 说明 | Description |
 |----------|------|------|-------------|
-| `FLOXCHAT_BRIDGE_SECRET` | 是 | 桥接密钥，必须与前端 `js/app.js` 里的 `MINICHAT_BRIDGE_SECRET` 完全一致 | Bridge secret; must match `MINICHAT_BRIDGE_SECRET` in `js/app.js` in `index.html` |
-| `MINICHAT_BRIDGE_PEPPER` | 建议 | 独立随机串，用于派生自动创建的 MiniChat 账号口令；未设置时回退为 `FLOXCHAT_BRIDGE_SECRET` | Independent random string used to derive the auto-created MiniChat account password |
-| `FLOXCHAT_VERIFY_URL` | 否 | 验证码校验接口地址，默认使用 FloxChat 官方接口 | Endpoint used to verify the code; defaults to the official FloxChat endpoint |
+| `MINICHAT_BRIDGE_SECRET` | 是 | 桥接密钥，必须与前端 `js/app.js` 里的 `MINICHAT_BRIDGE_SECRET` 完全一致 | Bridge secret; must match `MINICHAT_BRIDGE_SECRET` in `js/app.js` in `index.html` |
+| `MINICHAT_BRIDGE_PEPPER` | 建议 | 独立随机串，用于派生自动创建的 MiniChat 账号口令；未设置时回退为 `MINICHAT_BRIDGE_SECRET` | Independent random string used to derive the auto-created MiniChat account password |
 | `MINICHAT_ADMIN_EMAILS` | 否 | 管理员邮箱（逗号分隔）。配置后这些账号可在成员列表里删除其他用户；不配置则没人有该权限 | Comma-separated admin emails. When set, those accounts can delete other users from the member list; unset means nobody can |
 
 **部署顺序：先 Edge Function，后前端**，否则验证码登录会直接报错。  
@@ -260,11 +261,10 @@ minichat.astras/
 │   ── 资源与工具 ──
 ├── assets/
 │   ├── logo.svg        # 主 Logo（带字，启动画面用）
-│   ├── minichat-mark.svg  # 无字标记（小尺寸场合用，如 FloxChat 面板）
+│   ├── minichat-mark.svg  # 无字标记（小尺寸场合用，如登录页按钮）
 │   ├── favicon.svg     # 站点图标（SVG，无白边；favicon.ico 由它生成）
 │   ├── Inspired.svg    # 致谢标识：Inspired by SimpleChat
 │   ├── basied.svg      # 致谢标识：Basied on ChatMini+
-│   └── FloxChat LOGO.svg  # FloxChat 标识
 ├── lib/
 │   └── supabase.min.js # Supabase SDK
 ├── tools/
@@ -273,13 +273,6 @@ minichat.astras/
 │   ├── check-login.mjs           # 登录页自检（同步性 / i18n / 路径 / 绑定 / 版本号）
 │   ├── login-build-manifest.json # 生成指纹（自检用来判断是否已过期）
 │   └── emoji-split/              # 表情数据拆分工具（规则 + 脚本 + 说明）
-├── （已归档）    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop
-│   ├── minichat-bridge.js      # TurboWarp 扩展 | TurboWarp extension
-│   ├── minichat-avatar-150.svg # 群聊列表头像（150px，圆形）
-│   ├── floxchat-patch.js       # FloxChat 工程补丁脚本
-│   ├── floxchat-validate.js    # 补丁后校验
-│   ├── build-floxchat.ps1      # 一键迁移：复制→打补丁→校验→打包
-│   └── README.md               # 桥接技术细节与迁移清单
 │
 ├── LICENSE
 └── README.md
@@ -293,9 +286,8 @@ minichat.astras/
 |--------|------|-------------|
 | `SUPABASE_URL` | Supabase 项目 URL | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase 匿名密钥（公开） | Supabase anon public key |
-| `MINICHAT_EDGE_URL` | Edge Function 地址（`.../functions/v1/clever-task`），FloxChat 验证码登录用 | Edge Function URL used by FloxChat code login |
-| `MINICHAT_BRIDGE_SECRET` | 桥接密钥，必须与 Edge Function 的 `FLOXCHAT_BRIDGE_SECRET` 一致 | Bridge secret; must match the Edge Function's `FLOXCHAT_BRIDGE_SECRET` |
-| `FLOXCHAT_BASE_URL` | FloxChat 服务端地址（前端调用 `/ces/send-code` 用）。**FloxChat 换域名时只改这一行**，然后 `npm run build:login` 重新生成 login.js。当前值：`https://ces.flarefox.top`（FloxChat 新域名，路径 `/ces/` 未变；旧域名 `shebiao.dpdns.org` 已失效） | Base URL of the FloxChat server. **Change only this line when FloxChat moves domains**, then run `npm run build:login`. Current: `https://ces.flarefox.top` |
+| `MINICHAT_EDGE_URL` | Edge Function 地址（`.../functions/v1/clever-task`），注销/查身份/限额等动作走它 | Edge Function URL for server-side actions |loxChat code login |
+| `MINICHAT_BRIDGE_SECRET` | 桥接密钥，必须与 Edge Function 的 `MINICHAT_BRIDGE_SECRET` 一致 | Bridge secret; must match the Edge Function's `MINICHAT_BRIDGE_SECRET` |
 | `PAGE_SIZE` | 历史消息每页加载数量（默认 20） | Number of historical messages per page (default 20) |
 | `CAPTCHA_SITE_KEY` | Cloudflare Turnstile 的 Site Key（公开值；留空则不启用） | Cloudflare Turnstile site key (public; leave empty to disable) |
 | `DURATION` | 启动页最短展示时间（毫秒，当前 1800） | Splash minimum display time (ms, currently 1800) |
@@ -357,9 +349,8 @@ npm run check                  # 同上；package.json 无依赖，只放脚本�
 |---|-----------|------|
 | ① | `authToggle` / `togglePwd` 变量声明 | `if (未声明变量)` 抛 `ReferenceError`，整页脚本挂掉 |
 | ② | `lib/supabase.min.js` 用了相对路径 | `/login/` 下 404 → `supabase` 未定义 → 整页脚本挂掉，**永远卡在启动画面** |
-| ③ | `switchFloxChat` / `floxBack` 绑定 | 点「使用 FloxChat 登录」没反应 |
+| ③ | 第三方登录按钮的绑定 | 点「使用微软账号登录」没反应 |
 | ④ | 眼睛按钮的图标切换 | 图标永远不变 |
-| ⑤ | `btnFloxSendCode` / `btnFloxVerify` 绑定 | 面板能开、能填邮箱，但「发送验证码」「验证并登录」点不动 |
 | ⑥ | `customModalCancel` 绑定 | 通用弹窗的取消按钮没用 |
 
 其中 ⑤ ⑥ 是加上 `npm run check` 之后**自动发现**的 —— 它的「监听器覆盖」检查会
@@ -419,7 +410,7 @@ npm run check                  # 同上；package.json 无依赖，只放脚本�
 |----|------|------|
 | RLS 与存储桶策略 | 决定谁能读写什么数据 | `supabase/security-hardening.sql` |
 | 双维度全局限流 | 按目标 + 来源计数，跨 Edge 实例的原子配额 | `supabase/rate-limit.sql` |
-| 发码票据 | 校验验证码前必须"同一来源刚为该邮箱发过码" | 同上 + `floxCodeLogin` |
+| 共享密钥 | 所有 Edge 动作需带 SHARED_SECRET；该值在前端是公开的，只用于挡住随手扫描 | 每个动作内部用 access_token 再校验调用者身份 |
 | 来源白名单 | 只接受本站 / TurboWarp / 本地开发来源的请求 | `originAllowed()` |
 
 #### 来源白名单的边界（重要）
@@ -434,49 +425,54 @@ npm run check                  # 同上；package.json 无依赖，只放脚本�
 
 #### 维护约定
 
-**不要往 `js/app.js` 等会公开的文件里写**：FloxChat 的域名、任何接口路径、任何密钥。
-写在那里等于公开发布。历史上就因此暴露过 FloxChat 的验证码接口（2026-09-12 ~ 10-03，约 3 周），
+**不要往 `js/app.js` 等会公开的文件里写**：任何第三方服务的域名、接口路径或密钥。
+写在那里等于公开发布。历史上就因此暴露过外部服务的验证码接口（2026-09-12 ~ 10-03，约 3 周），
+写在那里等于公开发布。历史上就因此暴露过外部服务的接口凭据（2026-09-12 ~ 10-03，约 3 周），
 并间接导致 2026-10-03 的一次验证码爆破事件中被用来绕过对方限流。
 
 ---
 
-### FloxChat 互通 | FloxChat Interop
+### 第三方账号登录 | Third-party Sign-in
 
-MiniChat 与 FloxChat 有两个方向的互通，**两者的实现方式完全不同**，不要混淆：
+MiniChat 支持用**微软**或 **GitHub** 账号一键登录，走 Supabase 的 OAuth，与邮箱密码登录共用同一套会话。
 
-| 方向 | 实现 | 位置 |
-|------|------|------|
-| 用 FloxChat 验证码登录 MiniChat | MiniChat 调 FloxChat 的验证码接口 | `supabase/functions/clever-task/index.ts` |
-| 在 FloxChat 里收发 MiniChat 群聊 | FloxChat 客户端里的 TurboWarp 扩展注入 | `（已归档）` |
+| 提供商 | Supabase 里的 Provider 名 | 申请入口 |
+|--------|--------------------------|----------|
+| 微软 | `azure` | portal.azure.com → Microsoft Entra ID → 应用注册 |
+| GitHub | `github` | github.com/settings/developers → New OAuth App |
 
-#### FloxChat 验证码登录
+**配置三步**（缺一步就会失败）：
 
-**只需两个接口**（都在 FloxChat 的 `ces` 子域下）：
+1. **提供商后台**建应用，回调地址填
+   `https://<project-ref>.supabase.co/auth/v1/callback`
+   - 微软：个人账号要把 Supabase 里的 **Azure Tenant URL** 设为
+     `https://login.microsoftonline.com/common`，且应用注册的「支持的账户类型」
+     要包含**个人 Microsoft 账户**；
+   - 客户端密码的「**值**」只在创建时显示一次，立刻复制（不是「密码 ID」）。
+2. **Supabase → Authentication → Providers**：填该提供商的 Client ID / Secret，打开开关。
+3. **Supabase → Authentication → URL Configuration**：Site URL 与 Redirect URLs 指向本站。
+   回跳由 Supabase 执行，**没配会被丢到默认地址**。
+
+前端只做一件事：
+
+```js
+supabase.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + '/' } })
+```
+
+**不用浏览器就能自检配置是否生效**：
 
 ```
-POST https://ces.flarefox.top/ces/send-code     { email }        → { "message": "Code sent", "expiresIn": 300 }
-POST https://ces.flarefox.top/ces/verify-code   { email, code }  → 校验结果
+GET https://<project-ref>.supabase.co/auth/v1/authorize?provider=<name>&redirect_to=<url>
+  未启用 → 400 {"msg":"Unsupported provider: provider is not enabled"}
+  已启用 → 302 跳到提供商，URL 里能看到 client_id / redirect_uri / scope
 ```
 
-**调用方式（重要）**：前端**不直连** FloxChat，两个动作都走 Edge Function 代理。原因：
+> ⚠️ **已知观感问题**：个人微软账号走的是 `account.live.com` 的旧版同意页，界面比较简陋、
+> 可能不显示应用徽标，并带「未验证」字样（那是指没做微软的发布者验证，任何新应用都这样，
+> 不代表有问题）。要更干净可以改用 GitHub —— 它的授权页没有这类字样。
+> 若坚持用微软，可在 Azure 的「品牌打造和属性」里补上徽标、主页、隐私声明与服务条款 URL。
 
-- 发验证码是**唯一会消耗 FloxChat 真实资源**的动作（发一封真邮件）；
-- 直连会绕过 MiniChat 自己的限流，等于让对方替我们承担滥用风险；
-- 走代理后，Edge Function 的双维度限流（按收件邮箱 3 次/10 分钟 + 按来源 IP 10 次/10 分钟）
-  顺带替 FloxChat 挡了一层。
-
-所以 **FloxChat 的地址只存在于服务端**（`FLOXCHAT_SEND_URL` / `FLOXCHAT_VERIFY_URL` 两个环境变量，
-有默认值）。换域名只改那里或改 secrets，前端不用动。
-
-> ⚠️ **这是 FloxChat 的内部接口，不是对外发布的 API。** 使用前应与 FloxChat 作者沟通并取得同意；
-> MiniChat 侧不做任何写入（不建/改/删 FloxChat 账号，不读其用户表），只做验证码发送与校验。
-> 另外发信配额是与 FloxChat 共享的，用量大了值得知会作者。
-
-#### 在 FloxChat 里显示 MiniChat 群聊
-
-走 `（已归档）` 里的 TurboWarp 扩展（客户端注入），细节见 `（已归档，见 MiniChat/_archive-floxchat-bridge/README-归档说明.md）` 与
-根目录的 `FloxChat改版说明.md`。注意这一路依赖 FloxChat 的内部变量名，
-FloxChat 大改版后要用 `floxchat-patch.js` 对着新版工程重新打补丁。
+---
 
 ---
 
@@ -581,12 +577,8 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 - [ui-avatars.com](https://ui-avatars.com) - 按邮箱生成默认头像 | Default avatars generated from email
 - [GitHub Pages](https://pages.github.com) - 静态站点托管 | Static site hosting
 - [EmojiHub](https://github.com/cheatsnake/emojihub) - Emoji 数据 | Emoji data
-- [TurboWarp](https://turbowarp.org) - FloxChat 桥接扩展的运行环境 | Runtime for the FloxChat bridge extension
 - **SimpleChat** - 本项目的设计灵感来源（`assets/Inspired.svg`）| Design inspiration for this project
 - **ChatMini+** - 本项目的构建基础（`assets/basied.svg`）| The project this one is built upon
-- **FloxChat**（摄表）- 验证码登录能力来源于 FloxChat。MiniChat 仅调用其验证码接口完成身份核验，不读取、不存储 FloxChat 账号数据，不提供任何形式的注册，也不代表或代替 FloxChat 官方。  
-  **FloxChat** (Shebiao) – The verification-code login capability comes from FloxChat. MiniChat only calls its code endpoint to verify identity; it never reads or stores FloxChat account data, offers no registration of any kind, and is not affiliated with or acting on behalf of FloxChat.
-
 ---
 
 **由 [@ningqi24](https://github.com/ningqi24) 维护**  

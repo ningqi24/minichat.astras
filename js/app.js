@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.25.1';
+var APP_VERSION = '4.26.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -504,6 +504,9 @@ if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABAS
 //      用自己的 access_token 校验调用者身份。
 //   2. 服务端地址、service_role 密钥都只存在于 Edge Function 环境变量里，前端拿不到。
 //   3. 维护约定：不要往这个文件里写任何服务的域名、接口路径或真正的密钥。
+// 这两个值必须存在：之前整理注释时把它们的定义误删了，导致注销账号/查身份会 ReferenceError。
+var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
+var MINICHAT_BRIDGE_SECRET = "flox-ee4cfcf741e6e528a333abec";
 async function callEdge(payload) {
     var resp = await fetch(MINICHAT_EDGE_URL, {
         method: "POST",
