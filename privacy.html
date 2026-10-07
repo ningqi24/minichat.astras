@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>隐私政策 · MiniChat</title>
+<link rel="icon" href="/assets/favicon.svg"/>
+<link rel="stylesheet" href="/css/app.css?v=4.24.1"/>
+<style>
+  body{margin:0;background:var(--bg-primary,#0a0a0a);color:var(--text-primary,#e5e7eb);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;line-height:1.75}
+  .doc{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+  .doc h1{font-size:26px;margin:0 0 6px}
+  .doc .meta{color:var(--text-muted,#9ca3af);font-size:13px;margin-bottom:28px}
+  .doc h2{font-size:17px;margin:32px 0 8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08)}
+  .doc p,.doc li{font-size:14.5px}
+  .doc ul{padding-left:22px}
+  .doc a{color:#3b82f6}
+  .back{display:inline-block;margin-bottom:22px;color:#3b82f6;text-decoration:none;font-size:14px}
+  .note{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:10px 14px;border-radius:10px;font-size:13.5px;margin:18px 0}
+</style>
+</head>
+<body>
+<div class="doc">
+<a class="back" href="/">← 返回 MiniChat</a>
+  <h1>隐私政策</h1>
+  <div class="meta">适用于 minichat.astras.cc</div>
+
+  <p>MiniChat 是一个开源的小型实时聊天站点。这份说明告诉你：我们收集什么、用它做什么、以及你可以怎么删掉它。</p>
+
+  <h2>一、我们收集什么</h2>
+  <ul>
+    <li><b>账号信息</b>：你注册时使用的邮箱地址；如果你用微软或 GitHub 账号登录，我们从该平台获取你的邮箱、显示名称和头像地址。</li>
+    <li><b>你主动填写的内容</b>：显示昵称、个性标签、头像。</li>
+    <li><b>聊天内容</b>：你在公共聊天、群聊、私聊中发送的消息，以及你上传的图片/文件。</li>
+    <li><b>为了维持服务运行必需的技术信息</b>：登录会话凭据、大致在线状态。</li>
+  </ul>
+  <p>我们<b>不</b>收集：你的密码（第三方登录时代码里没有任何密码字段）、通讯录、位置、设备标识符，也不投放任何广告或做用户画像。</p>
+
+  <h2>二、怎么用这些信息</h2>
+  <ul>
+    <li>让你能登录、发消息、看到别人发的消息；</li>
+    <li>维护聊天室的基本秩序（例如频率限制、群管理操作）；</li>
+    <li>仅此而已。不会用于广告、不会出售、不会提供给第三方做营销。</li>
+  </ul>
+
+  <h2>三、数据存在哪里</h2>
+  <p>数据托管在 Supabase（PostgreSQL 数据库 + 对象存储）。生产环境通过行级安全策略（RLS）限制访问：只有会话参与者能读到该会话的消息，未登录用户读不到任何消息。头像与附件存放在对象存储中，按需生成可访问链接。</p>
+
+  <h2>四、你能做什么</h2>
+  <ul>
+    <li><b>修改</b>：昵称、个性标签、头像都能在设置里随时改。</li>
+    <li><b>删除账号</b>：设置里有「注销账号」。注销后你的账号与资料会被删除，你发过的消息会被匿名化为「已注销用户」，聊天记录本身保留（以免破坏他人的会话上下文）。</li>
+    <li><b>拉黑</b>：你可以把某人加入黑名单，之后你们互相不可见、无法互发好友请求、也无法私聊。</li>
+  </ul>
+
+  <h2>五、第三方登录</h2>
+  <p>使用微软或 GitHub 登录时，你会在对方的授权页面上确认权限。MiniChat 只申请最基本的范围（读取邮箱与公开资料），不会获得你的密码，也无法代表你在该平台上做任何其他操作。</p>
+
+  <h2>六、本政策可能的变更</h2>
+  <p>这是个人维护的开源项目，政策如有调整会直接更新本页，并修改页脚下的更新日期。</p>
+
+  <h2>七、联系</h2>
+  <p>项目地址：<a href="https://github.com/ningqi24/minichat.astras" target="_blank" rel="noopener">github.com/ningqi24/minichat.astras</a>。问题与建议请开 issue。</p>
+  <p class="meta" style="margin-top:40px">最后更新：2026-10-07</p>
+</div>
+</body>
+</html>
