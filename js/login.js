@@ -13,7 +13,7 @@
 //   · 辅助函数  —— js/app.js 的 getCurrentLang / t / loadLanguage（逐字）
 //   · 页面绑定  —— tools/login-page-bindings.js
 //
-// APP_VERSION 与 js/app.js 保持一致（当前 4.25.0）
+// APP_VERSION 与 js/app.js 保持一致（当前 4.25.1）
 // ==========================================================================
 
 // ===================== 版本号 =====================
@@ -21,7 +21,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.25.0';
+var APP_VERSION = '4.25.1';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }

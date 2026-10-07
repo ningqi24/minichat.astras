@@ -1112,3 +1112,6 @@
 
 /* 第 4 期：资料卡里的"群管理操作"分组分隔线 */
 .pc-sep{flex-basis:100%;height:1px;background:var(--border,rgba(255,255,255,.12));margin:6px 0 2px}
+
+/* 第三方登录按钮里的内联 SVG：撑满那个深色小格子（img 那条规则管不到 inline svg） */
+.alt-login-logo svg{width:100%;height:100%;display:block}
