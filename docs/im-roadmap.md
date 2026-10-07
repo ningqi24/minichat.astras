@@ -176,7 +176,7 @@ alter table conversations add column if not exists direct_key text unique;  -- '
 
 ## 6. 与 FloxChat 的关系（"稍稍兼容"）
 
-FloxChat 是另一个项目，通过 `Floxchat-Bridge/` 里的 TurboWarp 扩展把 MiniChat 的群聊注入到 FloxChat 界面里。
+FloxChat 是另一个项目，通过 `（已归档）` 里的 TurboWarp 扩展把 MiniChat 的群聊注入到 FloxChat 界面里。
 MiniChat 要做多群聊与好友，容易把这条链路弄坏，所以提前把关系定清楚。
 
 ### 原则：MiniChat 按 IM 的需要设计，兼容层由桥接侧承担

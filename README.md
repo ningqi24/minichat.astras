@@ -273,7 +273,7 @@ minichat.astras/
 │   ├── check-login.mjs           # 登录页自检（同步性 / i18n / 路径 / 绑定 / 版本号）
 │   ├── login-build-manifest.json # 生成指纹（自检用来判断是否已过期）
 │   └── emoji-split/              # 表情数据拆分工具（规则 + 脚本 + 说明）
-├── Floxchat-Bridge/    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop
+├── （已归档）    # FloxChat 互通（扩展 + 补丁脚本）| FloxChat interop
 │   ├── minichat-bridge.js      # TurboWarp 扩展 | TurboWarp extension
 │   ├── minichat-avatar-150.svg # 群聊列表头像（150px，圆形）
 │   ├── floxchat-patch.js       # FloxChat 工程补丁脚本
@@ -447,7 +447,7 @@ MiniChat 与 FloxChat 有两个方向的互通，**两者的实现方式完全�
 | 方向 | 实现 | 位置 |
 |------|------|------|
 | 用 FloxChat 验证码登录 MiniChat | MiniChat 调 FloxChat 的验证码接口 | `supabase/functions/clever-task/index.ts` |
-| 在 FloxChat 里收发 MiniChat 群聊 | FloxChat 客户端里的 TurboWarp 扩展注入 | `Floxchat-Bridge/` |
+| 在 FloxChat 里收发 MiniChat 群聊 | FloxChat 客户端里的 TurboWarp 扩展注入 | `（已归档）` |
 
 #### FloxChat 验证码登录
 
@@ -474,7 +474,7 @@ POST https://ces.flarefox.top/ces/verify-code   { email, code }  → 校验结�
 
 #### 在 FloxChat 里显示 MiniChat 群聊
 
-走 `Floxchat-Bridge/` 里的 TurboWarp 扩展（客户端注入），细节见 `Floxchat-Bridge/README.md` 与
+走 `（已归档）` 里的 TurboWarp 扩展（客户端注入），细节见 `（已归档，见 MiniChat/_archive-floxchat-bridge/README-归档说明.md）` 与
 根目录的 `FloxChat改版说明.md`。注意这一路依赖 FloxChat 的内部变量名，
 FloxChat 大改版后要用 `floxchat-patch.js` 对着新版工程重新打补丁。
 

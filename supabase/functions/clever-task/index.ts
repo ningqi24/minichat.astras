@@ -290,6 +290,16 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ⚠️ 2026-10 配额事故后用户决定【不再适配 FloxChat】：桥接只用到的四个动作直接停用。
+    //    为什么要在这里拦而不是删代码：这四个动作是 FloxChat 桥接在反复轮询，
+    //    150 万次调用产生了 15.6 GB 日志（Log Ingestion 超配额 15 倍）。
+    //    在路由最前面返回 410，可以立刻把每次调用的日志体积从 ~11KB 降到 1KB 量级；
+    //    彻底归零则需要在 FloxChat 侧停止桥接（那才是调用方）。
+    //    设 MINICHAT_BRIDGE_DISABLED=0 可临时恢复。
+    const BRIDGE_DISABLED = (Deno.env.get("MINICHAT_BRIDGE_DISABLED") ?? "1") !== "0";
+    if (BRIDGE_DISABLED && (action === "get_messages" || action === "send_message" || action === "get_users" || action === "upload_file")) {
+      return json({ error: "bridge_disabled", message: "FloxChat 桥接已停用" }, 410);
+    }
     if (action === "flox_send_code") return await floxSendCode(req, body);
     if (action === "flox_code_login") return await floxCodeLogin(req, body);
     if (action === "get_messages") return await getMessages(body);
