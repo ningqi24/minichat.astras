@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.21.0';
+var APP_VERSION = '4.22.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -3747,7 +3747,7 @@ function setupConversationsRealtime() {
     window.__convRefreshTimer = setInterval(function () {
         if (document.hidden) return;
         loadConversations();
-    }, 20000);
+    }, 60000);
 
     // 切回页面 / 窗口重新获得焦点时立刻拉一次（最常见的『其实我早就被拉进群了』场景）
     if (!window.__convFocusWired) {
@@ -3767,7 +3767,7 @@ function setupConversationsRealtime() {
         window.__frDotTimer = setInterval(function () {
             if (document.hidden) return;
             loadFriendRequests();
-        }, 30000);
+        }, 120000);
     }
 }
 
@@ -4048,7 +4048,7 @@ function ensureMyStatePolling() {
     window.__myStateTimer = setInterval(function () {
         if (document.hidden || !currentUserId) return;
         refreshMyState();
-    }, 30000);
+    }, 120000);
     document.addEventListener('visibilitychange', function () {
         if (!document.hidden && currentUserId) refreshMyState();
     });
@@ -4536,7 +4536,7 @@ function openFriendsModal() {
     window.__frRefreshTimer = setInterval(function () {
         if (document.hidden) return;
         loadFriends(); loadFriendRequests(); loadBlocks();
-    }, 5000);
+    }, 15000);
 }
 function closeFriendsModal() {
     var m = document.getElementById('friendsModal');
@@ -6922,11 +6922,15 @@ function subscribeMessages() {
             else { setAuthMessage(data.payload.from + ' 提到了你','success'); setTimeout(() => setAuthMessage(''), 5000); }
         }
     });
-    // 不再使用 convId 过滤器，监听 messages 表全部变更，在回调里筛全局消息（conversation_id 为 null）
-    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => {
+    // ⚠️ 2026-10 配额事故：这里原来【不带 filter】，每条新消息都会推给所有在线客户端，
+    //   488 并发 × 消息数 = 6786 万条 realtime 消息（超配额 31 倍）。
+    //   现在按当前会话过滤，只收本会话的消息；别的会话的未读角标由 60 秒轮询兜底。
+    var _msgFilter = 'conversation_id=eq.' + currentConversationId;
+    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter: _msgFilter }, payload => {
         var m = payload.new; if (!m || m.sender_email === currentEmail) return;
+        // 加了 filter 之后这里只会在极少数情况下命中（例如会话 id 刚刚切换）。
+        // 保留这段是为了兼容，真正保证角标正确性的是 60 秒轮询。
         // 不是当前打开的会话：只把那个会话的未读角标 +1，不往消息列表里插。
-        // 这样别人在群里说话时侧边栏角标是【立刻】变的，不用等重新拉取。
         // 全局会话兼容 conversation_id 为 null 的老数据。
         var mConv = m.conversation_id || GLOBAL_CONVERSATION_ID;
         if (mConv !== currentConversationId) {
@@ -6939,7 +6943,7 @@ function subscribeMessages() {
         }
         addMessageToBottom({ id: m.id, content: m.content, sender_name: m.sender_name || '匿名', sender_email: m.sender_email, isMe: false, time: formatTimeShort(m.created_at), created_at: m.created_at });
     });
-    ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages' }, payload => {
+    ch.on('postgres_changes', { event:'UPDATE', schema:'public', table:'messages', filter: _msgFilter }, payload => {
         var u = payload.new;
         if (currentConversationId === GLOBAL_CONVERSATION_ID) {
             if (u.conversation_id && u.conversation_id !== currentConversationId) return;
@@ -6948,7 +6952,7 @@ function subscribeMessages() {
         }
         document.querySelectorAll('.message[data-message-id="'+u.id+'"]').forEach(el => { el.replaceWith(createMessageElement({ id: u.id, content: u.content, sender_name: u.sender_name, sender_email: u.sender_email, isMe: u.sender_email === currentEmail, time: formatTimeShort(u.created_at), created_at: u.created_at })); });
     });
-    ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages' }, payload => {
+    ch.on('postgres_changes', { event:'DELETE', schema:'public', table:'messages', filter: _msgFilter }, payload => {
         var el = messageList ? messageList.querySelector('[data-message-id="'+payload.old.id+'"]') : null;
         if (el) el.remove();
     });
