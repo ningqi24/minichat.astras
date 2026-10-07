@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.24.0" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.24.0">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.24.0">
+    <link rel="icon" href="./favicon.ico?v=4.24.1" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.24.1">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.24.1">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.24.0" />
+    <meta name="version" content="4.24.1" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.24.0">
+    <link rel="stylesheet" href="/css/app.css?v=4.24.1">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -575,11 +575,6 @@
             <div class="cs-row"><span class="cs-label">类型</span><span class="cs-value" id="csType">—</span></div>
             <div class="cs-row"><span class="cs-label">群号</span><span class="cs-value" id="csGroupNo">—</span><button class="cs-copy" id="csCopyGroupNo" type="button">复制</button></div>
             <div class="cs-row"><span class="cs-label">我的身份</span><span class="cs-value" id="csRole">—</span></div>
-            <div class="cs-row cs-row-switch">
-                <span class="cs-label">同步到 FloxChat</span>
-                <label class="cs-switch"><input type="checkbox" id="csBridgeVisible" /><span class="cs-slider"></span></label>
-            </div>
-            <div class="cs-hint" id="csBridgeHint"></div>
             <!-- 第 1.5 期：群治理（仅群聊显示；非群主/管理员只读）-->
             <div id="csGroupBlock" style="display:none">
                 <div class="cs-row cs-edit"><span class="cs-label">群名</span><input type="text" id="csNameInput" maxlength="40" placeholder="群名称" /></div>
@@ -754,6 +749,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.24.0" defer></script>
+<script src="/js/app.js?v=4.24.1" defer></script>
 </body>
 </html>
