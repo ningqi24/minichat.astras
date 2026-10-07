@@ -3,19 +3,12 @@
 // 用法: supabase functions deploy clever-task
 //
 // 环境变量：
-//   FLOXCHAT_BRIDGE_SECRET  必填，前端/扩展的桥接密钥（沿用现有）
 //   MINICHAT_BRIDGE_PEPPER  建议设置：独立随机串，用于派生 MiniChat 账号口令，勿与其它密钥复用
-//   FLOXCHAT_VERIFY_URL     可选，FloxChat 验证码校验地址
-//   FLOXCHAT_SEND_URL       可选，FloxChat 发送验证码地址
-//       默认值已更新为 FloxChat 新域名 https://ces.flarefox.top（路径 /ces/ 未变）。
 //          旧域名 shebiao.dpdns.org 已失效（TLS 证书变成自签名 CN=localhost）。
 //          再换域名时：
-//            要么 supabase secrets set FLOXCHAT_SEND_URL=... FLOXCHAT_VERIFY_URL=...
 //            要么改下面的默认值后重新 supabase functions deploy clever-task
-//          前端那一侧对应 js/app.js 的 FLOXCHAT_BASE_URL（改完要 npm run build:login）
 //
 // 动作（全部需要请求体里的 secret）：
-//   flox_code_login  { email, code }              服务端校验 FloxChat 验证码后签发 MiniChat 会话
 //   get_messages     { access_token, limit, ... } 读历史消息（身份由 token 推导）
 //   send_message     { access_token, content, ...} 发消息（身份由 token 推导，不可伪造）
 //   get_users        { access_token }             读用户列表（供 TurboWarp 扩展使用）
@@ -25,10 +18,7 @@
 // 安全约束：
 //   1. 绝不调用 updateUserById({ password }) 去覆盖既有账号的口令。
 //   2. login 不接受客户端指定的口令，账号已存在且派生口令不匹配时直接返回 401。
-//   3. flox_code_login 对验证码做了严格校验与限流；账号只在验证码校验通过后才开通。
-//   4. flox_send_code 只是把「发送验证码」这一请求代理到 FloxChat，方便 TurboWarp 扩展
 //      调用（扩展直接 fetch 会被 CORS 拦截）。
-//   5. 本函数不读取 FloxChat 用户表，也绝不在 FloxChat 侧创建/修改/删除任何账号。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -49,9 +39,6 @@ function isAdminEmail(email?: string | null) {
 }
 
 // ---- FloxChat 验证码校验地址（服务端专用）----
-const FLOXCHAT_VERIFY_URL = Deno.env.get("FLOXCHAT_VERIFY_URL") ?? "https://ces.flarefox.top/ces/verify-code";
-// ---- FloxChat 发送验证码地址（服务端代理，扩展端不直接请求，避免 CORS）----
-const FLOXCHAT_SEND_URL = Deno.env.get("FLOXCHAT_SEND_URL") ?? "https://ces.flarefox.top/ces/send-code";
 // MiniChat 侧账号口令由服务端密钥派生，客户端无法推算（部署时请设置独立随机值）
 const MINICHAT_BRIDGE_PEPPER = Deno.env.get("MINICHAT_BRIDGE_PEPPER") ?? SHARED_SECRET;
 if (!Deno.env.get("MINICHAT_BRIDGE_PEPPER")) {
@@ -300,8 +287,6 @@ Deno.serve(async (req: Request) => {
     if (BRIDGE_DISABLED && (action === "get_messages" || action === "send_message" || action === "get_users" || action === "upload_file")) {
       return json({ error: "bridge_disabled", message: "FloxChat 桥接已停用" }, 410);
     }
-    if (action === "flox_send_code") return await floxSendCode(req, body);
-    if (action === "flox_code_login") return await floxCodeLogin(req, body);
     if (action === "get_messages") return await getMessages(body);
     if (action === "send_message") return await sendMessage(body);
     if (action === "get_users") return await getUsers(body);
@@ -368,98 +353,6 @@ async function login(req: Request, body: any) {
 }
 
 // ============================================================================
-// FloxChat 账号校验（服务端代理）
-// 约束：只负责“邮箱验证码 → MiniChat 会话”的换发，不读取 FloxChat 用户表、
-//       不提供密码登录，也绝不在 FloxChat 侧创建/修改/删除任何账号。
-// ============================================================================
-
-// 发送 FloxChat 验证码（服务端代理）。
-// 扩展在 TurboWarp/Electron 里直接 fetch shebiao.dpdns.org 会被 CORS 拦住，
-// 所以绕一层服务端。同时做限流，避免被人拿来给别人的邮箱刷验证码。
-async function floxSendCode(req: Request, body: any) {
-  const email = String(body?.email ?? "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json({ error: "invalid_email", code: "INVALID_EMAIL" }, 400);
-  }
-  if (
-    !(await rateLimitAll(`sendcode:email:${email}`, 3, 10 * 60_000)) ||
-    !(await rateLimitAll(`sendcode:ip:${clientIp(req)}`, 10, 10 * 60_000))
-  ) {
-    return json({ error: "发送过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
-  }
-
-  try {
-    const resp = await fetch(FLOXCHAT_SEND_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const text = await resp.text();
-    if (!resp.ok) {
-      return json({
-        error: `FloxChat 发送验证码失败（HTTP ${resp.status}）`,
-        code: "FLOX_SEND_FAILED",
-      }, 502);
-    }
-    await ticketPut(email, clientIp(req));
-    return json({ ok: true });
-  } catch (e: any) {
-    console.error('[flox/send] 失败', e);
-    return json({ error: safeError('FloxChat 发送服务暂不可用: ', e), code: 'FLOX_UNAVAILABLE' }, 502);
-  }
-}
-
-// 验证码登录（兼容旧流程）：验证码在服务端向 FloxChat 校验，客户端不再自行判定
-// 校验通过后由 issueSession 开通 MiniChat 账号（首次）或直接签发会话（已有）
-async function floxCodeLogin(req: Request, body: any) {
-  const email = String(body?.email ?? "").trim().toLowerCase();
-  const code = String(body?.code ?? "").trim();
-  if (!email || !code) {
-    return json({ error: "missing_credentials", code: "MISSING_CREDENTIALS" }, 400);
-  }
-  if (!/^[A-Za-z0-9]{4,12}$/.test(code)) {
-    return json({ error: "invalid_code", code: "INVALID_CODE" }, 401);
-  }
-  // 限流：验证码只有 6 位，不限流可被离线爆破
-  if (
-    !(await rateLimitAll(`code:email:${email}`, 5, 10 * 60_000)) ||
-    !(await rateLimitAll(`code:ip:${clientIp(req)}`, 20, 10 * 60_000))
-  ) {
-    return json({ error: "尝试过于频繁，请稍后再试", code: "RATE_LIMITED" }, 429);
-  }
-
-  // 要求「同一来源刚为这个邮箱发过码」——否则等于对外开放了任意邮箱的校验能力
-  if (!(await ticketTake(email, clientIp(req)))) {
-    return json({ error: "请先获取验证码", code: "NO_TICKET" }, 400);
-  }
-
-  let text = "";
-  try {
-    const resp = await fetch(FLOXCHAT_VERIFY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code }),
-    });
-    text = await resp.text();
-  } catch (e: any) {
-    console.error('[flox/verify] 失败', e);
-    return json({ error: safeError('FloxChat 校验服务暂不可用: ', e), code: 'FLOX_UNAVAILABLE' }, 502);
-  }
-
-  let ok = false;
-  try {
-    const parsed = JSON.parse(text);
-    ok = parsed?.success === true || parsed?.verified === true;
-  } catch (_) {
-    // 非 JSON 响应时只接受「整段就是 true/verified/ok/success」这种纯文本，
-    // 不再做子串匹配——旧实现只要响应里出现 verified 这个词就放行，
-    // 一段含有 "not verified" 的报错页也会被当成校验通过。
-    ok = /^\s*"?(true|verified|ok|success)"?\s*$/i.test(text);
-  }
-  if (!ok) return json({ error: "invalid_code", code: "INVALID_CODE" }, 401);
-
-  return await issueSession(email, email.split("@")[0], "");
-}
 
 // 由服务端密钥推导 MiniChat 账号口令（每次现算，不落库、不下发）
 async function bridgePassword(email: string): Promise<string> {

@@ -35,20 +35,12 @@ if (_togglePwd) _togglePwd.addEventListener('click', function() {
     this.setAttribute('aria-label', t2 === 'text' ? '隐藏密码' : '显示密码');
 });
 
-// ---- FloxChat 面板：入口 / 返回 / 发送验证码 / 验证登录 ----
-// ⚠️ 这四个都在 app.js 的 setupGlobalEventListeners() 里（约 5678-5685 行）。
-//    漏掉前面两个的症状是"点入口没反应"；漏掉后面两个的症状更隐蔽 ——
-//    面板能打开、能输入邮箱，但「发送验证码」和「验证并登录」点了毫无反应。
-//    这四项是靠 tools/check-login.mjs 的监听器覆盖检查发现的。
-var _switchFlox = document.getElementById('switchFloxChat');
-if (_switchFlox) _switchFlox.addEventListener('click', switchToFloxLogin);
-var _floxBack = document.getElementById('floxBack');
-if (_floxBack) _floxBack.addEventListener('click', switchBackFromFlox);
-var _btnFloxSend = document.getElementById('btnFloxSendCode');
-if (_btnFloxSend) _btnFloxSend.addEventListener('click', handleFloxSendCode);
-var _btnFloxVerify = document.getElementById('btnFloxVerify');
-if (_btnFloxVerify) _btnFloxVerify.addEventListener('click', handleFloxVerify);
-
+// ---- 第三方账号登录：微软 / GitHub ----
+// 具体的 OAuth 配置在 Supabase Dashboard，代码这边只负责发起跳转。
+var _oauthMs = document.getElementById('oauthMicrosoft');
+if (_oauthMs) _oauthMs.addEventListener('click', function () { signInWithProvider('azure'); });
+var _oauthGh = document.getElementById('oauthGitHub');
+if (_oauthGh) _oauthGh.addEventListener('click', function () { signInWithProvider('github'); });
 // ---- 通用弹窗（showAlert / showConfirm 用，登录页也会用到）----
 // app.js 里这段在 bindCustomModal()（约 5731 行），同样不在裁剪范围内。
 // 注意：确认按钮【不】在这里绑 —— showConfirm/showCustomModal 会给它赋 onclick，

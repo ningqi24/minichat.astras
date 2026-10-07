@@ -3,7 +3,7 @@
 //      1. 这里 APP_VERSION
 //      2. data/vision.json 的 version（checkForUpdate() 拿它和 APP_VERSION 比对）
 //      3. sw.js 的 CACHE_NAME（否则老访客拿不到新的 index.html）
-var APP_VERSION = '4.23.0';
+var APP_VERSION = '4.24.0';
 
 // ===================== 安全 DOM 获取 =====================
 function $safe(id) { return document.getElementById(id); }
@@ -495,39 +495,16 @@ var SUPABASE_URL = 'https://xgugltiuszrpmbxjmqfv.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndWdsdGl1c3pycG1ieGptcWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODE2MTUsImV4cCI6MjA5ODA1NzYxNX0.nWiJm_7Fh3-6MUdazhW7CwOAi8w2PVMsDbfhUNyUIsM';
 if (!supabase || !supabase.auth) window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ===================== FloxChat 桥接 =====================
-// 安全约定：FloxChat 的共享密钥与用户表只存在于 Edge Function 服务端；
-// 浏览器端既不接触密钥，也拿不到 FloxChat 用户数据，更不会注册 FloxChat 账号。
-var MINICHAT_EDGE_URL = "https://xgugltiuszrpmbxjmqfv.supabase.co/functions/v1/clever-task";
-var MINICHAT_BRIDGE_SECRET = "flox-ee4cfcf741e6e528a333abec";
-
-// ⚠️ FloxChat 服务端地址【不再放在前端】
-//
-// 历史：这里曾有一个 FLOXCHAT_BASE_URL，前端拿它直连 FloxChat 的验证码接口。
-// 已经移除，原因有两条：
-//   1. 发验证码是唯一会消耗 FloxChat 真实资源的动作（发真邮件），前端直连会绕过
-//      MiniChat 自己的限流，等于让它替我们承担滥用风险；
-//   2. 本仓库与本站都是公开的，把接口地址写在前端等于对外公布。
-//
-// 现在发送与校验都走 Edge Function 代理，地址只存在于服务端的环境变量
-// （见 supabase/functions/clever-task/index.ts 的 FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL；
-//  换域名改环境变量即可，前端不用动）。
-//
-// ⚠️ 维护约定：不要往这个文件里写 FloxChat 的域名、接口路径，或任何密钥。
-//    它会以源码形式公开（仓库公开 + 站点直接可读），写在这里等于公开。
-
-// ===================== 人机验证（CAPTCHA）配置 =====================
-// 留空 = 不启用。填上 site key 后会自动加载对应提供商的脚本，
-// 并在登录 / 注册 / 重置密码时附带 captchaToken。
-// 注意：Edge Function 侧用的是 service_role，GoTrue 对 service_role 会跳过 CAPTCHA
-//      校验（internal/api/middleware.go 的 requireAdminCredentials 例外），
-//      所以 FloxChat 验证码登录这条路径不需要人机验证。
-var CAPTCHA_SITE_KEY = '0x4AAAAAAExcrClTSiZHfYTp'; // Cloudflare Turnstile Site Key（公开值，放前端没问题）
-// ⚠️ Secret Key 只填在 Supabase → Authentication → Attack Protection，
-//    绝不要写进前端、仓库或任何公开位置。
-
-// 统一调用 Edge Function；失败时抛出带 code 的错误，便于区分“账号密码错误”和网络故障
-async function callFloxEdge(payload) {
+// ===================== Edge Function 调用 =====================
+// 说明：MiniChat 有一小组动作必须走服务端（删号、查身份、改限额等），
+//   因为它们需要 service_role。这些动作由一个 Edge Function 统一处理。
+// 安全约定：
+//   1. 所有动作需要在请求体里带上 SHARED_SECRET。注意该值在前端是公开的，
+//      它只用于挡住随手扫描，【不是】真正的权限边界；真正的边界是每个动作内部
+//      用自己的 access_token 校验调用者身份。
+//   2. 服务端地址、service_role 密钥都只存在于 Edge Function 环境变量里，前端拿不到。
+//   3. 维护约定：不要往这个文件里写任何服务的域名、接口路径或真正的密钥。
+async function callEdge(payload) {
     var resp = await fetch(MINICHAT_EDGE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -544,7 +521,7 @@ async function callFloxEdge(payload) {
 }
 
 // Edge 已签发会话：落地 Supabase 会话并进入聊天
-async function applyFloxSession(edgeData, email) {
+async function applyEdgeSession(edgeData, email) {
     if (!edgeData || !edgeData.access_token || !edgeData.refresh_token) throw new Error('边缘函数未返回有效令牌');
     var setRes = await supabase.auth.setSession({ access_token: edgeData.access_token, refresh_token: edgeData.refresh_token });
     if (setRes.error) throw new Error('设置会话失败: ' + setRes.error.message);
@@ -693,131 +670,28 @@ async function doAuth(email, pwd) {
         else { setAuthMessage('注册成功！请查收邮件确认后登录。','success'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
     } catch(e) { console.error(e); setAuthMessage('网络错误，请重试','error'); if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = '1'; } }
 }
-// ===================== FloxChat 验证码登录交互 =====================
-var floxEmailVal = '';
-// ---- FloxChat 登录面板：步骤条 / 重发倒计时 / 按钮加载态 ----
-var floxResendTimer = null;
-function floxSetStep(n) {
-    var a = document.getElementById('floxStepA'), b = document.getElementById('floxStepB');
-    if (!a || !b) return;
-    a.classList.toggle('is-active', n === 1);
-    a.classList.toggle('is-done', n === 2);
-    b.classList.toggle('is-active', n === 2);
-}
-function floxSetLoading(btn, on) {
-    if (!btn) return;
-    btn.classList.toggle('is-loading', !!on);
-    btn.disabled = !!on;
-}
-function floxStartResendCountdown(seconds) {
-    var btn = document.getElementById('btnFloxResend');
-    if (!btn) return;
-    if (floxResendTimer) { clearInterval(floxResendTimer); floxResendTimer = null; }
-    var left = seconds || 60;
-    var render = function() {
-        if (left > 0) { btn.disabled = true; btn.textContent = '重新发送（' + left + 's）'; }
-        else { btn.disabled = false; btn.textContent = '重新发送'; clearInterval(floxResendTimer); floxResendTimer = null; }
-    };
-    render();
-    floxResendTimer = setInterval(function() { left--; render(); }, 1000);
-}
-function switchToFloxLogin() {
-    var altLogin = document.getElementById('altLogin');
-    if (altLogin) altLogin.style.display = 'none';
-    document.querySelector('.login-card .logo-area').style.display = 'none';
-    document.querySelector('.login-card .auth-title').style.display = 'none';
-    document.querySelector('.login-card .auth-sub').style.display = 'none';
-    document.querySelectorAll('.auth-field').forEach(function(el) { el.style.display = 'none'; });
-    document.querySelector('.login-card .pwd-wrapper').style.display = 'none';
-    document.getElementById('btnLogin').style.display = 'none';
-    document.querySelector('.auth-toggle').style.display = 'none';
-    document.getElementById('authMessage').style.display = 'none';
-    // FloxChat 登录走 Edge Function 的 service_role，GoTrue 会跳过 CAPTCHA，
-    // 所以这里不需要人机验证，直接把它藏起来
-    var capBoxFlox = document.getElementById('captchaBoxLogin');
-    if (capBoxFlox) capBoxFlox.style.display = 'none';
-    document.getElementById('floxLogin').style.display = 'block';
-    document.getElementById('floxStep1').style.display = 'flex';
-    document.getElementById('floxStep2').style.display = 'none';
-    document.getElementById('switchFloxChat').style.display = 'none';
-    document.getElementById('floxMsg').textContent = '';
-    document.getElementById('floxMsg').style.display = '';
-    floxSetStep(1);
-    var rs = document.getElementById('btnFloxResend');
-    if (rs) { rs.disabled = true; rs.textContent = '重新发送'; }
-    var codeEl = document.getElementById('floxCode');
-    if (codeEl) codeEl.value = '';
-}
-function switchBackFromFlox() {
-    // 回到登录界面时要把 #app 容器放回来（它承载登录界面本身）
-    var appShellBack = document.getElementById('app');
-    if (appShellBack) appShellBack.style.display = '';
-    var altLoginBack = document.getElementById('altLogin');
-    if (altLoginBack) altLoginBack.style.display = '';
-    document.querySelector('.login-card .logo-area').style.display = '';
-    document.querySelector('.login-card .auth-title').style.display = '';
-    document.querySelector('.login-card .auth-title').textContent = isLoginMode ? t('welcome') : t('createAccount');
-    document.querySelector('.login-card .auth-sub').style.display = '';
-    document.querySelectorAll('.auth-field').forEach(function(el) { el.style.display = ''; });
-    document.querySelector('.login-card .pwd-wrapper').style.display = '';
-    document.getElementById('btnLogin').style.display = '';
-    document.querySelector('.auth-toggle').style.display = '';
-    document.getElementById('authMessage').style.display = '';
-    var capBoxBack = document.getElementById('captchaBoxLogin');
-    if (capBoxBack) capBoxBack.style.display = '';
-    document.getElementById('floxLogin').style.display = 'none';
-    document.getElementById('switchFloxChat').style.display = '';
-}
-async function handleFloxSendCode() {
-    var email = document.getElementById('floxEmail').value.trim();
-    if (!email) { document.getElementById('floxMsg').textContent = '请输入邮箱'; return; }
-    floxEmailVal = email;
-    var sendBtn = document.getElementById('btnFloxSendCode');
-    var msgEl0 = document.getElementById('floxMsg');
-    msgEl0.textContent = '';
-    floxSetLoading(sendBtn, true);
+// ===================== 第三方账号登录（OAuth）=====================
+// 通过 Supabase 的 signInWithOAuth 跳到提供商，回来后由 onAuthStateChange 接管，
+// 与邮箱密码登录走的是同一套会话逻辑。
+//
+// 需要在两处配置（见 README）：
+//   1. 提供商后台：把回调地址填成 https://<project-ref>.supabase.co/auth/v1/callback
+//   2. Supabase Dashboard → Authentication → Providers：填该提供商的 Client ID / Secret
+// 微软个人账号：提供商选 Azure，并把 Supabase 里的 Azure Tenant URL 设为 common。
+async function signInWithProvider(provider) {
+    var label = provider === 'azure' ? '微软' : provider === 'github' ? 'GitHub' : provider;
     try {
-        // ⚠️ 这里【必须走 Edge Function 代理】，不要改回前端直连 FloxChat。
-        //    原因：发验证码是【唯一会消耗 FloxChat 真实资源】的动作（发一封真邮件）。
-        //    直连的话，MiniChat 侧的限流完全拦不到 —— 万一有人拿这个入口滥用，
-        //    打的是 FloxChat 的服务器与发信配额。走代理后，Edge Function 的双维度限流
-        //    （按收件邮箱 3 次/10 分钟 + 按来源 IP 10 次/10 分钟）等于替对方挡了一层。
-        //    FloxChat 的服务端地址因此只存在于 Edge Function（FLOXCHAT_SEND_URL / FLOXCHAT_VERIFY_URL）。
-        await callFloxEdge({ action: 'flox_send_code', email: email });
-        document.getElementById('floxStep1').style.display = 'none';
-        document.getElementById('floxStep2').style.display = 'flex';
-        floxSetStep(2);
-        floxStartResendCountdown(60);
-        msgEl0.textContent = '验证码已发送至 ' + email;
-        var codeEl2 = document.getElementById('floxCode');
-        if (codeEl2) { codeEl2.value = ''; codeEl2.focus(); }
-    } catch(e) {
-        // callFloxEdge 在响应非 2xx 或带 error 字段时抛错，err.message 就是服务端给的中文提示
-        msgEl0.textContent = '发送失败：' + ((e && e.message) ? e.message : '请稍后重试');
-    }
-    floxSetLoading(sendBtn, false);
-}
-// 重新发送 = 复用上面的流程
-document.getElementById('btnFloxResend').addEventListener('click', function() { handleFloxSendCode(); });
-// 回车提交
-document.getElementById('floxEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleFloxSendCode(); });
-document.getElementById('floxCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleFloxVerify(); });
-document.getElementById('floxCode').addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0, 6); });
-async function handleFloxVerify() {
-    var code = document.getElementById('floxCode').value.trim();
-    if (!code) { document.getElementById('floxMsg').textContent = '请输入验证码'; return; }
-    var btn = document.getElementById('btnFloxVerify');
-    var msgEl = document.getElementById('floxMsg');
-    msgEl.textContent = '';
-    floxSetLoading(btn, true);
-    try {
-        // 验证码同样交给 Edge Function 在服务端校验，避免前端伪造邮箱直接换会话
-        var data = await callFloxEdge({ action: 'flox_code_login', email: floxEmailVal, code: code });
-        msgEl.textContent = '登录中…';
-        await applyFloxSession(data, data.email);
-    } catch(e) {
-        msgEl.textContent = (e.code === 'INVALID_CODE') ? '验证码错误或已过期，请重新获取' : ('网络错误：' + (e.message || '请重试'));
-        floxSetLoading(btn, false);
+        setAuthMessage('正在跳转到 ' + label + '…', 'success');
+        var res = await supabase.auth.signInWithOAuth({
+            provider: provider,
+            options: {
+                redirectTo: window.location.origin + '/',
+                scopes: provider === 'azure' ? 'email openid profile' : 'read:user user:email'
+            }
+        });
+        if (res && res.error) throw res.error;
+    } catch (e) {
+        setAuthMessage('跳转失败：' + (e && e.message ? e.message : e), 'error');
     }
 }
 function showTermsModal(callback) {
@@ -1449,7 +1323,6 @@ var i18n = {
         creditInspired: '设计灵感来源',
         creditBased: '本项目基于其构建',
         partners: '合作',
-        partnerFloxDesc: 'MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。',
         partnerAuthor: '作者 · 摄表',
         svcSupabase: '数据库 · 账号 · 文件存储 · 边缘函数',
         svcTurnstile: '人机验证',
@@ -1458,7 +1331,7 @@ var i18n = {
         svcUiavatar: '默认头像生成',
         svcGhpages: '静态站点托管',
         svcEmojihub: 'Emoji 数据',
-        svcTurbowarp: 'FloxChat 运行环境',
+        svcTurbowarp: '浏览器运行环境',
         svcLucide: '图标',
         licenseInfo: '许可证信息',
         sourceCode: '源代码',
@@ -2328,7 +2201,6 @@ var i18n = {
         creditInspired: 'Design inspiration',
         creditBased: 'Built upon it',
         partners: 'Partners',
-        partnerFloxDesc: 'The FloxChat verification-code login is provided by FloxChat; FloxChat also bridges the MiniChat group chat into its own client.',
         partnerAuthor: 'Author · Shebiao',
         svcSupabase: 'Database · Auth · Storage · Edge Functions',
         svcTurnstile: 'Human verification',
@@ -2337,7 +2209,7 @@ var i18n = {
         svcUiavatar: 'Default avatar generation',
         svcGhpages: 'Static site hosting',
         svcEmojihub: 'Emoji data',
-        svcTurbowarp: 'FloxChat runtime',
+        svcTurbowarp: 'Browser runtime',
         svcLucide: 'Icons',
         licenseInfo: 'License Information',
         sourceCode: 'Source Code',
@@ -3808,7 +3680,7 @@ function openConvSettings() {
         if (isDirect) hint.textContent = '私聊不参与同步。';
         else if (isGlobal) hint.textContent = '全局聊天固定同步。';
         else if (!canEditBridge) hint.textContent = '只有群主和管理员能改。';
-        else hint.textContent = '开启后，这个群会出现在 FloxChat 里。';
+        else hint.textContent = '开启后，这个群会出现在外部分享视图里。';
     }
 
     // ---- 第 1.5 期：群治理表单（仅群聊；非群主/管理员只读展示公告）----
@@ -6058,7 +5930,7 @@ function refreshAllAvatars(email, newUrl) {
 async function uploadAvatar(file) {
             if (!currentUserId) { showAlert(t('pleaseLogin'), 'error'); return; }
             if (!file || !file.type.startsWith('image/')) { showAlert(t('pleaseSelectImage'), 'error'); return; }
-            // 统一裁成正方形：FloxChat 侧的群头像/用户头像规格是 150×150 正方形，
+            // 统一裁成正方形：统一裁成正方形：
             // 非正方形图在那边会被拉伸变形，而且尺寸不一致会导致显示大小忽大忽小。
             var pf = file;
             try { pf = await cropAvatar(file, 300); } catch(e) { pf = file; }
@@ -6110,7 +5982,7 @@ function compressImage(file, mw, q) {
 }
 
 // 居中裁剪成正方形并缩放：头像统一存 300×300 正方形
-// （FloxChat 那边会用桥接扩展再压到 150×150，正好是它的头像规格）
+// （显示时再按需缩放）
 function cropAvatar(file, size) {
     return new Promise((res,rej) => {
         var r = new FileReader();
@@ -6213,7 +6085,7 @@ async function uploadNewAttachments(list) {
         // ⚠️ 大小一律用 pf.size（实际上传的那个 blob）—— 图片超过 200KB 会被 compressImage 压过，
         // 用 att.file.size 会报出原始大小，和服务器上的对不上。
         var realSize = (pf && typeof pf.size === 'number') ? pf.size : att.file.size;
-        // 图片/音频现在也带上 |mime|name|size，桥接方（FloxChat）就能显示大小了
+        // 图片/音频带上 |mime|name|size，接收方就能显示大小
         if (att.type === 'image') return '![image]('+url+'|'+esc(att.mime||'image/png')+'|'+esc(att.name||'image')+'|'+realSize+')';
         if (att.type === 'audio') return '[audio]('+url+'|'+esc(att.mime||'audio/mpeg')+'|'+esc(att.name||'audio')+'|'+realSize+')';
         if (att.type === 'video') return '[video]('+url+'|'+esc(att.mime||'video/mp4')+'|'+esc(att.name||'video.mp4')+'|'+realSize+')';
@@ -7322,7 +7194,7 @@ function confirmDelete() {
             var sess = await supabase.auth.getSession();
             var token = sess && sess.data && sess.data.session ? sess.data.session.access_token : '';
             if (!token) throw new Error('未获取到登录凭据，请重新登录后再试');
-            await callFloxEdge({ action: 'delete_self', access_token: token, anonymize: true });
+            await callEdge({ action: 'delete_self', access_token: token, anonymize: true });
             localStorage.clear();
             location.reload();
         } catch (err) {
@@ -7337,7 +7209,7 @@ async function checkAdmin() {
         var sess = await supabase.auth.getSession();
         var token = sess && sess.data && sess.data.session ? sess.data.session.access_token : '';
         if (!token) return;
-        var me = await callFloxEdge({ action: 'whoami', access_token: token });
+        var me = await callEdge({ action: 'whoami', access_token: token });
         window.isAdmin = !!me.is_admin;
         window.myUserId = me.id || '';
         window.myEmail = (me.email || '').toLowerCase();
@@ -7366,7 +7238,7 @@ async function doAdminDelete(m, email) {
         var sess = await supabase.auth.getSession();
         var token = sess && sess.data && sess.data.session ? sess.data.session.access_token : '';
         if (!token) throw new Error('未获取到登录凭据');
-        var res = await callFloxEdge({ action: 'admin_delete_user', access_token: token, target_user_id: m.id, anonymize: true });
+        var res = await callEdge({ action: 'admin_delete_user', access_token: token, target_user_id: m.id, anonymize: true });
         showAlert('已删除用户 ' + (res.email || email), 'success');
         var members = await fetchAllMembers();
         renderAllMembers(members);
@@ -7436,15 +7308,6 @@ function setupGlobalEventListeners() {
                 });
             }
             if (btnLogin) btnLogin.addEventListener('click', handleAuth);
-            // FloxChat
-            var switchFlox = document.getElementById('switchFloxChat');
-            if (switchFlox) switchFlox.addEventListener('click', switchToFloxLogin);
-            var floxBack = document.getElementById('floxBack');
-            if (floxBack) floxBack.addEventListener('click', switchBackFromFlox);
-            var btnSend = document.getElementById('btnFloxSendCode');
-            if (btnSend) btnSend.addEventListener('click', handleFloxSendCode);
-            var btnVerify = document.getElementById('btnFloxVerify');
-            if (btnVerify) btnVerify.addEventListener('click', handleFloxVerify);
             // v3.1.0: 返回前台后只清桌面未读，小红点保留直到真正阅读
             document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateBottomNavBadge(); } });
             window.addEventListener('beforeunload', async () => { if (presenceChannel) { try { await presenceChannel.untrack(); } catch(e) {} presenceChannel.unsubscribe(); } if (window.chatChannel) { window.chatChannel.unsubscribe(); } });

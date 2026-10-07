@@ -20,9 +20,9 @@
          这里把 .ico 放在最前 —— Chromium 对 SVG favicon 的支持其实没问题，
          但 .ico 是所有浏览器都吃的格式，最保险。
          ?v=2 是为了顶掉浏览器对 favicon 的顽固缓存。 -->
-    <link rel="icon" href="./favicon.ico?v=4.23.0" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.23.0">
-    <link rel="apple-touch-icon" href="./favicon.ico?v=4.23.0">
+    <link rel="icon" href="./favicon.ico?v=4.24.0" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=4.24.0">
+    <link rel="apple-touch-icon" href="./favicon.ico?v=4.24.0">
     <meta name="theme-color" content="#0d0d0d">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="4.23.0" />
+    <meta name="version" content="4.24.0" />
     <script src="lib/supabase.min.js"></script>
     <script type="application/ld+json">
         {
@@ -46,7 +46,7 @@
           "codeRepository": "https://github.com/ningqi24/minichat.astras"
         }
     </script>
-    <link rel="stylesheet" href="/css/app.css?v=4.23.0">
+    <link rel="stylesheet" href="/css/app.css?v=4.24.0">
 <base target="_blank">
 </head>
 <body data-page="chat">
@@ -73,9 +73,13 @@
             <div class="auth-title" id="authTitle" data-i18n="welcome">欢迎回来</div>
             <div class="auth-sub" id="authSub" data-i18n="loginOrSignup">登录或注册账户</div>
             <div class="alt-login" id="altLogin">
-                <button type="button" class="alt-login-btn" id="switchFloxChat" title="使用 FloxChat 登录">
-                    <span class="alt-login-logo"><img src="assets/FloxChat LOGO.svg" alt=""/></span>
-                    使用 FloxChat 登录
+                <button type="button" class="alt-login-btn oauth-btn" id="oauthMicrosoft" title="使用微软账号登录">
+                    <span class="alt-login-logo"><svg viewBox="0 0 23 23" width="16" height="16" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#f25022"/><rect x="12" y="1" width="10" height="10" fill="#7fba00"/><rect x="1" y="12" width="10" height="10" fill="#00a4ef"/><rect x="12" y="12" width="10" height="10" fill="#ffb900"/></svg></span>
+                    使用微软账号登录
+                </button>
+                <button type="button" class="alt-login-btn oauth-btn" id="oauthGitHub" title="使用 GitHub 登录">
+                    <span class="alt-login-logo"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span>
+                    使用 GitHub 登录
                 </button>
                 <div class="or-divider"><span>或</span></div>
             </div>
@@ -92,58 +96,16 @@
             <div class="auth-foot">
                 <div class="auth-toggle" data-i18n-html="noAccount">还没有账户？<a id="switchToSignup">注册</a></div>
             </div>
-            <!-- FloxChat 验证码登录 -->
-            <div class="floxchat-login" id="floxLogin">
-                <button type="button" class="floxchat-back" id="floxBack">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    返回邮箱登录
-                </button>
-                <div class="bridge-header">
-                    <div class="bridge-logos">
-                        <span class="bridge-tile"><img src="assets/logo.svg" alt="MiniChat"/></span>
-                        <span class="bridge-cross" aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
-                        <span class="bridge-tile"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
-                    </div>
-                    <div class="bridge-title">MiniChat <em>×</em> FloxChat</div>
-                    <div class="bridge-sub">用 FloxChat 验证码登录，无需在 MiniChat 输入密码</div>
-                </div>
-                <div class="flox-steps" id="floxSteps">
-                    <div class="flox-step is-active" id="floxStepA"><span class="flox-step-dot">1</span><span class="flox-step-label">验证邮箱</span></div>
-                    <div class="flox-step-line"></div>
-                    <div class="flox-step" id="floxStepB"><span class="flox-step-dot">2</span><span class="flox-step-label">输入验证码</span></div>
-                </div>
-                <div class="floxchat-step1" id="floxStep1">
-                    <label class="flox-field">
-                        <span class="flox-field-label">FloxChat 注册邮箱</span>
-                        <input type="email" id="floxEmail" placeholder="you@example.com" autocomplete="email"/>
-                    </label>
-                    <button class="btn-primary" id="btnFloxSendCode">发送验证码</button>
-                </div>
-                <div class="floxchat-step2" id="floxStep2" style="display:none">
-                    <label class="flox-field">
-                        <span class="flox-field-label">6 位验证码</span>
-                        <input type="text" id="floxCode" class="flox-code-input" placeholder="······" maxlength="6" inputmode="numeric" autocomplete="one-time-code"/>
-                    </label>
-                    <div class="flox-resend"><button type="button" id="btnFloxResend" disabled>重新发送</button></div>
-                    <button type="button" class="btn-primary" id="btnFloxVerify">验证并登录</button>
-                </div>
-                <div class="auth-message" id="floxMsg"></div>
-                <div class="flox-trust">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-                    <span>FloxChat 的密钥与用户数据只存在于服务端。MiniChat <b>不读取、不存储</b>你的 FloxChat 账号数据，也不会替你注册 FloxChat 账号。</span>
-                </div>
-                <div class="flox-credit">登录能力来自 FloxChat · 摄表</div>
-            </div>
             <div class="auth-message" id="authMessage"></div>
             </div>
             <aside class="login-brand">
                 <div class="brand-kicker">MiniChat · astras.cc</div>
                 <h2 class="brand-title">轻量级<br>实时聊天</h2>
-                <p class="brand-desc">原生 HTML + Supabase，无框架依赖。实时消息、文件分享、图片压缩，还能把 MiniChat 群聊接进 FloxChat。</p>
+                <p class="brand-desc">原生 HTML + Supabase，无框架依赖。实时消息、文件分享、图片压缩。</p>
                 <ul class="brand-points">
                     <li>开源 · MIT</li>
                     <li>PWA · 可离线</li>
-                    <li>FloxChat 互通</li>
+                    <li>多群聊 · 私聊</li>
                 </ul>
             </aside>
         </div>
@@ -577,11 +539,6 @@
                                     <span class="service-body"><span class="service-name">EmojiHub</span><span class="service-desc" data-i18n="svcEmojihub">Emoji 数据</span></span>
                                     <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
                                 </a>
-                                <a class="service-item" href="https://turbowarp.org" target="_blank" rel="noopener">
-                                    <span class="service-icon" style="--c:#ff4c4c"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 1.6 4 13.9h6.2l-.9 8.5L20 9.4h-6.3l-.5-7.8Z"/></svg><img src="https://turbowarp.org/images/apple-touch-icon.png" alt="" loading="lazy" decoding="async" onerror="this.remove()"></span>
-                                    <span class="service-body"><span class="service-name">TurboWarp</span><span class="service-desc" data-i18n="svcTurbowarp">FloxChat 运行环境</span></span>
-                                    <svg class="service-arrow" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
-                                </a>
                                 <a class="service-item" href="https://lucide.dev" target="_blank" rel="noopener">
                                     <span class="service-icon" style="--c:#f56565"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.483 1.123a1.09 1.09 0 0 0-.752.362 1.09 1.09 0 0 0 .088 1.54 11.956 11.956 0 0 1 4 8.946 7.62 7.62 0 0 1-7.637 7.636 7.62 7.62 0 0 1-7.637-7.636 3.255 3.255 0 0 1 3.273-3.273c1.82 0 3.273 1.45 3.273 3.273a1.09 1.09 0 0 0 1.09 1.09 1.09 1.09 0 0 0 1.092-1.09c0-3-2.455-5.455-5.455-5.455s-5.454 2.455-5.454 5.455c0 5.408 4.408 9.818 9.818 9.818 5.41 0 9.818-4.41 9.818-9.818A14.16 14.16 0 0 0 19.272 1.4a1.09 1.09 0 0 0-.789-.277ZM9.818 2.15C4.408 2.151 0 6.561 0 11.97a14.16 14.16 0 0 0 4.8 10.637 1.09 1.09 0 0 0 1.54-.096 1.09 1.09 0 0 0-.095-1.54 11.957 11.957 0 0 1-4.063-9 7.62 7.62 0 0 1 7.636-7.637 7.62 7.62 0 0 1 7.637 7.636 3.256 3.256 0 0 1-3.273 3.273 3.256 3.256 0 0 1-3.273-3.273 1.09 1.09 0 0 0-1.09-1.09 1.09 1.09 0 0 0-1.092 1.09c0 3 2.455 5.455 5.455 5.455s5.454-2.455 5.454-5.455c0-5.408-4.408-9.818-9.818-9.818z"/></svg><img src="https://lucide.dev/favicon.svg" alt="" loading="lazy" decoding="async" onerror="this.remove()"></span>
                                     <span class="service-body"><span class="service-name">Lucide</span><span class="service-desc" data-i18n="svcLucide">图标</span></span>
@@ -590,15 +547,6 @@
                             </div>
                         </div>
                         <div class="settings-group">
-                            <div class="settings-group-title" data-i18n="partners">合作</div>
-                            <div class="partner-card">
-                                <span class="partner-logo"><img src="assets/FloxChat LOGO.svg" alt="FloxChat"/></span>
-                                <span class="partner-body">
-                                    <span class="partner-name">FloxChat</span>
-                                    <span class="partner-desc" data-i18n="partnerFloxDesc">MiniChat 的 FloxChat 验证码登录能力由 FloxChat 提供；FloxChat 侧也通过桥接扩展接入了 MiniChat 群聊。</span>
-                                    <span class="partner-by" data-i18n="partnerAuthor">作者 · 摄表</span>
-                                </span>
-                            </div>
                         </div>
                     </div>
                     <div class="settings-tab-content" id="tab-terms">
@@ -806,6 +754,6 @@
     </div>
 </div>
 
-<script src="/js/app.js?v=4.23.0" defer></script>
+<script src="/js/app.js?v=4.24.0" defer></script>
 </body>
 </html>
